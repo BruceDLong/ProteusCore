@@ -1,0 +1,1 @@
+make && nosetests test_build.py

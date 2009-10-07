@@ -47,7 +47,7 @@ std::string printPure (infon* i, uint f, uint wSize, infon* CI){
         s+=(f&fConcat)?"(":"{";
         for(infon* p=i;p;) {
             if(p==i && f&fLoop && i->spec2){printInfon(i->spec2,CI); s+=" | ";}
-            s+=printInfon(p, CI);
+            s+=printInfon(p, CI); s+=' ';
             if (p->flags&isBottom) p=0; else p=p->next;
         }
         s+=(f&fConcat)?")":"}";
@@ -70,8 +70,9 @@ std::string printInfon(infon* i, infon* CI){
         if (f&(fUnknown<<goSize)) {s+=printPure(i->value, f, i->wSize, CI); s+=",";}
         else if (f&fUnknown) {s+=printPure(i->size, f>>goSize,i->wSize, CI); s+=";";}
         else{
-            s+=((f>>goSize)&fInvert)?"/":"*"; s+=printPure(i->size, f>>goSize, 0,CI);
-            s+=(f&fInvert)?"-":"+"; s+=printPure(i->value,f, (uint)i->size, CI);
+            if((f&tType)==tUInt) {s+=((f>>goSize)&fInvert)?"/":"*"; s+=printPure(i->size, f>>goSize, 0,CI);}
+             if((f&tType)==tUInt) s+=(f&fInvert)?"-":"+"; 
+            s+=printPure(i->value,f, (uint)i->size, CI);
         }
     } else {
         if (!(f&isNormed)) {
@@ -143,7 +144,8 @@ uint QParser::ReadPureInfon(char &tok, infon** i, uint* flags, infon** s2){
         RmvWSC(); int foundRet=0; int foundBar=0;
         for(tok=peek(); tok != rchr && stay; tok=peek()){
             if(tok=='<') {foundRet=1; getToken(tok); j=ReadInfon();}
-            else if(tok=='.'){stream.get();chk('.');chk('.'); j=new infon(fUnknown+isVirtual+isTentative+asNone+(tUInt<<goSize),(infon*)(size+1));stay=0;}
+            else if(tok=='.'){stream.get();chk('.');chk('.'); 
+                j=new infon(fUnknown+isVirtual+asNone+(tUInt<<goSize),(infon*)(size+1));stay=0;}
             else j=ReadInfon();
             if(++size==1){
                 Peek(tok);
@@ -180,7 +182,8 @@ infon* QParser::ReadInfon(int noIDs){
     getToken(tok); //DEB(tok)
     if(tok=='#'){flags|=toExec; getToken(tok);}
     if(tok=='@'){flags|=asDesc; getToken(tok);}
-    if(iscsym(tok)&&!isdigit(tok)&&(tok!='_')){
+    if(tok=='?'){f1=f2=fUnknown; flags=asNone;}
+    else if(iscsym(tok)&&!isdigit(tok)&&(tok!='_')){
         stream.putback(tok); flags|=asTag; stng tag; stng* tags=new stng;
         while(iscsym(tok)&&!isdigit(tok)){
             readTag(tag);
@@ -205,8 +208,9 @@ infon* QParser::ReadInfon(int noIDs){
         if(tok=='-'||tok=='/') {f1^=fInvert;}
         if(op) getToken(tok);
         size=ReadPureInfon(tok, &i1, &f1, &s2);
-        if(op=='+'){i2=i1; i1=(infon*)size; f2=f1; f1=tUInt;} // use identity term '1'
-        else if(op=='*'){
+        if(op=='+'){
+            i2=i1; i1=(infon*)size; f2=f1; f1=tUInt; // use identity term '1'
+        }else if(op=='*'){
             if((f1&tType)==tString){throw("Terms cannot be strings");}
             if((f1&tType)==tList){throw("Terms cannot be lists");}
             getToken(tok); if(tok=='~'){f2|=fInvert; getToken(tok);}
@@ -218,9 +222,9 @@ infon* QParser::ReadInfon(int noIDs){
             Peek(tok);
             if(tok==','||tok==')'||tok=='}'||tok==']'||((f1&tType)!=tUInt)){
                 i2=i1;f2=f1; f1=tUInt; i1=(infon*)size;
+                if(((f2&tType)==tList) && i2 && ((i2->prev)->flags)&isVirtual) {f1|=fUnknown;}
                 if(tok==',')getToken(tok);
-            }
-            else if(tok==';'){i2=0; f2=fUnknown; getToken(tok);}
+            }else if(tok==';'){i2=0; f2=fUnknown; getToken(tok);}
         }
     }
     Peek(tok);

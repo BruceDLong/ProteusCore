@@ -1,7 +1,7 @@
 1
 test rep$
 <%
-%{"AARON", "ARON"}*_+[...]  =  +'ARONdacks' // This is a comment
+%{"AARON", "ARON"}*_+[...]  =  "ARONdacks"
 %>
 
 5

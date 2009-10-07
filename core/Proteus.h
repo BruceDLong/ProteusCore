@@ -37,7 +37,7 @@ inline bool operator< (const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) ret
 inline bool operator> (const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) return (a.key2>b.key2); else return (a.key1>b.key1);}
 inline bool operator==(const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) return (a.key2==b.key2); else return false;}
 
-enum masks {mRepMode=0x0700, mMode=0x0800, isNormed=0x1000, asDesc=0x2000, toExec=0x4000, mListPos=0xff000000, goSize=16};
+enum masks {mRepMode=0x0700, mMode=0x0800, isNormed=0x1000, asDesc=0x2000, toExec=0x4000, sizeIndef=0x8000, mListPos=0xff000000, goSize=16};
 enum vals {toGiven=0, toWorldCtxt=0x0100, toHomePos=0x0200, fromHere=0x0300, asFunc=0x0400, intersect=0x0500, asTag=0x0600, asNone=0x0700,
     fMode=0xf8, fConcat=0x08, fLoop=0x10, fInvert=0x20, fIncomplete=0x40, fUnknown=0x80,
     tType=3, tUInt=1, tString=2, tList=3,
@@ -46,8 +46,8 @@ enum vals {toGiven=0, toWorldCtxt=0x0100, toHomePos=0x0200, fromHere=0x0300, asF
     };
 
 struct infon;
-struct infNode {infon* item; infon* pred; uint idFlags; infNode* next; infNode(infon* itm=0, uint f=0):item(itm),idFlags(f){};};
-enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, CountSize=2, SetComplete=3, EliminateAlts=4, NodeDoneFlag=8, NoMatch=16, isRawFlag=32};
+struct infNode {infon* item; infon* slot; uint idFlags; infNode* next; infNode(infon* itm=0, uint f=0):item(itm),idFlags(f){};};
+enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, CountSize=2, SetComplete=3, EliminateAlts=4, NodeDoneFlag=8, NoMatch=16,isRawFlag=32};
 
 struct infon {
     infon(uint f=0,infon* s=0, infon*v=0,infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0):
@@ -94,8 +94,8 @@ struct QParser{
     infon* ti; // top infon
 };
 //extern std::fstream log;
-#define OUT(msg) {std::cout<< msg;}
-#define DEB(msg) {std::cout<< msg << "\n";}
+#define OUT(msg) /*{std::cout<< msg;}*/
+#define DEB(msg) /*{std::cout<< msg << "\n";}*/
 #define getInt(inf, num, sign) {/*normalize(inf);  */           \
   uint f=inf->flags;                           \
   if((f&tType)==tUInt && !(f&fUnknown)) num=(uint)inf->value; else num=0;     \

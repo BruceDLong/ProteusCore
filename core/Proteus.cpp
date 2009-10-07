@@ -66,8 +66,8 @@ void deepCopy(infon* from, infon* to, infon* args){
     to->wrkList=copyIdentList(from->wrkList);
     if((from->flags&mRepMode)==toHomePos) to->spec1=from->spec1;
     else if((from->flags&mRepMode)==asTag) to->spec1=from->spec1;
-    else if(from->spec1){to->spec1=new infon; deepCopy(from->spec1,(args)?args:to->spec1);to->spec1->top=to;}else to->spec1=0;
-    if(from->spec2){to->spec2=new infon; deepCopy(from->spec2, to->spec2);to->spec2->top=to;}else to->spec2=0;
+    else if(from->spec1){to->spec1=new infon; deepCopy((args)?args:from->spec1,to->spec1);}else to->spec1=0;
+    if(from->spec2){to->spec2=new infon; deepCopy(from->spec2, to->spec2);/*to->spec2->top=to;*/}else to->spec2=0;
 }
 
 #define recAlts(lval, rval) {if((rval->flags&tType)==tString) alts[dblPtr((char*)rval->value,lval)]++;}
@@ -77,6 +77,14 @@ void deepCopy(infon* from, infon* to, infon* args){
 #define cpFlags(from, to) {to->flags=(to->flags&0xff000000)+(from->flags&0x00ffffff);}
 #define copyTo(from, to) {if(from!=to){to->size=from->size; to->value=from->value; cpFlags(from,to);}}
 #define pushCIsFollower {int lvl=cn.level-nxtLvl; if(lvl>0) ItmQ.push(Qitem(CIfol,0,0,lvl));}
+#define AddSizeAlternate(Lval, Rval, Pred, Size, Last) {   infon *copy, *copy2, *LvalFol;    \
+        copy=new infon(Lval->flags,(infon*)(Size),Lval->value,0,Lval->spec1,Lval->spec2,Lval->next); \
+        copy->prev=Lval->prev; copy->top=Lval->top;copy->pred=Pred; \
+        insertID(&Lval->wrkList,copy,ProcessAlternatives); Lval->wrkList->slot=Last;\
+        getFollower(&LvalFol, Lval);                  \
+        if (LvalFol){\
+            copy2=new infon(LvalFol->flags,LvalFol->size,LvalFol->value,0,LvalFol->spec1,LvalFol->spec2,LvalFol->next);\
+            copy2->pred=copy; insertID(&copy2->wrkList,Rval,0); insertID(&LvalFol->wrkList,copy2,ProcessAlternatives);}}
 
 char isPosLorEorGtoSize(uint pos, infon* item){
     if((item->flags>>goSize)&fUnknown) return '?';
@@ -110,12 +118,13 @@ void processVirtual(infon* v){
     if (posArea=='?'){ v->flags|=isTentative;}
 }
 
-void InitList(infon* item) { 
-    int EOT_IL=0; infon* tmp; uint Flags=item->flags; 
+void InitList(infon* item) {
+    int EOT_IL=0; infon* tmp; infNode* IDp;
     if(item->value && (((tmp=item->value->prev)->flags)&isVirtual)){
         tmp->spec2=item->spec2;
-        if(tmp->spec2 && ((tmp->spec2->flags&mRepMode)==asFunc)) StartTerm(tmp->spec2,tmp->spec1,IL); 
+        if(tmp->spec2 && ((tmp->spec2->flags&mRepMode)==asFunc)) StartTerm(tmp->spec2->spec1,tmp->spec1,IL);
         processVirtual(tmp); item->flags|=tList;
+//        if((tmp->flags&isTentative) && tmp==item->value) {AddSizeAlternate(item,0, 0, 0);}
     }
 }
 
@@ -124,7 +133,7 @@ int getFollower(infon** lval, infon* i){
     gnsTop: if(i->next==0) {*lval=0; return levels;}
     if(i->flags&isLast){
         i=getTop(i); ++levels;
-        if(i && (i->spec2==0)) goto gnsTop;
+        if(i /*&& (i->spec2==0)*/) goto gnsTop;
         else {*lval=0; return levels;}
     }
     *lval=i->next;
@@ -134,26 +143,24 @@ int getFollower(infon** lval, infon* i){
 
 void addIDs(infon* Lvals, infon* Rvals, int asAlt=0){
     const int maxAlternates=100;
-    infon* altLst[maxAlternates]; infon* crntAlt=Rvals; infon *pred, *tmp; infNode* IDp; 
-    int altCnt=1; altLst[0]=crntAlt;
+    infon* RvlLst[maxAlternates]; infon* crntAlt=Rvals; infon *pred, *Rval, *prev=0; infNode* IDp; uint size;
+    int altCnt=1; RvlLst[0]=crntAlt;
     while(crntAlt && (crntAlt->flags&isTentative)){
         getFollower(&crntAlt, getTop(crntAlt));
-        altLst[altCnt++]=crntAlt;
+        RvlLst[altCnt++]=crntAlt;
         if(altCnt>=maxAlternates) throw "Too many nested alternates";
     }
-    crntAlt=Lvals; pred=Lvals->pred;
-    while(crntAlt){
-        for(int i=0; i<altCnt; ++i){
+    size=((uint)Lvals->next->size)-2; crntAlt=Lvals; pred=Lvals->pred;
+    while(crntAlt){  // Lvals
+        for(int i=0; i<altCnt; ++i){   // Rvals
             if (!asAlt && altCnt==1 && crntAlt==Lvals){
                 insertID(&Lvals->wrkList,Rvals,0); recAlts(Lvals,Rvals);
             } else {
-                tmp=altLst[i]; insertID(&crntAlt->wrkList, tmp,0);
-                crntAlt->wrkList->idFlags=(ProcessAlternatives+isRawFlag);
-                crntAlt->wrkList->pred=pred;
-                recAlts(crntAlt, tmp); 
+                Rval=RvlLst[i];
+                AddSizeAlternate(crntAlt, Rval, pred, size, (prev)?prev->prev:0);
             }
         }
-        if(crntAlt->flags&isTentative) {getFollower(&crntAlt,getTop(crntAlt)); if(crntAlt) crntAlt->flags|=hasAlts;}
+        if(crntAlt->flags&isTentative) {prev=crntAlt; size=((uint)crntAlt->next->size)-2; crntAlt=getTop(crntAlt); if(crntAlt) crntAlt->flags|=hasAlts;}
         else crntAlt=0;
     }
 }
@@ -184,7 +191,7 @@ int compute(infon* i){
 }
 
 void resolve(infon* i, infon* theOne){
-    infon* parent, *tmp; uint count;
+    infon* parent, *tmp, *prev=0; uint count;
     while(i && theOne){
         if(theOne->flags&isTentative){
             parent=getTop(theOne);
@@ -194,16 +201,18 @@ void resolve(infon* i, infon* theOne){
             parent->size=(infon*)count; parent->flags^=(fUnknown<<goSize);
             return; // TODO: probably this should continue going left
         } else {
-             i->size=theOne->size; i->value=theOne->value; i->flags^=hasAlts;
-            i=i->pred; theOne=theOne->pred;
+            i->size=theOne->size; i->value=theOne->value; i->flags^=hasAlts;
+            prev=i; i=i->pred; theOne=theOne->pred;
         }
-    }
+    } if (theOne){theOne->next=prev->value; theOne->flags|=isLast+isBottom;}
 }
+
+#define SetBypassDeadEnd() {result=BypassDeadEnd; infon* CA=getTop(ci); if (CA) AddSizeAlternate(CA, item, 0, ((uint)ci->next->size)-1, ci); }
 
 enum WorkItemResults {DoNothing, BypassDeadEnd, DoNext};
 int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
     infNode *wrkNode=ci->wrkList, *iter, *IDp; infon *item, *IDfol, *tmp, *parent, *theOne=0; 
-    uint altCount=0, cSize, tempRes, result=DoNothing, f;
+    uint altCount=0, cSize, tempRes, isIndef=0, result=DoNothing, f;
     if(CIfol && !CIfol->pred) CIfol->pred=ci;
     if(wrkNode)do{
         wrkNode=wrkNode->next; item=wrkNode->item; DEB(" Doing Work Order:" << item);
@@ -211,7 +220,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
         case ProcessAlternatives:
             if(wrkNode->idFlags&isRawFlag){
               tmp=new infon(ci->flags,ci->size,ci->value,0,ci->spec1,ci->spec2,ci->next);
-              tmp->prev=ci->prev; tmp->top=ci->top;tmp->pred=wrkNode->pred;
+              tmp->prev=ci->prev; tmp->top=ci->top;
               insertID(&tmp->wrkList, item,0);
               wrkNode->item=item=tmp;
               wrkNode->idFlags^=isRawFlag;
@@ -224,11 +233,14 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             break;
         case MergeIdent:
             if((item->flags&mRepMode)!=asNone) normalize(item);
-            if((ci->flags&tType)==0) {ci->flags|=item->flags&tType; ci->size=item->size;}
+            if((ci->flags&tType)==0) {
+                ci->flags|=((item->flags&tType)+(tUInt<<goSize)+sizeIndef); isIndef=1; 
+                ci->size=item->size;if (!(item->flags&(fUnknown<<goSize))) ci->flags&=~(fUnknown<<goSize);
+            } else isIndef=0;
             switch((ci->flags&tType)+4*(item->flags&tType)){
                 case tUInt+4*tUInt: DEB("(UU) #Copy item to ci")
                     if(ci->flags&fUnknown) {copyTo(item, ci);}
-                    else if(ci->value!=item->value) {result=BypassDeadEnd; break;}
+                    else if(ci->value!=item->value) {SetBypassDeadEnd(); break;}
                     result=DoNext;
                     getFollower(&IDfol, item);
                     if(CIfol && IDfol) {DEB("add ID's follower to CI's follower") addIDs(CIfol, IDfol, asAlt);}
@@ -237,17 +249,36 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                 case tUInt+4*tList:DEB("(UL)") InitList(item); DEB("add value to CI's wrkList ") addIDs(ci,item->value,asAlt); result=DoNext;break;
                 case tString+4*tUInt:DEB("(SU)") result=DoNext;break;
                 case tString+4*tString: DEB("(SS)")
-                    if(((ci->flags>>goSize)&(fUnknown+tType))!=tUInt)throw"unknown size for string not supported here.";
+                    if (!isIndef && ci->flags&sizeIndef){
+                        if(ci->size < item->size) {result=BypassDeadEnd; break;}
+                        if (memcmp(ci->value, item->value, (uint)item->size)!=0)  {result=BypassDeadEnd;break;}
+                        ci->size=item->size;
+                        if(CIfol){
+                            IDfol=ci->next;
+                            if(ci->size==item->size){
+                                if(IDfol) {DEB("Add id's follower to CI's follower") addIDs(CIfol, IDfol, asAlt);}
+                                else {SetBypassDeadEnd(); break;}
+                            }else if(cSize < (uint)item->size){
+                                tmp=new infon(item->flags,(infon*)((uint)item->size-cSize),(infon*)((uint)item->value+cSize),0,0,item->next);
+                                addIDs(CIfol, tmp, asAlt); DEB("add copy of ID to CI's follower");
+                            }
+                    }
+                    result=DoNext; 
+                    break;
+                    } else isIndef=0;
+                    
+                    if(((ci->flags>>goSize)&(fUnknown+tType))!=tUInt)
+                        throw"unknown size for string not supported here.";
                     cSize=(uint)ci->size;
-                    if(cSize>(uint)item->size) {result=BypassDeadEnd; break;}
+                    if(cSize>(uint)item->size) {SetBypassDeadEnd(); break;}
                     if(ci->flags&fUnknown){ci->flags&=~fUnknown;}
-                    else if (memcmp(ci->value, item->value, cSize)!=0) {result=BypassDeadEnd; break;}
+                    else if (memcmp(ci->value, item->value, cSize)!=0) {SetBypassDeadEnd(); break;}
                     ci->value=item->value;
                     if(CIfol){
                         getFollower(&IDfol, item);
                         if(cSize==(uint)item->size){
                             if(IDfol) {DEB("Add id's follower to CI's follower") addIDs(CIfol, IDfol, asAlt);}
-                            else {result=BypassDeadEnd; break;}
+                            else {if(ci->next && (ci->next->flags&isTentative)) {SetBypassDeadEnd();}else result=DoNext; break;}
                         }else if(cSize < (uint)item->size){
                             tmp=new infon(item->flags,(infon*)((uint)item->size-cSize),(infon*)((uint)item->value+cSize),0,0,item->next);
                             addIDs(CIfol, tmp, asAlt); DEB("add copy of ID to CI's follower");
@@ -280,7 +311,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                if (tmp->flags&hasAlts) {f=0; break;}
             if(f) resolve(ci, theOne);
     }
-    ci->flags|=isNormed;
+    ci->flags|=isNormed; ci->flags&=~sizeIndef;
     return result;
 }
 
@@ -334,8 +365,19 @@ infon* agent::normalize(infon* i, infon* firstID){
                         insertID(&CI->spec2->wrkList, tmp,0); DEB("#Then norm(item-list (spec2))")
                         normalize(CI->spec2);
                         LastTerm(CI->spec2, tmp, n); DEB("Add that last term to CI's wrkList.")
-                        insertID(&CI->wrkList, tmp,0); cpFlags(tmp, CI);  CI->flags|=fUnknown;                    
-      //                 cpFlags(CI->wrkList->item ,CI);  CI->flags|=fUnknown;
+                        if (tmp->flags&isLast) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
+                        else {  // migrate alternates from spec2 to CI
+                            infNode *wrkNode=CI->spec2->wrkList; infon* item=0;
+                            if(wrkNode)do{
+                                wrkNode=wrkNode->next; item=wrkNode->item; 
+                                if((wrkNode->idFlags&(ProcessAlternatives+NoMatch))==ProcessAlternatives){
+                                    if(wrkNode->item->size==0){} // TODO: handle the null alternative
+                                    else {insertID(&CI->wrkList,wrkNode->slot,ProcessAlternatives+isRawFlag);}
+                                }
+                            }while (wrkNode!=CI->spec2->wrkList); 
+                            CI->flags|=asNone;
+                        }  
+                        CI->flags|=fUnknown;
                     }
                 }
             } else if(CIRepMode==asTag){
@@ -352,7 +394,7 @@ infon* agent::normalize(infon* i, infon* firstID){
             CIRepMode=CI->flags&mRepMode;
         }
         if(CIRepMode==asNone&&cn.IDStatus==2){cn.IDStatus=0; insertID(&CI->wrkList,cn.firstID,0);}
-        if((CI->flags&tType)==tList){InitList(CI);}
+        if(CI!=i && (CI->flags&tType)==tList){InitList(CI);}
         nxtLvl=getFollower(&CIfol, CI);
         if((CI->flags&asDesc) && !override) {pushCIsFollower; continue;}
         switch (doWorkList(CI, CIfol)) {

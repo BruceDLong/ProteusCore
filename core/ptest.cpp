@@ -39,31 +39,31 @@ do{
         pr=ch; ch=getCH(); query+=ch;
     } while (!(pr=='%' && ch=='>'));
 
-std::cerr << "#####################\nBeginning " << desc << " ("<< mode<<")\n";
+//std::cerr << "#####################\nBeginning " << desc << " ("<< mode<<")\n";
     // Load World
-    std::cerr << "Parsing ["<<world<<"]\n";
+    std::cout << "Parsing ["<<world<<"]\n";
     std::istrstream fin(world.c_str());
     QParser q(fin);
-    World=q.parse(); std::cerr <<"Parsed.\n";
+    World=q.parse(); std::cout <<"Parsed.\n";
     if (mode>0){
-        agent a;  std::cerr <<"Norming World...";
+        agent a;  std::cout <<"Norming World...\n";
         topInfon=World;
-        a.normalize(World);  std::cerr << "Normed\n";
+        a.normalize(World);  std::cout << "Normed\n";
     }
-    if (World) std::cerr<<"["<<printInfon(World)<<"]\n";
-    else {std::cerr<<"Error: "<<q.buf<<"\n"; exit(0);}
+    if (World) std::cout<<"<"<<printInfon(World)<<">\n";
+    else {std::cout<<"Error: "<<q.buf<<"\n"; exit(0);}
 if (mode==2){
     // Load DispList
-    std::cerr << "Parsing query ["<<query<<"]\n";
+    std::cout << "Parsing query ["<<query<<"]\n";
 DEB(printHTMLHeader(query))
     std::istrstream fin2(query.c_str());
     QParser D(fin2);
-    infon* queryinf=D.parse(); std::cerr << "parsed\n";
-    if(queryinf) std::cerr<<"["<<printInfon(queryinf).c_str()<<"]\n";
-    else {std::cerr<<"Error: "<<D.buf<<"\n"; exit(0);}
-    agent a; std::cerr<<"Norming query...";
-    a.normalize(queryinf); std::cerr<<"Normed:";
-    std::cerr<<printInfon(queryinf);
+    infon* queryinf=D.parse(); std::cout << "parsed\n";
+    if(queryinf) std::cout<<"<<["<<printInfon(queryinf).c_str()<<"]>>\n";
+    else {std::cout<<"Error: "<<D.buf<<"\n"; exit(0);}
+    agent a; std::cout<<"Norming query...";
+    a.normalize(queryinf); std::cout<<"Normed\n";
+    std::cout<<printInfon(queryinf);
 DEB(printHTMLFooter(D.buf))
 }
  }while (mode!=5 && ! std::cin.eof());

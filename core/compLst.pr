@@ -1,8 +1,10 @@
 1
 Test List / idx comprehension
 <%
-     [+_  (
-        {555, 444, \\[_]},
-
-    )]: {700000000, "hello", 'roger', 65432}
+     {[ ?
+        {555, 444, \[?]}
+      ]: {'slothe', "Hello", 'bob', 65432}|...}
 %>
+5
+done
+!

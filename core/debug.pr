@@ -1,7 +1,9 @@
 1
-test anon functions
-+[456,789,]:+123
-!
+test rep$
+<%
+{*_ +{"A"|...} "AARON"} =  +'AAAARON' // This is a comment
+%>
+
 5
 done
 !

@@ -17,15 +17,28 @@
 #define OUT(msg) {std::cout<< msg;}
 #define DEB(msg) {std::cout<< msg << "\n";}
 
+// GraphicsEngine: OPENGL, GLES, DIRECTX
+// CPU: Ix86, ARMEH, ARMEL
+// OpSys: LINUX, MAC, WINDOWS
+#define GraphicsEngine_GLES
+#define CPU_ARMEL
+#define OpSys_LINUX
+
 #include <time.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_thread.h>
 #include "fastevents.h"
+
+#ifdef GraphicsEngine_OPENGL
 #include "SDLUtils.h"
 #include <GL/gl.h>
 #include <GL/glu.h>
-#include <cairo.h>
+#elif defined GraphicsEngine_GLES
+#include <SDL/SDL_gles.h>
+#include <GLES2/gl2.h>
+#elif GraphicsEngine_DIRECTX
 
+#endif
 
 
 enum {LINUX, MACINTOSH, WINDOWS}
@@ -136,74 +149,6 @@ void DrawTriFanTex(int size, int size2){
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 }
 
-void setGradientSource(cairo_t* cr){
-    float a,b,c,d,e,f;
-	int linear=gINT; // 0=radial, 1=linear
-	cairo_pattern_t* pattern=0;
-	if (linear) {Z4 pattern=cairo_pattern_create_linear(a,b,c,d);}
-	else {Z6 pattern=cairo_pattern_create_radial(a,b,c,d,e,f);}
-	int numColorStops=gINT;
-	for (int i=0; i<numColorStops; ++i){
-		int useAlpha=gINT; 
-		if (useAlpha) {Z5 cairo_pattern_add_color_stop_rgba(pattern, a,b,c,d,e);}
-		else {Z4 cairo_pattern_add_color_stop_rgb(pattern, a,b,c,d);}
-	}
-	cairo_set_source(cr, pattern);
-}
-
-void TextureViaCairoPango(){
-	cairo_surface_t* surface;	float a,b,c,d; int Ia,Ib,Ic;
-infon* ItmPtrC=0;
-if (ItmPtr==0) std::cout << "Err1 in cairo Draw\n";
-if (ItmPtr->size==0) std::cout << "Err2 in cairo Draw\n";
-
-int count=0;
-int width=gINT;
-int height=gINT;
-const int channels=4;
-unsigned char* ImgBuff=(unsigned char*)calloc (channels * width * height, sizeof (char));
-surface=cairo_image_surface_create_for_data (ImgBuff,CAIRO_FORMAT_ARGB32, width, height, channels*width);
-cairo_t* cr=cairo_create(surface);
-cairo_status_t status;
-//cairo_set_source_rgba(cr, 1.0, 0.0, 0.0, 1.0); cairo_paint(cr);
-int EOT_old=EOT_d2; ItmPtrC=ItmPtr;
-while(!EOT_old){
-//  std::cout << count<<":[" << printInfon(i).c_str() << "]\n";
-        StartTerm(ItmPtrC,ItmPtr,d2);
-//std::cout<<"ival["<<ItmPtr<<"]\n";
-        int cmd=gINT;
-std::cout<<"\n[Cairo CMD:"<< cmd << "]";
-        switch(cmd){
-            case 0:   Z3 cairo_set_source_rgb (cr,a,b,c);     break;
-            case 1:   Z4 cairo_set_source_rgba(cr,a,b,c,d);  break;
-            case 2:	   setGradientSource(cr);  			    break;
-            
-            case 10:   cairo_paint(cr);						             break;
-            case 11:   cairo_stroke(cr);								     break;
-            case 12:   cairo_fill(cr);								     break;
-            case 13:   cairo_set_line_width(cr, gZto1);				     break;
-            case 14:   Z2  cairo_move_to(cr,a, b);       				 break;
-            case 15:   Z2  cairo_line_to(cr,a, b); 					 break;
- 	        case 16:   Z2  cairo_rel_move_to(cr,a, b); 					 break;
-            case 17:   Z2  cairo_rel_line_to(cr,a, b);	 break;
- 			case 18:   Z4  cairo_rectangle(cr, a,b,c,d);
-            case 19:   I3 Z2 cairo_arc(cr, Ia, Ib, Ic, a, b);	 break;
-            
-            case 30:	gSTR; I2 cairo_select_font_face(cr,textBuff, (cairo_font_slant_t)Ia, (cairo_font_weight_t)Ib); break;
-            case 31:	cairo_set_font_size(cr, gZto1);				 break;
-            case 32:	cairo_show_text(cr, gSTR);					 break;
-        }
-    if (++count==90) break;
-    getNextTerm(ItmPtrC,old);
-    }
-//cairo_surface_write_to_png(surface, "image.png"); 
-    EOT_d2=EOT_old; ItmPtr=ItmPtrC;
-    glTexImage2D(GL_TEXTURE_RECTANGLE_ARB,0,GL_RGBA,width,height,0,GL_BGRA,GL_UNSIGNED_BYTE,ImgBuff);
-	free(ImgBuff);
-    cairo_destroy(cr);
-    cairo_surface_destroy(surface);
-//    std::cout << "\nCount: " << count << "\n======================\n";
-}
 
 void DrawProteusDescription(infon* ProteusDesc){
 if (ProteusDesc==0) std::cout << "Err1\n";
@@ -235,7 +180,7 @@ std::cout<<"\n[CMD:"<< cmd << "]";
             case 11:       glPushMatrix();   break;
             case 12:       glPopMatrix();   break;
             
-            case 90:	TextureViaCairoPango(); break;
+//            case 90:	TextureViaCairoPango(); break;
         }
     if (++count==90) break;
     getNextTerm(i,d1);

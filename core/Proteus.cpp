@@ -57,16 +57,18 @@ infon* copyList(infon* from){
 }
 
 void deepCopy(infon* from, infon* to, infon* args){
+	uint fm=from->flags&mRepMode;
     to->flags=from->flags;
-    uint f=from->flags&tType;
     if(((from->flags>>goSize)&tType)==tList){to->size=copyList(from->size); if(to->size)to->size->top=to;}
     else to->size=from->size;
-    if(f==tList){to->value=copyList(from->value); if(to->value)to->value->top=to;}
+    if((from->flags&tType)==tList){to->value=copyList(from->value); if(to->value)to->value->top=to;}
     else to->value=from->value;
     to->wrkList=copyIdentList(from->wrkList);
-    if((from->flags&mRepMode)==toHomePos) to->spec1=from->spec1;
-    else if((from->flags&mRepMode)==asTag) to->spec1=from->spec1;
-    else if(from->spec1){to->spec1=new infon; deepCopy((args)?args:from->spec1,to->spec1);}else to->spec1=0;
+    if(fm==toHomePos) to->spec1=from->spec1;
+    else if(fm==asTag) to->spec1=from->spec1;
+    else if(from->spec1==0) to->spec1=0;
+	else if(fm<asFunc) to->spec1=from->spec1;
+	else {to->spec1=new infon; deepCopy((args)?args:from->spec1,to->spec1);}
     if(from->spec2){to->spec2=new infon; deepCopy(from->spec2, to->spec2);/*to->spec2->top=to;*/}else to->spec2=0;
 }
 
@@ -104,7 +106,7 @@ void processVirtual(infon* v){
         if((mode=(spec->flags&mRepMode))==asFunc){
             deepCopy(spec,v,args);
             getNextTerm(args,PV)
-        } else if(mode<asFunc){ deepCopy(spec,v,(infon*)1); 
+        } else if(mode<asFunc){ deepCopy(spec,v); // ,(infon*)1); // detect if this is the first item; deepcopy accordingly.
         }else deepCopy(spec, v);
     } 
     v->flags|=tmpFlags; v->flags&=~isVirtual;
@@ -350,7 +352,7 @@ infon* agent::normalize(infon* i, infon* firstID){
                     case toHomePos: DEB("#toHomePos")
                         tmp=CI;
                         for(uint i=(uint)CI->spec1; i--;) {
-                            if(tmp==0 || ((tmp->flags&mRepMode)==asFunc)) {tmp=0;break;}
+                            if(tmp==0 || ((tmp->flags&mRepMode)==asFunc)) {tmp=0;break;} 
                             tmp=getTop(tmp); DEB("#goUpTo:"<<tmp)
                         }
                         if(tmp) {
@@ -363,7 +365,7 @@ infon* agent::normalize(infon* i, infon* firstID){
                     }
                     if(tmp) { DEB("# Now add that to the 'item-list's wrkList. ")
                         insertID(&CI->spec2->wrkList, tmp,0); DEB("#Then norm(item-list (spec2))")
-                        normalize(CI->spec2);
+                        normalize(CI->spec2); // ***** TEMP COMMENT: Make sure idfol has been recorded by here
                         LastTerm(CI->spec2, tmp, n); DEB("Add that last term to CI's wrkList.")
                         if (tmp->flags&isLast) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
                         else {  // migrate alternates from spec2 to CI

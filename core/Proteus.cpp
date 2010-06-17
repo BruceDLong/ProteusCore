@@ -56,22 +56,6 @@ infon* copyList(infon* from){
     return top;
 }
 
-void deepCopy(infon* from, infon* to, infon* args){
-	uint fm=from->flags&mRepMode;
-    to->flags=from->flags;
-    if(((from->flags>>goSize)&tType)==tList){to->size=copyList(from->size); if(to->size)to->size->top=to;}
-    else to->size=from->size;
-    if((from->flags&tType)==tList){to->value=copyList(from->value); if(to->value)to->value->top=to;}
-    else to->value=from->value;
-    to->wrkList=copyIdentList(from->wrkList);
-    if(fm==toHomePos) to->spec1=from->spec1;
-    else if(fm==asTag) to->spec1=from->spec1;
-    else if(from->spec1==0) to->spec1=0;
-	else if(fm<asFunc) to->spec1=from->spec1;
-	else {to->spec1=new infon; deepCopy((args)?args:from->spec1,to->spec1);}
-    if(from->spec2){to->spec2=new infon; deepCopy(from->spec2, to->spec2);/*to->spec2->top=to;*/}else to->spec2=0;
-}
-
 #define recAlts(lval, rval) {if((rval->flags&tType)==tString) alts[dblPtr((char*)rval->value,lval)]++;}
 #define getTop(item) ((item->flags&isTop||item->top==0)? item->top : item->top->top)
 #define fetchLastItem(lval, item) {for(lval=item;(lval->flags&tType)==tList;lval=lval->value->prev);}
@@ -87,6 +71,25 @@ void deepCopy(infon* from, infon* to, infon* args){
         if (LvalFol){\
             copy2=new infon(LvalFol->flags,LvalFol->size,LvalFol->value,0,LvalFol->spec1,LvalFol->spec2,LvalFol->next);\
             copy2->pred=copy; insertID(&copy2->wrkList,Rval,0); insertID(&LvalFol->wrkList,copy2,ProcessAlternatives);}}
+
+void deepCopy(infon* from, infon* to, infon* args){
+	uint fm=from->flags&mRepMode;
+    to->flags=from->flags;
+    if(((from->flags>>goSize)&tType)==tList){to->size=copyList(from->size); if(to->size)to->size->top=to;}
+    else to->size=from->size;
+    if((from->flags&tType)==tList){to->value=copyList(from->value); if(to->value)to->value->top=to;}
+    else to->value=from->value;
+    to->wrkList=copyIdentList(from->wrkList);
+    if(fm==toHomePos) to->spec1=from->spec1;
+    else if(fm==asTag) to->spec1=from->spec1;
+    else if(from->spec1==0) to->spec1=0;
+	else if(fm<asFunc){ //to->spec1=from->spec1;
+		to->spec1=new infon; copyTo(from->spec1,to->spec1);
+		// if(there is a pred with 0-next but >0-prev) copy pred->prev to value, size-=pred->size
+}
+	else {to->spec1=new infon; deepCopy((args)?args:from->spec1,to->spec1);}
+    if(from->spec2){to->spec2=new infon; deepCopy(from->spec2, to->spec2);/*to->spec2->top=to;*/}else to->spec2=0;
+}
 
 char isPosLorEorGtoSize(uint pos, infon* item){
     if((item->flags>>goSize)&fUnknown) return '?';
@@ -106,7 +109,7 @@ void processVirtual(infon* v){
         if((mode=(spec->flags&mRepMode))==asFunc){
             deepCopy(spec,v,args);
             getNextTerm(args,PV)
-        } else if(mode<asFunc){ deepCopy(spec,v); // ,(infon*)1); // detect if this is the first item; deepcopy accordingly.
+        } else if(mode<asFunc){ deepCopy(spec,v); // ,(infon*)1);
         }else deepCopy(spec, v);
     } 
     v->flags|=tmpFlags; v->flags&=~isVirtual;
@@ -246,6 +249,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                     result=DoNext;
                     getFollower(&IDfol, item);
                     if(CIfol && IDfol) {DEB("add ID's follower to CI's follower") addIDs(CIfol, IDfol, asAlt);}
+                    // else here (and elsewhere), if very-top->prev==1, prev=IDfol
                     break;
                 case tUInt+4*tString: DEB("(US)") result=DoNext; break;
                 case tUInt+4*tList:DEB("(UL)") InitList(item); DEB("add value to CI's wrkList ") addIDs(ci,item->value,asAlt); result=DoNext;break;
@@ -364,7 +368,8 @@ infon* agent::normalize(infon* i, infon* firstID){
                     case fromHere:DEB("#fromHere ") tmp=CI; break;
                     }
                     if(tmp) { DEB("# Now add that to the 'item-list's wrkList. ")
-                        insertID(&CI->spec2->wrkList, tmp,0); DEB("#Then norm(item-list (spec2))")
+                        insertID(&CI->spec2->wrkList, tmp,0);
+                        CI->spec2->prev=(infon*)1;  // Set sentinal value so this can tell it is an index
                         normalize(CI->spec2); // ***** TEMP COMMENT: Make sure idfol has been recorded by here
                         LastTerm(CI->spec2, tmp, n); DEB("Add that last term to CI's wrkList.")
                         if (tmp->flags&isLast) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}

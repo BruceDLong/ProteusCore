@@ -57,7 +57,7 @@ infon* copyList(infon* from){
 }
 
 #define recAlts(lval, rval) {if((rval->flags&tType)==tString) alts[dblPtr((char*)rval->value,lval)]++;}
-#define getTop(item) ((item->flags&isTop||item->top==0)? item->top : item->top->top)
+#define getTop(item) (((item->flags&isTop)||item->top==0)? item->top : item->top->top)
 #define fetchLastItem(lval, item) {for(lval=item;(lval->flags&tType)==tList;lval=lval->value->prev);}
 #define fetchFirstItem(lval, item) {for(lval=item;(lval->flags&tType)==tList;lval=lval->value){};}
 #define cpFlags(from, to) {to->flags=(to->flags&0xff000000)+(from->flags&0x00ffffff);}
@@ -71,6 +71,12 @@ infon* copyList(infon* from){
         if (LvalFol){\
             copy2=new infon(LvalFol->flags,LvalFol->size,LvalFol->value,0,LvalFol->spec1,LvalFol->spec2,LvalFol->next);\
             copy2->pred=copy; insertID(&copy2->wrkList,Rval,0); insertID(&LvalFol->wrkList,copy2,ProcessAlternatives);}}
+
+infon* getVeryTop(infon* i){
+	infon* j;
+	while(i!=0) {j=i; i=getTop(i);}
+	return j;
+}
 
 void deepCopy(infon* from, infon* to, infon* args){
 	uint fm=from->flags&mRepMode;
@@ -216,7 +222,7 @@ void resolve(infon* i, infon* theOne){
 
 enum WorkItemResults {DoNothing, BypassDeadEnd, DoNext};
 int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
-    infNode *wrkNode=ci->wrkList, *iter, *IDp; infon *item, *IDfol, *tmp, *parent, *theOne=0; 
+    infNode *wrkNode=ci->wrkList, *iter, *IDp; infon *item, *IDfol, *tmp, *tmp2, *parent, *theOne=0; 
     uint altCount=0, cSize, tempRes, isIndef=0, result=DoNothing, f;
     if(CIfol && !CIfol->pred) CIfol->pred=ci;
     if(wrkNode)do{
@@ -249,7 +255,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                     result=DoNext;
                     getFollower(&IDfol, item);
                     if(CIfol && IDfol) {DEB("add ID's follower to CI's follower") addIDs(CIfol, IDfol, asAlt);}
-                    // else here (and elsewhere), if very-top->prev==1, prev=IDfol
+    /******/                else if(((tmp2=getVeryTop(ci))!=0) && (tmp2->prev==((infon*)1))) tmp2->prev=IDfol; // Set the next seed for index-lists
                     break;
                 case tUInt+4*tString: DEB("(US)") result=DoNext; break;
                 case tUInt+4*tList:DEB("(UL)") InitList(item); DEB("add value to CI's wrkList ") addIDs(ci,item->value,asAlt); result=DoNext;break;

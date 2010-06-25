@@ -1,7 +1,8 @@
 1
 test rep$
 <%
-%{"AARON", "ARON"}*_+[...]  =  "ARONdacks"
+ {%{"AARON", "ARON"}*_+[...]  "dac"}  =  +"ARONdacks"
+
 %>
 
 5

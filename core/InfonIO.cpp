@@ -67,7 +67,7 @@ std::string printInfon(infon* i, infon* CI){
             s+=(*ch=='\0')?' ':ch++[0];
         }s+=' ';
     } else if(f&isNormed || mode==asNone /* || f&notParent */){
-        if (f&(fUnknown<<goSize)) {s+=printPure(i->value, f, i->wSize, CI); s+=",";}
+        if (f&(fUnknown<<goSize)) {s+=printPure(i->value, f, i->wSize, CI); if((f&tType)!=tList) s+=",";}
         else if (f&fUnknown) {s+=printPure(i->size, f>>goSize,i->wSize, CI); s+=";";}
         else{
             if((f&tType)==tUInt) {s+=((f>>goSize)&fInvert)?"/":"*"; s+=printPure(i->size, f>>goSize, 0,CI);}

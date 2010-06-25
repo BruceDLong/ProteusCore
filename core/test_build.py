@@ -25,14 +25,14 @@ def test_engine():
    ('1', 'A two argument function', '[+{_, _} +{\\[+_] \\[+_ +_]  \\[+_]} ]:+{9,4}', '<{*1+9 *1+4 *1+9 }>'), 
    ('2', 'define and use a tag', '+{color=@+{*_+_ *_+_ *_+_} size=@*_+_}', '<{color   size   }>', 'color', '@{_, _, _, }'), 
    ('2', 'Two argument function defined with a tag', '+{func={+{_, _} +{\\[_] \\[_, _]  \\[_]}}  }', '<{func   }>', 'func: +{9,4}', '{*1+9 *1+4 *1+9 }'), 
-   ('1', 'test rep$', '{*_ +{"A"|...} "AARON"} =  +\'AAAARON\' // This is a comment', '<{{"A" "A" }, "AARON" }>'), 
+   ('1', 'test rep$', '{*_ +{"A"|...} "AARON"} =  +\'AAAARON\' // This is a comment', '<{{"A" "A" } "AARON" }>'), 
    ('1', 'test indexing', '%{111, 222, 333, 444}*2+[...]', '<*1+222>'),
    ('1', 'Indexing, unknown index 1', r'%{"AARON", "ARON"}*_+[...]  =  +"ARONdacks" ', '<"ARON">'),
    ('1', 'Indexing, unknown index 2', r'%{"AARON", "ARON"}*_+[...]  =  +"AARONdacks" ', '<"AARON">'),
-#   ('1', 'Indexing, unknown index 3', r'{%{"AARON", "ARON"}*_+[...] , "dac"}  =  "ARONdacks"', '<{"ARON" "dac" }>'),
-   ('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \[?]}]: {"slothe", "Hello", "bob", 65432}|...}', '<{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } },>'),
+ #  ('1', 'Indexing, unknown index 3', r'{%{"AARON", "ARON"}*_+[...]  "dac"}  =  +"ARONdacks" ', '<{"ARON" "dac" }>'),
+   ('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \[?]}]: {"slothe", "Hello", "bob", 65432}|...}', '<{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } }>'),
 # The above test but with a list in the comprehension yeild.     ALSO, run through this whole thing to make sure it isn't doing things too many times.
-   ('1', 'test #1 of repeated indexing (i.e., filtering)', '{%{111, 222, 333, 444}*2+[...]|...}', '<{*1+222, *1+444}>')
+   ('1', 'test #1 of repeated indexing (i.e., filtering)', '{%{111, 222, 333, 444}*2+[...]|...}', '<{*1+222 *1+444 }>')
    ]
  
    for t in testsLst:
@@ -77,17 +77,20 @@ def ChkNorm(t):
        child.expect(r'Parsing\s*\[<%\s*'); child.expect_exact(t[2]); child.expect(r'\s*%>\]\s*');  print "N3";
        child.expect(r'\s*Parsed.\s*'); print  "N4";
        child.expect_exact('Norming World...');  print "N5";
-       child.expect(r'\s*Normed\s*');
-       print "Looking for ",t[3]
-       child.expect_exact(t[3])
-       print "Found: ", child.after;      
-       assert child.after==t[3]
+       child.expect(r'\s*Normed\s*'); print "N6";
+       print "Looking For:",t[3]; print "N7"; #print "Found: ", child.after;      print "N9";
+       try:
+           child.expect_exact(t[3]);  print "N8";
+       except:
+		   print str(child);
+       print "Found: ", child.after;      print "N9";
+       assert child.after==t[3];   print "N10";
 
        child.send ("5\ndone\n!\n")
        pass
    finally:
        assert child.after==t[3]
-   
+       child.expect( pexpect.EOF ) 
    
 def ChkWorld(t):
    print "WORLD TEST:", t[1]
@@ -102,7 +105,7 @@ def ChkWorld(t):
        child.expect(r'\s*Parsed.\s*'); print  "W4";
        child.expect_exact('Norming World...');   child.expect(r'\s*Normed\s*'); print "W5";
       
-       print "Looking for ",t[3]
+       print "Looking For ",t[3]
        child.expect_exact(t[3]);
        assert child.after==t[3]
        print "Found: ", child.after;
@@ -111,7 +114,7 @@ def ChkWorld(t):
        child.expect(r'\s*parsed.\s*<<\['); child.expect(r'.*?'); child.expect(r'\s*\]>>\s*'); print  "W7";
        child.expect_exact('Norming query...');   child.expect(r'\s*Normed\s*'); print "W8";
 
-       print "Looking for ",t[5]
+       print "Looking for:",t[5]
        child.expect_exact(t[5])
        print "Found: ", child.after;
        assert child.after==t[5]

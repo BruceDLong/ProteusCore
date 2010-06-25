@@ -50,7 +50,7 @@ do{
         topInfon=World;
         a.normalize(World);  std::cout << "Normed\n";
     }
-    if (World) std::cout<<"<"<<printInfon(World)<<">\n";
+    if (World) std::cout<<"<"<<printInfon(World)<<"> \n";
     else {std::cout<<"Error: "<<q.buf<<"\n"; exit(0);}
 if (mode==2){
     // Load DispList

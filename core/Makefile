@@ -1,4 +1,4 @@
-UNCOMMENT_TO_DO_GCOVERAGE = -fprofile-arcs -ftest-coverage
+#UNCOMMENT_TO_DO_GCOVERAGE = -fprofile-arcs -ftest-coverage
 
 INCLUDE = -I/usr/X11R6/include/ 
 LIBDIR  = -L/usr/X11R6/lib

@@ -32,7 +32,7 @@ def test_engine():
  #  ('1', 'Indexing, unknown index 3', r'{%{"AARON", "ARON"}*_+[...]  "dac"}  =  +"ARONdacks" ', '<{"ARON" "dac" }>'),
    ('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \[?]}]: {"slothe", "Hello", "bob", 65432}|...}', '<{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } }>'),
 # The above test but with a list in the comprehension yeild.     ALSO, run through this whole thing to make sure it isn't doing things too many times.
-   ('1', 'test #1 of repeated indexing (i.e., filtering)', '{%{111, 222, 333, 444}*2+[...]|...}', '<{*1+222 *1+444 }>')
+   ('1', 'test #1 of repeated indexing (i.e., filtering)', "{%{111, '222', '333', 444, {'hi'}, {'a', 'b', 'c'}}*2+[...]|...}", '<{"222" *1+444 {"a" "b" "c" } }>')
    ]
  
    for t in testsLst:

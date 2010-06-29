@@ -89,7 +89,7 @@ void deepCopy(infon* from, infon* to, infon* args){
     if(fm==toHomePos) to->spec1=from->spec1;
     else if(fm==asTag) to->spec1=from->spec1;
     else if(from->spec1==0) to->spec1=0;
-	else if(fm<asFunc){ //to->spec1=from->spec1;
+	else if(fm<asFunc){ 
 		to->spec1=new infon; copyTo(from->spec1,to->spec1);
 		if(to->prev && to->prev!=to){
 			infon* spec2=to->prev->spec2;
@@ -98,9 +98,9 @@ void deepCopy(infon* from, infon* to, infon* args){
 				to->spec1->size=(infon*)((uint)to->prev->spec1->size - (uint)spec2->size);
 			}
 		}
-}
+	}
 	else {to->spec1=new infon; deepCopy((args)?args:from->spec1,to->spec1);}
-    if(from->spec2){to->spec2=new infon; deepCopy(from->spec2, to->spec2);/*to->spec2->top=to;*/}else to->spec2=0;
+    if(from->spec2){to->spec2=new infon; deepCopy(from->spec2, to->spec2);}else to->spec2=0;
 }
 
 char isPosLorEorGtoSize(uint pos, infon* item){
@@ -121,8 +121,10 @@ void processVirtual(infon* v){
         if((mode=(spec->flags&mRepMode))==asFunc){
             deepCopy(spec,v,args);
             getNextTerm(args,PV)
-        } else if(mode<asFunc){deepCopy(spec,v);
-        }else deepCopy(spec, v);
+        } else if(mode<asFunc){
+			deepCopy(spec,v);
+			if(posArea=='?' && v->spec1) posArea= 'N'; // N='Not greater' Is this logic correct?
+        } else deepCopy(spec, v);
     } 
     v->flags|=tmpFlags; v->flags&=~isVirtual;
     if(EOT_PV) if(posArea=='?'){posArea='E'; /* TODO:Set Parent's Size to v->size */ }
@@ -239,7 +241,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
     uint altCount=0, cSize, tempRes, isIndef=0, result=DoNothing, f;
     if(CIfol && !CIfol->pred) CIfol->pred=ci;
     if(wrkNode)do{
-        wrkNode=wrkNode->next; item=wrkNode->item; DEB(" Doing Work Order:" << item);
+        wrkNode=wrkNode->next; item=wrkNode->item; IDfol=(infon*)1; DEB(" Doing Work Order:" << item);
         switch (wrkNode->idFlags&WorkType){
         case ProcessAlternatives:
             if(wrkNode->idFlags&isRawFlag){
@@ -268,7 +270,6 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                     result=DoNext;
                     getFollower(&IDfol, item);
                     if(CIfol && IDfol) {DEB("add ID's follower to CI's follower") addIDs(CIfol, IDfol, asAlt);}
-                    else if(((tmp2=getVeryTop(ci))!=0) && (tmp2->prev==((infon*)1))) tmp2->prev=(IDfol==0)?(infon*)2:IDfol; // Set the next seed for index-lists
                     break;
                 case tUInt+4*tString: DEB("(US)") result=DoNext; break;
                 case tUInt+4*tList:DEB("(UL)") InitList(item); DEB("add value to CI's wrkList ") addIDs(ci,item->value,asAlt); result=DoNext;break;
@@ -297,11 +298,12 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                     if(ci->flags&fUnknown){ci->flags&=~fUnknown;}
                     else if (memcmp(ci->value, item->value, cSize)!=0) {SetBypassDeadEnd(); break;}
                     ci->value=item->value;
+                    getFollower(&IDfol, item);
                     if(CIfol){
-                        getFollower(&IDfol, item);
                         if(cSize==(uint)item->size){
                             if(IDfol) {DEB("Add id's follower to CI's follower") addIDs(CIfol, IDfol, asAlt);}
-                            else {if(ci->next && (ci->next->flags&isTentative)) {SetBypassDeadEnd();}else result=DoNext; break;}
+                            else {if(ci->next && (ci->next->flags&isTentative)) {SetBypassDeadEnd();}
+								else result=DoNext; break;}
                         }else if(cSize < (uint)item->size){
                             tmp=new infon(item->flags,(infon*)((uint)item->size-cSize),(infon*)((uint)item->value+cSize),0,0,item->next);
                             addIDs(CIfol, tmp, asAlt); DEB("add copy of ID to CI's follower");
@@ -317,7 +319,6 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                         copyTo(item, ci); item->value->top=ci;
                         getFollower(&IDfol, item);
                         if(CIfol && IDfol) {DEB("add ID's Follower to CI's Follower") addIDs(CIfol, IDfol, asAlt);}
-                        else if(((tmp2=getVeryTop(ci))!=0) && (tmp2->prev==((infon*)1))) tmp2->prev=(IDfol==0)?(infon*)2:IDfol; // Set the next seed for index-lists
                     }
                     result=DoNext;
                     break;
@@ -329,6 +330,8 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             }
             break;
         }
+        if(!CIfol && ((tmp2=getVeryTop(ci))!=0) && (tmp2->prev==((infon*)1))) 
+			tmp2->prev=(IDfol==0)?(infon*)2:IDfol; // Set the next seed for index-lists
     }while (wrkNode!=ci->wrkList); else result=DoNext;
     if(altCount==1){ 
             for (f=1, tmp=getTop(ci); tmp!=0; tmp=getTop(tmp)) // check ancestors for alts

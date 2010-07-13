@@ -105,11 +105,13 @@ void deepCopy(infon* from, infon* to, infon* args){
 
 char isPosLorEorGtoSize(uint pos, infon* item){
     if((item->flags>>goSize)&fUnknown) return '?';
-    if(((item->flags>>goSize)&tType)==tUInt){
-        if(pos<(uint)item->size) return 'L';
-        if(pos==(uint)item->size) return 'E'; else return 'G';
-    }else {} // TODO: handle size is expression
-    return '?';
+    if(((item->flags>>goSize)&tType)!=tUInt) throw "Size as non integer is probably not useful, so not allowed.";
+    if(item->flags&(fConcat<<goSize)){
+		return '?'; // 'X';
+	}
+    if(pos<(uint)item->size) return 'L';  // Less
+    if(pos==(uint)item->size) return 'E';  // Equal
+    else return 'G';  // Greater
 }
 
 void processVirtual(infon* v){
@@ -264,15 +266,15 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                 ci->size=item->size;if (!(item->flags&(fUnknown<<goSize))) ci->flags&=~(fUnknown<<goSize);
             } else isIndef=0;
             switch((ci->flags&tType)+4*(item->flags&tType)){
-                case tUInt+4*tUInt: DEB("(UU) #Copy item to ci")
+                case tUInt+4*tUInt: DEB("(UU)")
                     if(ci->flags&fUnknown) {copyTo(item, ci);}
                     else if(ci->value!=item->value) {SetBypassDeadEnd(); break;}
                     result=DoNext;
                     getFollower(&IDfol, item);
-                    if(CIfol && IDfol) {DEB("add ID's follower to CI's follower") addIDs(CIfol, IDfol, asAlt);}
+                    if(CIfol && IDfol) addIDs(CIfol, IDfol, asAlt);
                     break;
                 case tUInt+4*tString: DEB("(US)") result=DoNext; break;
-                case tUInt+4*tList:DEB("(UL)") InitList(item); DEB("add value to CI's wrkList ") addIDs(ci,item->value,asAlt); result=DoNext;break;
+                case tUInt+4*tList:DEB("(UL)") InitList(item); addIDs(ci,item->value,asAlt); result=DoNext;break;
                 case tString+4*tUInt:DEB("(SU)") result=DoNext;break;
                 case tString+4*tString: DEB("(SS)")
                     if (!isIndef && ci->flags&sizeIndef){
@@ -282,11 +284,11 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                         if(CIfol){
                             IDfol=ci->next;
                             if(ci->size==item->size){
-                                if(IDfol) {DEB("Add id's follower to CI's follower") addIDs(CIfol, IDfol, asAlt);}
+                                if(IDfol) {addIDs(CIfol, IDfol, asAlt);}
                                 else {SetBypassDeadEnd(); break;}
                             }else if(cSize < (uint)item->size){
                                 tmp=new infon(item->flags,(infon*)((uint)item->size-cSize),(infon*)((uint)item->value+cSize),0,0,item->next);
-                                addIDs(CIfol, tmp, asAlt); DEB("add copy of ID to CI's follower");
+                                addIDs(CIfol, tmp, asAlt);
                             }
 						}
                     result=DoNext; 
@@ -301,12 +303,12 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                     getFollower(&IDfol, item);
                     if(CIfol){
                         if(cSize==(uint)item->size){
-                            if(IDfol) {DEB("Add id's follower to CI's follower") addIDs(CIfol, IDfol, asAlt);}
+                            if(IDfol) {addIDs(CIfol, IDfol, asAlt);}
                             else {if(ci->next && (ci->next->flags&isTentative)) {SetBypassDeadEnd();}
 								else result=DoNext; break;}
                         }else if(cSize < (uint)item->size){
                             tmp=new infon(item->flags,(infon*)((uint)item->size-cSize),(infon*)((uint)item->value+cSize),0,0,item->next);
-                            addIDs(CIfol, tmp, asAlt); DEB("add copy of ID to CI's follower");
+                            addIDs(CIfol, tmp, asAlt);
                         }
                     }
                     result=DoNext;
@@ -318,14 +320,14 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                     else{
                         copyTo(item, ci); item->value->top=ci;
                         getFollower(&IDfol, item);
-                        if(CIfol && IDfol) {DEB("add ID's Follower to CI's Follower") addIDs(CIfol, IDfol, asAlt);}
+                        if(CIfol && IDfol) {addIDs(CIfol, IDfol, asAlt);}
                     }
                     result=DoNext;
                     break;
                 case tList+4*tString:
                 case tList+4*tUInt: DEB("(L?)")
-                    if(ci->value){DEB("#add id to CI's value wrkList.") addIDs(ci->value, item, asAlt);}
-                    else{DEB("#Copy id to CI, reset top.") copyTo(item, ci);}
+                    if(ci->value){addIDs(ci->value, item, asAlt);}
+                    else{copyTo(item, ci);}
                     result=DoNext;
             }
             break;
@@ -356,25 +358,25 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
             if(CI->flags&toExec) override=1;
             if(CI->flags&asDesc) if(override) override=0; else break;
             if(CIRepMode==asFunc){
-                if(CI->flags&mMode){  DEB("#Evaluating Inverse function... ");
+                if(CI->flags&mMode){//Evaluating Inverse function...
                     LastTerm(CI, tmp, n);
                     insertID(&tmp->wrkList, CI->spec1,0);
-                }else { DEB("#Evaluating Function... 1)norm(func-body-list (CI->spec2)) ")
-                    normalize(CI->spec2,CI->spec1); DEB("6) fetchLastTerm(CI->spec2, tmp)(results) ");
-                    LastTerm(CI->spec2, tmp, n); DEB("7) add "<<tmp<< " to CI's wrkList. ");
-                    insertID(&CI->wrkList, tmp,0); DEB("8) copy flags from tmp to CI. ")
+                }else { //Evaluating Function... 
+                    normalize(CI->spec2,CI->spec1); // norm(func-body-list (CI->spec2))
+                    LastTerm(CI->spec2, tmp, n); 
+                    insertID(&CI->wrkList, tmp,0);
                     cpFlags(tmp,CI); CI->flags|=fUnknown;
                 }
-            } else if(CIRepMode<asFunc){ DEB("#Processing Index...")
+            } else if(CIRepMode<asFunc){ // Processing Index...
                if(CI->flags&mMode){insertID(&CI->wrkList, CI->spec2,0); fetchFirstItem(CIfol,getTop(CI->spec2))}
                else {
                     switch (CIRepMode){
-                    case toGiven: DEB("#toGiven ")
+                    case toGiven:
                         if (CI->spec1>(infon*)1) {normalize(CI->spec1,0,1); StartTerm(CI->spec1, tmp, n);}
                         else tmp=getIdentFromPrev(CI->prev);
                         break;
-                    case toWorldCtxt:DEB("#toWorldCtxt ") tmp=&context; break;
-                    case toHomePos: DEB("#toHomePos")
+                    case toWorldCtxt:tmp=&context; break;
+                    case toHomePos:
                         tmp=CI;
                         for(uint i=(uint)CI->spec1; i--;) {
                             if(tmp==0 || ((tmp->flags&mRepMode)==asFunc)) {tmp=0;break;} 
@@ -386,15 +388,15 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                             if(!(tmp->flags&isFirst)) tmp=0;
                         } else std::cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';
                         break;
-                    case fromHere:DEB("#fromHere ") tmp=CI; break;
+                    case fromHere:tmp=CI; break;
                     }
-                    if(tmp) { DEB("# Now add that to the 'item-list's wrkList. ")
+                    if(tmp) { // Now add that to the 'item-list's wrkList...
                         insertID(&CI->spec2->wrkList, tmp,0);
                         CI->spec2->prev=(infon*)1;  // Set sentinal value so this can tell it is an index
                         normalize(CI->spec2);
-                        LastTerm(CI->spec2, tmp, n); DEB("Add that last term to CI's wrkList.")
+                        LastTerm(CI->spec2, tmp, n); // Add that last term to CI's wrkList.
                         if (tmp->flags&isLast) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
-                        else {  // migrate alternates from spec2 to CI
+                        else {  // migrate alternates from spec2 to CI...
                             infNode *wrkNode=CI->spec2->wrkList; infon* item=0;
                             if(wrkNode)do{
                                 wrkNode=wrkNode->next; item=wrkNode->item; 
@@ -429,11 +431,11 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
         switch (doWorkList(CI, CIfol)) {
         case DoNext:
             if((CI->flags&(fConcat+tType))==(fConcat+tUInt))
-                {normalize(CI->value); compute(CI); if(CIfol){DEB("    Pn:"<<CIfol); pushCIsFollower;}}
+                {normalize(CI->value); compute(CI); if(CIfol){pushCIsFollower;}} // push CI's follower
             else if(!((CI->flags&asDesc)&&!override)&&(CI->value&&((CI->flags&tType)==tList)||(CI->flags&fConcat))){
-                DEB("    Pv:" <<CI->value);
+                // push CI's value
                 ItmQ.push(Qitem(CI->value,cn.firstID,(cn.IDStatus==1&!(CI->flags&fConcat))?2:cn.IDStatus,cn.level+1));
-            }else if (CIfol){DEB("    Pn:"<<CIfol); pushCIsFollower;}
+            }else if (CIfol){pushCIsFollower;} // push CI's follower
             break;
         case BypassDeadEnd: {nxtLvl=getFollower(&CIfol,getTop(CI))+1; pushCIsFollower;} break;
         case DoNothing: break;

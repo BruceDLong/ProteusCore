@@ -104,7 +104,7 @@ void deepCopy(infon* from, infon* to, infon* args){
 }
 
 char isPosLorEorGtoSize(uint pos, infon* item){
-    if((item->flags>>goSize)&fUnknown) return '?';
+    if(item->flags&(fUnknown<<goSize)) return '?';
     if(((item->flags>>goSize)&tType)!=tUInt) throw "Size as non integer is probably not useful, so not allowed.";
     if(item->flags&(fConcat<<goSize)){
 		return '?'; // 'X';
@@ -267,11 +267,15 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             } else isIndef=0;
             switch((ci->flags&tType)+4*(item->flags&tType)){
                 case tUInt+4*tUInt: DEB("(UU)")
-                    if(ci->flags&fUnknown) {copyTo(item, ci);}
-                    else if(ci->value!=item->value) {SetBypassDeadEnd(); break;}
+                    if(!(ci->flags&fUnknown) && ci->value!=item->value) {SetBypassDeadEnd(); break;}
+                    if(!(ci->flags&(fUnknown<<goSize)) && ci->size!=item->size) {SetBypassDeadEnd(); break;}
+                    copyTo(item, ci);
                     result=DoNext;
                     getFollower(&IDfol, item);
-                    if(CIfol && IDfol) addIDs(CIfol, IDfol, asAlt);
+                    if(CIfol)
+						if(IDfol) addIDs(CIfol, IDfol, asAlt);
+						else if(ci->next && (ci->next->flags&isTentative))
+							SetBypassDeadEnd();
                     break;
                 case tUInt+4*tString: DEB("(US)") result=DoNext; break;
                 case tUInt+4*tList:DEB("(UL)") InitList(item); addIDs(ci,item->value,asAlt); result=DoNext;break;
@@ -282,14 +286,8 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                         if (memcmp(ci->value, item->value, (uint)item->size)!=0)  {result=BypassDeadEnd;break;}
                         ci->size=item->size;
                         if(CIfol){
-                            IDfol=ci->next;
-                            if(ci->size==item->size){
-                                if(IDfol) {addIDs(CIfol, IDfol, asAlt);}
-                                else {SetBypassDeadEnd(); break;}
-                            }else if(cSize < (uint)item->size){
-                                tmp=new infon(item->flags,(infon*)((uint)item->size-cSize),(infon*)((uint)item->value+cSize),0,0,item->next);
-                                addIDs(CIfol, tmp, asAlt);
-                            }
+                            IDfol=item->next;
+                            if(IDfol) addIDs(CIfol, IDfol, asAlt); else {SetBypassDeadEnd(); break;}
 						}
                     result=DoNext; 
                     break;
@@ -300,29 +298,29 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                     if(ci->flags&fUnknown){ci->flags&=~fUnknown;}
                     else if (memcmp(ci->value, item->value, cSize)!=0) {SetBypassDeadEnd(); break;}
                     ci->value=item->value;
+                    result=DoNext;
                     getFollower(&IDfol, item);
                     if(CIfol){
                         if(cSize==(uint)item->size){
                             if(IDfol) {addIDs(CIfol, IDfol, asAlt);}
-                            else {if(ci->next && (ci->next->flags&isTentative)) {SetBypassDeadEnd();}
-								else result=DoNext; break;}
+                            else if(ci->next && (ci->next->flags&isTentative)) 
+								SetBypassDeadEnd();
                         }else if(cSize < (uint)item->size){
                             tmp=new infon(item->flags,(infon*)((uint)item->size-cSize),(infon*)((uint)item->value+cSize),0,0,item->next);
                             addIDs(CIfol, tmp, asAlt);
                         }
                     }
-                    result=DoNext;
                     break;
                 case tString+4*tList:DEB("(SL)") InitList(item);  result=DoNext;
                     break;
                 case tList+4*tList: InitList(item);
+					result=DoNext;
                     if(ci->value) {addIDs(ci->value, item->value, asAlt);}
                     else{
                         copyTo(item, ci); item->value->top=ci;
                         getFollower(&IDfol, item);
                         if(CIfol && IDfol) {addIDs(CIfol, IDfol, asAlt);}
                     }
-                    result=DoNext;
                     break;
                 case tList+4*tString:
                 case tList+4*tUInt: DEB("(L?)")
@@ -335,7 +333,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
         if(!CIfol && ((tmp2=getVeryTop(ci))!=0) && (tmp2->prev==((infon*)1))) 
 			tmp2->prev=(IDfol==0)?(infon*)2:IDfol; // Set the next seed for index-lists
     }while (wrkNode!=ci->wrkList); else result=DoNext;
-    if(altCount==1){ 
+    if(altCount>=1){ 
             for (f=1, tmp=getTop(ci); tmp!=0; tmp=getTop(tmp)) // check ancestors for alts
                if (tmp->flags&hasAlts) {f=0; break;}
             if(f) resolve(ci, theOne);

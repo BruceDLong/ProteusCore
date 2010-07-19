@@ -246,6 +246,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
         wrkNode=wrkNode->next; item=wrkNode->item; IDfol=(infon*)1; DEB(" Doing Work Order:" << item);
         switch (wrkNode->idFlags&WorkType){
         case ProcessAlternatives:
+			if (altCount>=1) break; // don't keep looking after found
             if(wrkNode->idFlags&isRawFlag){
               tmp=new infon(ci->flags,ci->size,ci->value,0,ci->spec1,ci->spec2,ci->next);
               tmp->prev=ci->prev; tmp->top=ci->top;
@@ -333,7 +334,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
         if(!CIfol && ((tmp2=getVeryTop(ci))!=0) && (tmp2->prev==((infon*)1))) 
 			tmp2->prev=(IDfol==0)?(infon*)2:IDfol; // Set the next seed for index-lists
     }while (wrkNode!=ci->wrkList); else result=DoNext;
-    if(altCount>=1){ 
+    if(altCount==1){ 
             for (f=1, tmp=getTop(ci); tmp!=0; tmp=getTop(tmp)) // check ancestors for alts
                if (tmp->flags&hasAlts) {f=0; break;}
             if(f) resolve(ci, theOne);
@@ -363,7 +364,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     normalize(CI->spec2,CI->spec1); // norm(func-body-list (CI->spec2))
                     LastTerm(CI->spec2, tmp, n); 
                     insertID(&CI->wrkList, tmp,0);
-                    cpFlags(tmp,CI); CI->flags|=fUnknown;
+                    cpFlags(tmp,CI); CI->flags|=fUnknown+(fUnknown<<goSize);
                 }
             } else if(CIRepMode<asFunc){ // Processing Index...
                if(CI->flags&mMode){insertID(&CI->wrkList, CI->spec2,0); fetchFirstItem(CIfol,getTop(CI->spec2))}

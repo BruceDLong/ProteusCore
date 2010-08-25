@@ -89,7 +89,7 @@ void deepCopy(infon* from, infon* to, infon* args){
     if(fm==toHomePos) to->spec1=from->spec1;
     else if(fm==asTag) to->spec1=from->spec1;
     else if(from->spec1==0) to->spec1=0;
-	else if(fm<asFunc){ 
+	else if(fm<asFunc){
 		to->spec1=new infon; copyTo(from->spec1,to->spec1);
 		if(to->prev && to->prev!=to){
 			infon* spec2=to->prev->spec2;
@@ -127,12 +127,12 @@ void processVirtual(infon* v){
 			deepCopy(spec,v);
 			if(posArea=='?' && v->spec1) posArea= 'N'; // N='Not greater' Is this logic correct?
         } else deepCopy(spec, v);
-    } 
+    }
     v->flags|=tmpFlags; v->flags&=~isVirtual;
     if(EOT_PV) if(posArea=='?'){posArea='E'; /* TODO:Set Parent's Size to v->size */ }
         else if(posArea!='E') throw "List was too short";
     if (posArea=='E') {v->flags|=isBottom+isLast; return;}
-    infon* tmp= new infon;  tmp->size=(infon*)(vSize+1); tmp->spec2=spec; 
+    infon* tmp= new infon;  tmp->size=(infon*)(vSize+1); tmp->spec2=spec;
     tmp->flags|=fUnknown+isBottom+isVirtual+asNone+(tUInt<<goSize);
     tmp->top=tmp->next=v->next; v->next=tmp; tmp->prev=v; tmp->next->prev=tmp; tmp->spec1=args;
     v->flags&=~isBottom;
@@ -153,10 +153,10 @@ int getFollower(infon** lval, infon* i){
     infon* size; int levels=0;
     gnsTop: if(i->next==0) {*lval=0; return levels;}
     if((i->next->flags&isVirtual) && i->spec2 && i->spec2->prev==(infon*)2){
-		i->flags|=(isLast+isBottom); 
+		i->flags|=(isLast+isBottom);
 		size=i->next->size-1;
 		i->next->next->prev=i; i->next=i->next->next;// TODO when working on mem mngr: i->next is dangling
-		i=getTop(i); i->size=size; i->flags&= ~fLoop; ++levels; 
+		i=getTop(i); i->size=size; i->flags&= ~fLoop; ++levels;
 		goto gnsTop;
 	}
     if(i->flags&isLast){
@@ -218,6 +218,24 @@ int compute(infon* i){
     return 1;
 }
 
+int isValueLessThan(uint val, infon* i){  // 1=yes, 0=no, -1=can't tell
+	if(i->flags&fUnknown) return 1;
+	if(((i->flags&(tUInt)+fConcat))==tUInt) return((uint)i->value<val);
+	int result=isValueLessThan(val, i->value);
+	return (result>=0) ? result : isValueLessThan(val, i->size);
+}
+
+int canValueEqualInfon(uint val, infon* i){  // 1=yes, 0=no, -1=can't tell
+	if(i->flags&fUnknown) return 1;
+	if(((i->flags&(tUInt)+fConcat))==tUInt) return((uint)i->value==val);
+	int result=canValueEqualInfon(val, i->value);
+	return (result>=0) ? result : isValueLessThan(val, i->size);
+}
+
+int doesACohereWithB(infon* A, infon* B){  // 1=yes, 0=no, -1=can't tell
+
+}
+
 void resolve(infon* i, infon* theOne){
     infon* parent, *tmp, *prev=0; uint count;
     while(i && theOne){
@@ -239,7 +257,7 @@ void resolve(infon* i, infon* theOne){
 
 enum WorkItemResults {DoNothing, BypassDeadEnd, DoNext};
 int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
-    infNode *wrkNode=ci->wrkList, *iter, *IDp; infon *item, *IDfol, *tmp, *tmp2, *parent, *theOne=0; 
+    infNode *wrkNode=ci->wrkList, *iter, *IDp; infon *item, *IDfol, *tmp, *tmp2, *parent, *theOne=0;
     uint altCount=0, cSize, tempRes, isIndef=0, result=DoNothing, f;
     if(CIfol && !CIfol->pred) CIfol->pred=ci;
     if(wrkNode)do{
@@ -263,7 +281,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
         case MergeIdent:
             if((item->flags&mRepMode)!=asNone) normalize(item);
             if((ci->flags&tType)==0) {
-                ci->flags|=((item->flags&tType)+(tUInt<<goSize)+sizeIndef); isIndef=1; 
+                ci->flags|=((item->flags&tType)+(tUInt<<goSize)+sizeIndef); isIndef=1;
                 ci->size=item->size;if (!(item->flags&(fUnknown<<goSize))) ci->flags&=~(fUnknown<<goSize);
             } else isIndef=0;
             switch((ci->flags&tType)+4*(item->flags&tType)){
@@ -290,7 +308,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                             IDfol=item->next;
                             if(IDfol) addIDs(CIfol, IDfol, asAlt); else {SetBypassDeadEnd(); break;}
 						}
-                    result=DoNext; 
+                    result=DoNext;
                     break;
                     } else isIndef=0;
                     if(((ci->flags>>goSize)&(fUnknown+tType))!=tUInt) throw"unknown size for string not supported here.";
@@ -304,7 +322,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                     if(CIfol){
                         if(cSize==(uint)item->size){
                             if(IDfol) {addIDs(CIfol, IDfol, asAlt);}
-                            else if(ci->next && (ci->next->flags&isTentative)) 
+                            else if(ci->next && (ci->next->flags&isTentative))
 								SetBypassDeadEnd();
                         }else if(cSize < (uint)item->size){
                             tmp=new infon(item->flags,(infon*)((uint)item->size-cSize),(infon*)((uint)item->value+cSize),0,0,item->next);
@@ -331,10 +349,10 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             }
             break;
         }
-        if(!CIfol && ((tmp2=getVeryTop(ci))!=0) && (tmp2->prev==((infon*)1))) 
+        if(!CIfol && ((tmp2=getVeryTop(ci))!=0) && (tmp2->prev==((infon*)1)))
 			tmp2->prev=(IDfol==0)?(infon*)2:IDfol; // Set the next seed for index-lists
     }while (wrkNode!=ci->wrkList); else result=DoNext;
-    if(altCount==1){ 
+    if(altCount==1){
             for (f=1, tmp=getTop(ci); tmp!=0; tmp=getTop(tmp)) // check ancestors for alts
                if (tmp->flags&hasAlts) {f=0; break;}
             if(f) resolve(ci, theOne);
@@ -360,9 +378,9 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                 if(CI->flags&mMode){//Evaluating Inverse function...
                     LastTerm(CI, tmp, n);
                     insertID(&tmp->wrkList, CI->spec1,0);
-                }else { //Evaluating Function... 
+                }else { //Evaluating Function...
                     normalize(CI->spec2,CI->spec1); // norm(func-body-list (CI->spec2))
-                    LastTerm(CI->spec2, tmp, n); 
+                    LastTerm(CI->spec2, tmp, n);
                     insertID(&CI->wrkList, tmp,0);
                     cpFlags(tmp,CI); CI->flags|=fUnknown+(fUnknown<<goSize);
                 }
@@ -378,7 +396,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     case toHomePos:
                         tmp=CI;
                         for(uint i=(uint)CI->spec1; i--;) {
-                            if(tmp==0 || ((tmp->flags&mRepMode)==asFunc)) {tmp=0;break;} 
+                            if(tmp==0 || ((tmp->flags&mRepMode)==asFunc)) {tmp=0;break;}
                             tmp=getTop(tmp); DEB("#goUpTo:"<<tmp)
                         }
                         if(tmp) {
@@ -398,14 +416,14 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                         else {  // migrate alternates from spec2 to CI...
                             infNode *wrkNode=CI->spec2->wrkList; infon* item=0;
                             if(wrkNode)do{
-                                wrkNode=wrkNode->next; item=wrkNode->item; 
+                                wrkNode=wrkNode->next; item=wrkNode->item;
                                 if((wrkNode->idFlags&(ProcessAlternatives+NoMatch))==ProcessAlternatives){
                                     if(wrkNode->item->size==0){} // TODO: handle the null alternative
                                     else {insertID(&CI->wrkList,wrkNode->slot,ProcessAlternatives+isRawFlag);}
                                 }
-                            }while (wrkNode!=CI->spec2->wrkList); 
+                            }while (wrkNode!=CI->spec2->wrkList);
                             CI->flags|=asNone;
-                        }  
+                        }
                         CI->flags|=fUnknown;
                     }
                 }

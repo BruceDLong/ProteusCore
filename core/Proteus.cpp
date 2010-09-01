@@ -103,12 +103,20 @@ void deepCopy(infon* from, infon* to, infon* args){
     if(from->spec2){to->spec2=new infon; deepCopy(from->spec2, to->spec2);}else to->spec2=0;
 }
 
+const simpleUnknownUint=((fUnknown+tUInt)<<goSize) + fUnknown+tUInt+asNone;
 char isPosLorEorGtoSize(uint pos, infon* item){
     if(item->flags&(fUnknown<<goSize)) return '?';
     if(((item->flags>>goSize)&tType)!=tUInt) throw "Size as non integer is probably not useful, so not allowed.";
     if(item->flags&(fConcat<<goSize)){
-		return '?'; // 'X';
-	}
+   	infon* size=item->size;
+    	//if ((size->flags&mRepMode)!=asNone) normalize(size);
+    	if ((size->flags&simpleUnknownUint)==simpleUnknownUint)
+        	if(size->next!=size && size->next==size->prev && ((size->next->flags&simpleUnknownUint)==simpleUnknownUint)){
+            		if(pos<(uint)size->value) return 'L';
+                        if(pos>(uint)size->size) return 'G';
+            		return '?';  // later, if pos is in between two ranges, return 'X'
+                }
+    }
     if(pos<(uint)item->size) return 'L';  // Less
     if(pos==(uint)item->size) return 'E';  // Equal
     else return 'G';  // Greater
@@ -216,24 +224,6 @@ int compute(infon* i){
     i->value=(infon*)vAcc; i->size=(infon*)sAcc;
     i->flags=(i->flags&0xFF00FF00)+(tUInt<<goSize)+tUInt;
     return 1;
-}
-
-int isValueLessThan(uint val, infon* i){  // 1=yes, 0=no, -1=can't tell
-	if(i->flags&fUnknown) return 1;
-	if(((i->flags&(tUInt)+fConcat))==tUInt) return((uint)i->value<val);
-	int result=isValueLessThan(val, i->value);
-	return (result>=0) ? result : isValueLessThan(val, i->size);
-}
-
-int canValueEqualInfon(uint val, infon* i){  // 1=yes, 0=no, -1=can't tell
-	if(i->flags&fUnknown) return 1;
-	if(((i->flags&(tUInt)+fConcat))==tUInt) return((uint)i->value==val);
-	int result=canValueEqualInfon(val, i->value);
-	return (result>=0) ? result : isValueLessThan(val, i->size);
-}
-
-int doesACohereWithB(infon* A, infon* B){  // 1=yes, 0=no, -1=can't tell
-
 }
 
 void resolve(infon* i, infon* theOne){

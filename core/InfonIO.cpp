@@ -71,7 +71,7 @@ std::string printInfon(infon* i, infon* CI){
         else if (f&fUnknown) {s+=printPure(i->size, f>>goSize,i->wSize, CI); s+=";";}
         else{
             if((f&tType)==tUInt) {s+=((f>>goSize)&fInvert)?"/":"*"; s+=printPure(i->size, f>>goSize, 0,CI);}
-             if((f&tType)==tUInt) s+=(f&fInvert)?"-":"+"; 
+             if((f&tType)==tUInt) s+=(f&fInvert)?"-":"+";
             s+=printPure(i->value,f, (uint)i->size, CI);
         }
     } else {
@@ -144,7 +144,7 @@ uint QParser::ReadPureInfon(char &tok, infon** i, uint* flags, infon** s2){
         RmvWSC(); int foundRet=0; int foundBar=0;
         for(tok=peek(); tok != rchr && stay; tok=peek()){
             if(tok=='<') {foundRet=1; getToken(tok); j=ReadInfon();}
-            else if(tok=='.'){stream.get();chk('.');chk('.'); 
+            else if(tok=='.'){stream.get();chk('.');chk('.');
                 j=new infon(fUnknown+isVirtual+asNone+(tUInt<<goSize),(infon*)(size+1));stay=0;}
             else j=ReadInfon();
             if(++size==1){
@@ -210,7 +210,7 @@ infon* QParser::ReadInfon(int noIDs){
         size=ReadPureInfon(tok, &i1, &f1, &s2);
         if(op=='+'){
             i2=i1; i1=(infon*)size; f2=f1; f1=tUInt; // use identity term '1'
-            if (size==0 && f2==(fUnknown+tUInt)) f1=fUnknown+tUInt;
+            if (size==0 && (f2==(fUnknown+tUInt) || f2==(fUnknown+tString))) f1=fUnknown+tUInt;
         }else if(op=='*'){
             if((f1&tType)==tString){throw("Terms cannot be strings");}
             if((f1&tType)==tList){throw("Terms cannot be lists");}
@@ -223,7 +223,7 @@ infon* QParser::ReadInfon(int noIDs){
             Peek(tok);
             if(tok==','||tok==')'||tok=='}'||tok==']'||((f1&tType)!=tUInt)){
                 i2=i1;f2=f1; f1=tUInt; i1=(infon*)size;
-                if (size==0 && f2==(fUnknown+tUInt)) f1=fUnknown+tUInt;
+                if (size==0 && (f2==(fUnknown+tUInt) || f2==(fUnknown+tString))) f1=fUnknown+tUInt;
                 else if(((f2&tType)==tList) && i2 && ((i2->prev)->flags)&isVirtual) {f1|=fUnknown;}
                 if(tok==',')getToken(tok);
             }else if(tok==';'){i2=0; f2=fUnknown; getToken(tok);}

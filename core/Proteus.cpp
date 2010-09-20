@@ -19,10 +19,6 @@
 #include "Proteus.h"
 #include "remiss.h"
 
-#define INSEC(nAme) {nAme++; if(nAme>1)std::cout<<"\n-->" #nAme "="<<nAme; }
-#define OUTSEC(nAme) {nAme--; if(nAme>0)std::cout<<"\n<--" #nAme "="<<nAme; }
-int NormFunc, Norm1, NormMergeID, NormIDX, NormNext, WrkList1, Loop1, LoopOUTER;
-
 infon* World;
 std::map<stng,infon*> tag2Ptr;
 std::map<infon*,stng> ptr2Tag;
@@ -267,17 +263,13 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
               wrkNode->idFlags^=isRawFlag;
             }
             wrkNode->idFlags|=NodeDoneFlag;
-         INSEC(WrkList1);
             tempRes=doWorkList(item, CIfol,1); if(result<tempRes) result=tempRes;
-         OUTSEC(WrkList1);
             if (tempRes==BypassDeadEnd) {wrkNode->idFlags|=NoMatch; break;}
         case (ProcessAlternatives+NodeDoneFlag):
             altCount++;  theOne=item;
             break;
         case MergeIdent:
-        INSEC(NormMergeID);
             if((item->flags&mRepMode)!=asNone) normalize(item);
-        OUTSEC(NormMergeID);
             if((ci->flags&tType)==0) {
                 ci->flags|=((item->flags&tType)+(tUInt<<goSize)+sizeIndef); isIndef=1;
                 ci->size=item->size;if (!(item->flags&(fUnknown<<goSize))) ci->flags&=~(fUnknown<<goSize);
@@ -368,13 +360,10 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
     if((i->flags&tType)==tList) InitList(i);
     infQ ItmQ; ItmQ.push(Qitem(i,firstID,(firstID)?1:0,0));
     DEB("\n<h2>Normalizing: " << i << "</h2>\n<table border=\"3\" cellpadding=\"5\" width=\"100%\"><tr><td>\n");
-    INSEC(LoopOUTER);
     while (!ItmQ.empty()){
         Qitem cn=ItmQ.front(); ItmQ.pop(); CI=cn.item;
         int CIRepMode=CI->flags&mRepMode; override=0;
         DEB("<br>CI:"<<cnt++<<" "<<CI<<":<b>"<<printInfon(i,CI)<<"</b><br>\n")
-        std::cout <<"\n"<< CI;
-        INSEC(Loop1);
         while (CIRepMode!=asNone){
             if(CI->flags&toExec) override=1;
             if(CI->flags&asDesc) if(override) override=0; else break;
@@ -383,10 +372,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     LastTerm(CI, tmp, n);
                     insertID(&tmp->wrkList, CI->spec1,0);
                 }else { //Evaluating Function...
-                INSEC(NormFunc);
-                std::cout<<"X2, ";
                     normalize(CI->spec2,CI->spec1); // norm(func-body-list (CI->spec2))
-                OUTSEC(NormFunc);
                     LastTerm(CI->spec2, tmp, n);
                     insertID(&CI->wrkList, tmp,0);
                     cpFlags(tmp,CI); CI->flags|=fUnknown+(fUnknown<<goSize);
@@ -396,10 +382,8 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                else {
                     switch (CIRepMode){
                     case toGiven:
-                    INSEC(Norm1);
-                        if (CI->spec1>(infon*)1) {std::cout<<"X1,"; normalize(CI->spec1,0,1); StartTerm(CI->spec1, tmp, n);}
+                        if (CI->spec1>(infon*)1) {normalize(CI->spec1,0,1); StartTerm(CI->spec1, tmp, n);}
                         else tmp=getIdentFromPrev(CI->prev);
-                    OUTSEC(Norm1);
                         break;
                     case toWorldCtxt:tmp=&context; break;
                     case toHomePos:
@@ -419,9 +403,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     if(tmp) { // Now add that to the 'item-list's wrkList...
                         insertID(&CI->spec2->wrkList, tmp,0);
                         CI->spec2->prev=(infon*)1;  // Set sentinal value so this can tell it is an index
-                        INSEC(NormIDX); std::cout<<"X3,";
                         normalize(CI->spec2);
-                        OUTSEC(NormIDX);
                         LastTerm(CI->spec2, tmp, n); // Add that last term to CI's wrkList.
                         if (tmp->flags&isLast) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
                         else {  // migrate alternates from spec2 to CI...
@@ -450,7 +432,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                 }
             }
             CIRepMode=CI->flags&mRepMode;
-        }OUTSEC(Loop1);
+        }
         if (doShortNorm) return 0;
         if(CIRepMode==asNone&&cn.IDStatus==2){cn.IDStatus=0; insertID(&CI->wrkList,cn.firstID,0);}
         if(CI!=i && (CI->flags&tType)==tList){InitList(CI);}
@@ -459,7 +441,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
         switch (doWorkList(CI, CIfol)) {
         case DoNext:
             if((CI->flags&(fConcat+tType))==(fConcat+tUInt))
-                {INSEC(NormNext);std::cout<<"X4,";  normalize(CI->value); OUTSEC(NormNext); compute(CI); if(CIfol){pushCIsFollower;}} // push CI's follower
+                {normalize(CI->value); compute(CI); if(CIfol){pushCIsFollower;}} // push CI's follower
             else if(!((CI->flags&asDesc)&&!override)&&(CI->value&&((CI->flags&tType)==tList)||(CI->flags&fConcat))){
                 // push CI's value
                 ItmQ.push(Qitem(CI->value,cn.firstID,(cn.IDStatus==1&!(CI->flags&fConcat))?2:cn.IDStatus,cn.level+1));
@@ -468,7 +450,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
         case BypassDeadEnd: {nxtLvl=getFollower(&CIfol,getTop(CI))+1; pushCIsFollower;} break;
         case DoNothing: break;
         }
-    }OUTSEC(LoopOUTER);
+    }
     DEB("<br>RESULT:<b>"<<printInfon(i)<<"</b><br>"); DEB("</td></tr></table>\n");
     return (i->flags&isNormed)?i:0;
 }

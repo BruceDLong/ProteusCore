@@ -1,0 +1,39 @@
+README_TO_TEST_BUILDS:
+======================
+
+A smallish system called NOSE is being used to execute tests written in python.
+
+After you install NOSE you can execute the tests by running:
+
+$nosetests test_build.py
+
+Even easier: The script M does a 'make' then executes the tests.
+
+Look at test_build.py to see how to add your own tests.
+
+INSTALLING NOSE:
+===================
+
+1. INSTALL pexpect 
+
+The file pexpect-2.3.tar.gz is in the project/core folder, but you can also read how to fetch and install it here: http://www.noah.org/wiki/Pexpect#Download_and_Installation
+
+$tar zxvf pexpect-2.3.tar.gz
+$cd pexpect-2.3/
+$sudo python ./setup.py install
+
+
+
+2. INSTALL nose
+
+Run:
+
+$easy_install nose
+
+You can get more information about nose at: http://somethingaboutorange.com/mrl/projects/nose/0.11.2/
+
+3. TEST the build
+
+$cd proteus/core
+$./M
+

@@ -269,7 +269,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             altCount++;  theOne=item;
             break;
         case MergeIdent:
-            if((item->flags&mRepMode)!=asNone) normalize(item);
+            if((item->flags&mRepMode)!=asNone && (item->flags&mRepMode)!=fromHere) normalize(item);
             if((ci->flags&tType)==0) {
                 ci->flags|=((item->flags&tType)+(tUInt<<goSize)+sizeIndef); isIndef=1;
                 ci->size=item->size;if (!(item->flags&(fUnknown<<goSize))) ci->flags&=~(fUnknown<<goSize);
@@ -279,6 +279,8 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                     if(!(ci->flags&fUnknown) && ci->value!=item->value) {SetBypassDeadEnd(); break;}
                     if(!(ci->flags&(fUnknown<<goSize)) && ci->size!=item->size) {SetBypassDeadEnd(); break;}
                     copyTo(item, ci);
+                  case tUInt+4*tUnknown:
+                  case tString+4*tUnknown:
                     result=DoNext;
                     getFollower(&IDfol, item);
                     if(CIfol)
@@ -334,6 +336,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                         if(CIfol && IDfol) {addIDs(CIfol, IDfol, asAlt);}
                     }
                     break;
+                case tList+4*tUnknown:
                 case tList+4*tString:
                 case tList+4*tUInt: DEB("(L?)")
                     if(ci->value){addIDs(ci->value, item, asAlt);}
@@ -398,7 +401,9 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                             if(!(tmp->flags&isFirst)) tmp=0;
                         } else std::cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';
                         break;
-                    case fromHere:tmp=CI; break;
+                    case fromHere:
+                    	tmp=CI;
+                    	break;
                     }
                     if(tmp) { // Now add that to the 'item-list's wrkList...
                         insertID(&CI->spec2->wrkList, tmp,0);

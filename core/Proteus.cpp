@@ -206,9 +206,10 @@ infon* getIdentFromPrev(infon* prev){
     return prev->wrkList->item->wrkList->item;
 }
 
-int compute(infon* i){
+int agent::compute(infon* i){
     infon* p=i->value; uint vAcc, sAcc, sSign, vSign, count=0;
     if(p) do{
+        normalize(p); // TODO: appending inline rather than here would allow streaming.
         if((p->flags&((tType<<goSize)+tType))==((tUInt<<goSize)+tUInt)){
             if (p->flags&(fUnknown<<goSize)) return 0;
             if (p->flags&fConcat) compute(p->size);
@@ -279,14 +280,15 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                     if(!(ci->flags&fUnknown) && ci->value!=item->value) {SetBypassDeadEnd(); break;}
                     if(!(ci->flags&(fUnknown<<goSize)) && ci->size!=item->size) {SetBypassDeadEnd(); break;}
                     copyTo(item, ci);
+                  case tUnknown+4*tUnknown:
                   case tUInt+4*tUnknown:
                   case tString+4*tUnknown:
                     result=DoNext;
                     getFollower(&IDfol, item);
                     if(CIfol)
-						if(IDfol) addIDs(CIfol, IDfol, asAlt);
-						else if(ci->next && (ci->next->flags&isTentative))
-							SetBypassDeadEnd();
+		        if(IDfol) addIDs(CIfol, IDfol, asAlt);
+			else if(ci->next && (ci->next->flags&isTentative))
+			SetBypassDeadEnd();
                     break;
                 case tUInt+4*tString: DEB("(US)") result=DoNext; break;
                 case tUInt+4*tList:DEB("(UL)") InitList(item); addIDs(ci,item->value,asAlt); result=DoNext;break;
@@ -446,7 +448,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
         switch (doWorkList(CI, CIfol)) {
         case DoNext:
             if((CI->flags&(fConcat+tType))==(fConcat+tUInt))
-                {normalize(CI->value); compute(CI); if(CIfol){pushCIsFollower;}} // push CI's follower
+                {compute(CI); if(CIfol){pushCIsFollower;}} // push CI's follower
             else if(!((CI->flags&asDesc)&&!override)&&(CI->value&&((CI->flags&tType)==tList)||(CI->flags&fConcat))){
                 // push CI's value
                 ItmQ.push(Qitem(CI->value,cn.firstID,(cn.IDStatus==1&!(CI->flags&fConcat))?2:cn.IDStatus,cn.level+1));

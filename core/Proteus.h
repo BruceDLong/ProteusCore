@@ -70,6 +70,7 @@ extern std::map<stng,infon*> tag2Ptr;
 extern std::map<infon*,stng> ptr2Tag;
 struct agent {
     agent(){world=World;};
+    int compute(infon* i);
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
     infon* normalize(infon* i, infon* firstID=0, bool doShortNorm=false);
     infon *world, context;

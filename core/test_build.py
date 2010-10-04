@@ -22,6 +22,7 @@ def test_engine():
    ('1', 'Try a bigger function', r'[+_ ({555, 444, \\[_]},)]: +700000000', r'<({*1+555 *1+444 *1+700000000 } )>'),
    ('1', 'test rep$', '*4 +{*3+$|...} = +"catHatDogPig"', '<{"cat" "Hat" "Dog" "Pig" }>'),
    ('1', 'Addition', '+(+3+7)', '<*2+10>'),
+   ('1', 'Addition with references', '{4, 6, (\[_] \[_, _])}', '<{*1+4 *1+6 *2+10 }>'),
    ('1', 'A two argument function', '[+{_, _} +{\\[+_] \\[+_ +_]  \\[+_]} ]:+{9,4}', '<{*1+9 *1+4 *1+9 }>'),
    ('2', 'define and use a tag', '+{color=@+{*_+_ *_+_ *_+_} size=@*_+_}', '<{color   size   }>', 'color', '@{_, _, _, }'),
    ('2', 'Two argument function defined with a tag', '+{func={+{_, _} +{\\[_] \\[_, _]  \\[_]}}  }', '<{func   }>', 'func: +{9,4}', '{*1+9 *1+4 *1+9 }'),
@@ -32,7 +33,10 @@ def test_engine():
  #  ('1', 'Indexing, unknown index 3', r'{%{"AARON", "ARON"}*_+[...]  "dac"}  =  +"ARONdacks" ', '<{"ARON" "dac" }>'),
    ('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \[?]}]: {"slothe", "Hello", "bob", 65432}|...}', '<{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } }>'),
 # The above test but with a list in the comprehension yeild.     ALSO, run through this whole thing to make sure it isn't doing things too many times.
-   ('1', 'test 1 of repeated indexing (i.e., filtering)', "{%{111, '222', '333', 444, {'hi'}, {'a', 'b', 'c'}}*2+[...]|...}", '<{"222" *1+444 {"a" "b" "c" } }>')
+   ('1', 'test 1 of repeated indexing (i.e., filtering)', "{%{111, '222', '333', 444, {'hi'}, {'a', 'b', 'c'}}*2+[...]|...}", '<{"222" *1+444 {"a" "b" "c" } }>'),
+
+    ('1', "fromHere indexing string 1", "{111, '222' ^{_, _, $} 444, '555', 666, {'hi'}}", '<{*1+111 "222" "555" *1+444 "555" *1+666 {"hi" } }>'),
+    ('1', "fromHere indexing string 2", "{111, 222, ^*3+{...} 444, 555, 666, {'hi'}}", '<{*1+111 *1+222 *1+555 *1+444 *1+555 *1+666 {"hi" } }> ')
    ]
 
    for t in testsLst:

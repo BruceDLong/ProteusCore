@@ -364,7 +364,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
     int cnt=0; int nxtLvl, override, EOT_n; infon *CI, *CIfol, *tmp; infNode* IDp;
     if((i->flags&tType)==tList) InitList(i);
     infQ ItmQ; ItmQ.push(Qitem(i,firstID,(firstID)?1:0,0));
-    DEB("\n<h2>Normalizing: " << i << "</h2>\n<table border=\"3\" cellpadding=\"5\" width=\"100%\"><tr><td>\n");
+//    DEB("\n<h2>Normalizing: " << i << "</h2>\n<table border=\"3\" cellpadding=\"5\" width=\"100%\"><tr><td>\n");
     while (!ItmQ.empty()){
         Qitem cn=ItmQ.front(); ItmQ.pop(); CI=cn.item;
         int CIRepMode=CI->flags&mRepMode; override=0;
@@ -408,6 +408,12 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     	break;
                     }
                     if(tmp) { // Now add that to the 'item-list's wrkList...
+// TODO: This 'if' section is a hack to make simple backward references work. Fix for full back-parsing.
+                        if ((CI->spec2->flags)&(fInvert<<goSize)){
+                            for(int i=CI->spec2->size; i>0; --i){tmp=tmp->prev;}
+                            {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
+                            CI->flags|=fUnknown;
+                        } else {
                         insertID(&CI->spec2->wrkList, tmp,0);
                         CI->spec2->prev=(infon*)1;  // Set sentinal value so this can tell it is an index
                         normalize(CI->spec2);
@@ -425,6 +431,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                             CI->flags|=asNone;
                         }
                         CI->flags|=fUnknown;
+                        }
                     }
                 }
             } else if(CIRepMode==asTag){

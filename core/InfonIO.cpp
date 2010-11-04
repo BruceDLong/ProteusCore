@@ -60,7 +60,8 @@ std::string printInfon(infon* i, infon* CI){
     if(i==CI)s+="<font color=green>";
     uint f=i->flags;
     uint mode=f&mRepMode;
-    if(f&asDesc) s+="@";
+//    if(f&toExec) s+="@";
+    if(f&asDesc) s+="#";
     if (mode==asTag) {
        char* ch=((stng*)(i->spec1))->S;
         for(int x=((stng*)(i->spec1))->L;x;--x){
@@ -180,8 +181,8 @@ uint QParser::ReadPureInfon(char &tok, infon** i, uint* flags, infon** s2){
 infon* QParser::ReadInfon(int noIDs){
     char tok, op=0; uint p=0, size=0; infon*i1=0,*i2=0,*s1=0,*s2=0; uint flags=0,f1=0,f2=0;
     getToken(tok); //DEB(tok)
-    if(tok=='#'){flags|=toExec; getToken(tok);}
-    if(tok=='@'){flags|=asDesc; getToken(tok);}
+    if(tok=='@'){flags|=toExec; getToken(tok);}
+    if(tok=='#'){flags|=asDesc; getToken(tok);}
     if(tok=='?'){f1=f2=fUnknown; flags=asNone;}
     else if(iscsym(tok)&&!isdigit(tok)&&(tok!='_')){
         stream.putback(tok); flags|=asTag; stng tag; stng* tags=new stng;

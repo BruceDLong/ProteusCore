@@ -81,15 +81,15 @@ infon* getVeryTop(infon* i){
 void deepCopy(infon* from, infon* to, infon* args){
 	uint fm=from->flags&mRepMode;
     to->flags=from->flags;
-    if(((from->flags>>goSize)&tType)==tList){to->size=copyList(from->size); if(to->size)to->size->top=to;}
+    if(((from->flags>>goSize)&tType)==tList || ((from->flags>>goSize)&fConcat)){to->size=copyList(from->size); if(to->size)to->size->top=to;}
     else to->size=from->size;
-    if((from->flags&tType)==tList){to->value=copyList(from->value); if(to->value)to->value->top=to;}
+    if((from->flags&tType)==tList || ((from->flags)&fConcat)){to->value=copyList(from->value); if(to->value)to->value->top=to;}
     else to->value=from->value;
     to->wrkList=copyIdentList(from->wrkList);
     if(fm==toHomePos) to->spec1=from->spec1;
     else if(fm==asTag) to->spec1=from->spec1;
-    else if(from->spec1==0) to->spec1=0;
-	else if(fm<asFunc){
+    else if((uint)(from->spec1)<=20) to->spec1=from->spec1;
+    else if(fm<asFunc){
 		to->spec1=new infon; copyTo(from->spec1,to->spec1);
 		if(to->prev && to->prev!=to){
 			infon* spec2=to->prev->spec2;
@@ -218,7 +218,7 @@ int agent::compute(infon* i){
             if ((p->flags&tType)==tList) compute(p->value);
             if ((p->flags&tType)!=tUInt) return 0;
             if (++count==1){sAcc=(uint)p->size; vAcc=(uint)p->value;}
-            else {sAcc+=(uint)p->size; vAcc*=(uint)p->size; vAcc+=(uint)p->value;}
+            else {sAcc*=(uint)p->size; vAcc+=(uint)p->value;}
             } else return 0;
         p=p->next;
     } while (p!=i->value);
@@ -417,6 +417,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                         insertID(&CI->spec2->wrkList, tmp,0);
                         CI->spec2->prev=(infon*)1;  // Set sentinal value so this can tell it is an index
                         normalize(CI->spec2);
+                        tmp->flags|=toExec;
                         LastTerm(CI->spec2, tmp, n); // Add that last term to CI's wrkList.
                         if (tmp->flags&isLast) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
                         else {  // migrate alternates from spec2 to CI...

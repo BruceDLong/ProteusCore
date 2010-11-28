@@ -1,0 +1,62 @@
+2
+Testing autoname functions
+<%
+{
+	white={255,255,255}
+	black={0,0,0}
+	gray={150,150,150}
+	red={255,0,0}
+	green={0,255,0}
+	blue={0,0,255}
+	purple={255,0,255}
+
+	drawComplex=+0
+	rectangle=+1
+	curvedRect=+2
+	circle=+3
+	line=+4
+	text=+10
+
+
++{show_clock= {
+  +{_, _, _} // hours, minutes, seconds
+	{ {1,2,3} drawComplex
+		{
+		{blue circle 200,210,80}
+		{purple line 200,210,  cos::*1+(*1-30 \\\\\\[_,_,_] *1+90)  sin::*1+(*1-30  \\\\\\[_,_,_] *1+90 ) }  // second hand
+		{red line 200,210,  cos::*1+(*1-30*4+90)  sin::*1+(*1-30*4+90)}   // minute hand
+		{green line 200,210,  cos::*1+(*1-6*48+90)  sin::*1+(*1-6*48+90 ) }  // hour hand
+		}
+	}
+     }
+   }
+}
+%>
+
+<% {
+// Rectangle 1
+	{ blue curvedRect 50,50,200,80, 10}
+	{ green text 60,60, "Hello World!"}
+
+show_clock:: +{9,4, 3}
+//	{blue circle 200,210,80}
+//	{purple line 200,210,  cos::*1+(*1-30 time::*1+0 +90)  sin::*1+(*1-30 time::*1+0 +90 ) }  // hour hand
+//	{red line 200,210,  cos::*1+(*1-30*4+90)  sin::*1+(*1-30*4+90)}   // minute hand
+//	{green line 200,210,  cos::*1+(*1-6*48+90)  sin::*1+(*1-6*48+90 ) }  // hour hand
+}
+%>
+
+/*
+<%
+{
+  +{_, _, _} // hours, minutes, seconds
+	{ {1,2,3} +0
+		{'hi'}
+		{{255,0,0} 3, 200,210,  cos::*1+(*1-30 \\\\\[_,_,_] *1+90)  sin::*1+(*1-30  \\\\\[_,_,_] *1+90 ) }  // second hand
+		}
+}
+%>
+*/
+5
+done
+!

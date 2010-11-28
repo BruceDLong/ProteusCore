@@ -18,28 +18,29 @@ def test_engine():
    ('0', 'parse a list', '+{123, 456, "Hello there!", {789, 321}}', '<{*1+123 *1+456 "Hello there!" {*1+789 *1+321 } }>'),
    ('0', 'parse nested empty lists', '+{{},{}}', '<{{} {} }>'),
    ('1', 'test list/string', '+{*3+$ *4+$}=+"CatDogs"', '<{"Cat" "Dogs" }>'),
-   ('1', 'test anon functions', '[456,789,]:+123', '<*1+789>'),
-   ('1', 'Try a bigger function', r'[+_ ({555, 444, \\[_]},)]: +700000000', r'<({*1+555 *1+444 *1+700000000 } )>'),
+   ('1', 'test anon functions', '[456,789,]::+123', '<*1+789>'),
+   ('1', 'Try a bigger function', r'[+_ ({555, 444, \\\[_]},)]:: +700000000', r'<({*1+555 *1+444 *1+700000000 } )>'),
    ('1', 'test rep$', '*4 +{*3+$|...} = +"catHatDogPig"', '<{"cat" "Hat" "Dog" "Pig" }>'),
    ('1', 'Addition', '+(+3+7)', '<*1+10>'),
-   ('1', 'Addition with references', '{4, 6, (\[_] \[_, _])}', '<{*1+4 *1+6 *1+10 }>'),
-   ('1', 'A two argument function', '[+{_, _} +{\\[+_] \\[+_ +_]  \\[+_]} ]:+{9,4}', '<{*1+9 *1+4 *1+9 }>'),
+   ('1', 'Addition with references', r'{4, 6, (\\[_] \\[_, _])}', '<{*1+4 *1+6 *1+10 }>'),
+   ('1', 'A two argument function', r'[+{_, _} +{\\[+_] \\[+_ +_]  \\[+_]} ]::+{9,4}', '<{*1+9 *1+4 *1+9 }>'),
    ('2', 'define and use a tag', '+{color=#+{*_+_ *_+_ *_+_} size=#*_+_}', '<{color   size   }>', 'color', '#{_, _, _, }'),
-   ('2', 'Two argument function defined with a tag', '+{func={+{_, _} +{\\[_] \\[_, _]  \\[_]}}  }', '<{func   }>', 'func: +{9,4}', '{*1+9 *1+4 *1+9 }'),
+   ('2', 'Two argument function defined with a tag', r'+{func={+{_, _} +{\\[_] \\[_, _]  \\[_]}}  }', '<{func   }>', 'func:: +{9,4}', '{*1+9 *1+4 *1+9 }'),
    ('1', 'test rep$', '{*_ +{"A"|...} "AARON"} =  +\'AAAARON\' // This is a comment', '<{{"A" "A" } "AARON" }>'),
    ('1', 'test indexing', '%{111, 222, 333, 444}*2+[...]', '<*1+222>'),
    ('1', 'Indexing, unknown index 1', r'%{"AARON", "ARON"}*_+[...]  =  +"ARONdacks" ', '<"ARON">'),
    ('1', 'Indexing, unknown index 2', r'%{"AARON", "ARON"}*_+[...]  =  +"AARONdacks" ', '<"AARON">'),
  #  ('1', 'Indexing, unknown index 3', r'{%{"AARON", "ARON"}*_+[...]  "dac"}  =  +"ARONdacks" ', '<{"ARON" "dac" }>'),
-   ('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \[?]}]: {"slothe", "Hello", "bob", 65432}|...}', '<{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } }>'),
+   ('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \\[?]}]:: {"slothe", "Hello", "bob", 65432}|...}', '<{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } }>'),
 # The above test but with a list in the comprehension yeild.     ALSO, run through this whole thing to make sure it isn't doing things too many times.
    ('1', 'test 1 of repeated indexing (i.e., filtering)', "{%{111, '222', '333', 444, {'hi'}, {'a', 'b', 'c'}}*2+[...]|...}", '<{"222" *1+444 {"a" "b" "c" } }>'),
 
     ('1', "fromHere indexing string 1", "{111, '222' ^{_, _, $} 444, '555', 666, {'hi'}}", '<{*1+111 "222" "555" *1+444 "555" *1+666 {"hi" } }>'),
     ('1', "fromHere indexing string 2", "{111, 222, ^*3+{...} 444, 555, 666, {'hi'}}", '<{*1+111 *1+222 *1+555 *1+444 *1+555 *1+666 {"hi" } }> '),
     ('1', "fromHere indexing negative", "{111, 222, ^/3+{...} 444, 555, 666, 777}", '<{*1+111 *1+222 *1+777 *1+444 *1+555 *1+666 *1+777 }> '),
-    
-    ('1', "Adding prep for 'reduce'", "{[ ? {\[?] (\[?] *1+22)}]: {*1+5 *2+7 *3+9 *4+13}|...}", '<{ | {*1+5 *1+27 } {*2+7 *2+29 } {*3+9 *3+31 } {*4+13 *4+35 } }>')
+
+    ('1', "Adding prep for 'reduce'", r'{[ ? {\\[?] (\\[?] *1+22)}]:: {*1+5 *2+7 *3+9 *4+13}|...}', '<{ | {*1+5 *1+27 } {*2+7 *2+29 } {*3+9 *3+31 } {*4+13 *4+35 } }>'),
+    ('1', "Adding test multi-input functions", r'[+{_, _}  ? +{\\^[+_ +_ $]   \\[+_] \\^[+_ +_]  \[$] \\^[+_ +_ $]  } ]::+{9,4}:"Hello"', '<{"Hello" *1+9 *1+4 "Hello" "Hello" }>')
    ]
 
    for t in testsLst:
@@ -77,27 +78,27 @@ def ChkNorm(t):
    print "NORM TEST:", t[1],'   ',t[2]
    try:
        child=pexpect.spawn('./proteus',timeout=4);
-       print "N1"
+       #print "N1"
        child.send('1\n')
        child.sendline(t[1])
-       child.send('<%\n');  child.send(t[2]); child.send('\n%>\n'); print "N2";
-       child.expect(r'Parsing\s*\[<%\s*'); child.expect_exact(t[2]); child.expect(r'\s*%>\]\s*');  print "N3";
-       child.expect(r'\s*Parsed.\s*'); print  "N4";
-       child.expect_exact('Norming World...');  print "N5";
-       child.expect(r'\s*Normed\s*'); print "N6";
-       print "Looking For:",t[3]; print "N7"; #print "Found: ", child.after;      print "N9";
+       child.send('<%\n');  child.send(t[2]); child.send('\n%>\n'); #print "N2";
+       child.expect(r'Parsing\s*\[<%\s*'); child.expect_exact(t[2]); child.expect(r'\s*%>\]\s*');  #print "N3";
+       child.expect(r'\s*Parsed.\s*'); #print  "N4";
+       child.expect_exact('Norming World...');  #print "N5";
+       child.expect(r'\s*Normed\s*'); #print "N6";
+       print "Looking For:",t[3]; #print "N7"; #print "Found: ", child.after;      print "N9";
        try:
-           child.expect_exact(t[3]);  print "N8";
+           child.expect_exact(t[3]); # print "N8";
        except:
 		   print str(child);
-       print "Found: ", child.after;      print "N9";
-       assert child.after==t[3];   print "N10";
+       print "Found: ", child.after;     # print "N9";
+       assert child.after==t[3];   #print "N10";
 
        child.send ("5\ndone\n!\n")
        pass
    finally:
        assert child.after==t[3]
-       child.expect( pexpect.EOF )
+     #  child.expect( pexpect.EOF )
 
 def ChkWorld(t):
    print "WORLD TEST:", t[1]

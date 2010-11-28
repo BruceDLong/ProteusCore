@@ -62,6 +62,7 @@ DEB(printHTMLHeader(query))
     if(queryinf) std::cout<<"<<["<<printInfon(queryinf).c_str()<<"]>>\n";
     else {std::cout<<"Error: "<<D.buf<<"\n"; exit(0);}
     agent a; std::cout<<"Norming query...";
+    topInfon=queryinf;
     a.normalize(queryinf); std::cout<<"Normed\n";
     std::cout<<printInfon(queryinf);
 DEB(printHTMLFooter(D.buf))

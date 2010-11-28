@@ -131,7 +131,7 @@ char QParser::peek(){
 #define getbuf(c) {ChkNEOF; for(p=0;(c);buf[p++]=stream.get()){if (p>=bufmax) throw "String Overflow";} buf[p]=0;}
 #define readTag(tag)  {getbuf(iscsym(peek())); if(!p){throw "Tag expected";} else {lstngCpy(tag,buf,p);}}
 #define Peek(tok) {RmvWSC(); tok=stream.peek();}
-#define check(ch) {getToken(tok);  if(tok != ch) throw "Unexpected character";}
+#define check(ch) {getToken(tok);  if(tok != ch) {std::cout<<"Expected "<<ch<<"\n"; throw "Unexpected character";}}
 #define chk(ch) {if(stream.peek()==ch) stream.get(); else throw "Expected something else";}
 
 char errMsg[100];
@@ -186,7 +186,7 @@ infon* QParser::ReadInfon(int noIDs){
     if(tok=='?'){f1=f2=fUnknown; flags=asNone;}
     else if(iscsym(tok)&&!isdigit(tok)&&(tok!='_')){
         stream.putback(tok); flags|=asTag; stng tag; stng* tags=new stng;
-        while(iscsym(tok)&&!isdigit(tok)){
+        if(iscsym(tok)&&!isdigit(tok)){  // change 'if' to 'while' when tag-chains are ready.
             readTag(tag);
             stngApnd((*tags),tag.S,tag.L+1);
             Peek(tok);
@@ -196,11 +196,10 @@ infon* QParser::ReadInfon(int noIDs){
     else if(tok=='\\'||tok=='%'||tok=='&'||tok=='^'){
         flags|=fUnknown;
         if (tok=='%'){flags|=toGiven; s1=ReadInfon();} // % search
-        else if (tok=='\\') {
-            flags|=toHomePos; s1=0;
-            while(tok=='\\') {s1=(infon*)((uint)s1+1); ChkNEOF; tok=stream.get();}stream.putback(tok);
+        else if (tok=='\\' || tok=='^') {
+            for(s1=0; tok=='\\';  tok=stream.get()) {s1=(infon*)((uint)s1+1); ChkNEOF;}
+             if (tok=='^') flags|=fromHere; else {flags|=toHomePos; stream.putback(tok);}
         } else if (tok=='&') flags|=toWorldCtxt;
-        else if (tok=='^') flags|=fromHere;
         s2=ReadInfon(3);
     }else{
         flags|=asNone;
@@ -243,7 +242,20 @@ infon* QParser::ReadInfon(int noIDs){
     if (i->value&& ((f2&tType)==tList)||(f2&fConcat))i->value->top=i;
     if(!(noIDs&2)){
         if (tok=='!'){modeBit=mMode; getToken(tok); if(peek()!=':') throw"Expected ':'";}
-        if (tok==':'){getToken(tok); i=new infon(asFunc+modeBit,0,0,0,ReadInfon(1),i);}
+        if (tok==':'){
+            getToken(tok);
+            infon *p=0, *q=0, *head=0;
+            for(tok=peek(); tok==':'; tok=peek()){
+                getToken(tok);
+                p=ReadInfon(3);
+                if (!head) head=p;
+                else q->next=p;
+                q=p;
+                RmvWSC();
+            }
+            i=new infon(asFunc+modeBit,0,0,0,head,i);
+            head->top=i; head->flags|=(isFirst+isTop);
+        }
     }
     return i;
 }

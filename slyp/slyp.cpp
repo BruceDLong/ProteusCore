@@ -14,13 +14,13 @@
     You should have received a copy of the GNU General Public License
     along with the SlypStreem Engine.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define OUT(msg) {std::cout<< msg;}
-#define DEB(msg) {std::cout<< msg << "\n";}
+//#define OUT(msg) {std::cout<< msg;}
+//#define DEB(msg) {std::cout<< msg << "\n";}
 
 // GraphicsEngine: OPENGL, GLES, DIRECTX
 // CPU: Ix86, ARMEH, ARMEL
 // OpSys: LINUX, MAC, WINDOWS
-#define GraphicsEngine_GLES
+#define GraphicsEngine_NONE
 #define CPU_ARMEL
 #define OpSys_LINUX
 
@@ -28,6 +28,9 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_thread.h>
 #include "fastevents.h"
+#include <SDL/SDL_image.h>
+#include <SDL/SDL_ttf.h>
+#include <SDL/SDL_draw.h>
 
 #ifdef GraphicsEngine_OPENGL
 #include "SDLUtils.h"
@@ -49,6 +52,16 @@ int height, width, bpp;
 static int doneYet = 0;
 static int num = 0;
 
+SDL_Surface *screen = NULL;
+TTF_Font *font = NULL;
+SDL_Color textColor = { 128, 128, 128 };
+SDL_Color hiColor = { 255, 255, 255 };
+SDL_Color loColor = { 0, 0, 0 };
+
+int bg_red = 0;
+int bg_green = 0;
+int bg_blue = 0;
+
 //////////////////// Slyp Code
 #include <strstream>
 #include <iostream>
@@ -65,15 +78,19 @@ infon* ProteusDesc=0;
 #define Z3 {a=gZto1; b=gZto1; c=gZto1;}
 #define Z4 {a=gZto1; b=gZto1; c=gZto1; d=gZto1;}
 #define Z5 {a=gZto1; b=gZto1; c=gZto1; d=gZto1; e=gZto1;}
-#define Z6 {a=gZto1; b=gZto1; c=gZto1; d=gZto1; f=gZto1; e=gZto1;}
+#define Z6 {a=gZto1; b=gZto1; c=gZto1; d=gZto1; e=gZto1; f=gZto1;}
 #define I2 {Ia=gINT; Ib=gINT;}
 #define I3 {Ia=gINT; Ib=gINT; Ic=gINT;}
+#define I4 {Ia=gINT; Ib=gINT; Ic=gINT;  Id=gINT;}
+#define I5 {Ia=gINT; Ib=gINT; Ic=gINT;  Id=gINT; Ie=gINT;}
+#define I6 {Ia=gINT; Ib=gINT; Ic=gINT;  Id=gINT; Ie=gINT; If=gINT;}
+#define I7 {Ia=gINT; Ib=gINT; Ic=gINT;  Id=gINT; Ie=gINT; If=gINT; Ih=gINT;}
+#define I8 {Ia=gINT; Ib=gINT; Ic=gINT;  Id=gINT; Ie=gINT; If=gINT; Ih=gINT; II=gINT;}
+#define S1 {Sa=gSTR;}
 
 infon* ItmPtr=0;
 int EOT_d2,j,sign;
 char textBuff[1024];
-const int numOfSlots=5;  // GL slots for textures
-GLuint texSlots[numOfSlots];
 
 int gInt(){
     getInt(ItmPtr,j,sign);  // std::cout << j << ", ";
@@ -88,6 +105,12 @@ char* gStr() {
 	}
 	getNextTerm(ItmPtr,d2);
 	return textBuff;
+}
+
+infon* gList(){
+    infon* ret=ItmPtr;
+    getNextTerm(ItmPtr,d2);
+    return ret;
 }
 
 const int maxVerts = 1024*20;
@@ -109,6 +132,123 @@ int getArrayz(float* array){ // gets an array of 0..1 values (Zero)
     return size;
 }
 
+static inline uint32_t map_value(uint32_t val, uint32_t max, uint32_t tomax)
+{
+	return((uint32_t)((double)val * (double)tomax/(double)max));
+}
+
+static inline SDL_Surface *load_image(const char *filename)
+{
+	SDL_Surface* loadedImage = NULL;
+	SDL_Surface* optimizedImage = NULL;
+
+	if((loadedImage = IMG_Load(filename))) {
+		optimizedImage = SDL_DisplayFormat(loadedImage);
+		SDL_FreeSurface(loadedImage);
+	}
+	return optimizedImage;
+}
+
+int getColorComponents(infon* color, int* red, int* green, int* blue){
+    color=color->value; *red=color->value;
+    color=color->next; *green=color->value;
+    color=color->next; *blue=color->value;
+}
+
+static inline void render_bg(void)
+{
+	int x;
+	int y;
+	uint32_t blue_color = 0;
+	uint32_t color = 0;
+	uint32_t *pixels = (uint32_t*)screen->pixels;
+	memset(pixels, SDL_MapRGB(screen->format, 0, 0, 0), 640*480);
+	for(x = 0; x < 640; ++x) {
+		// color = SDL_MapRGB(screen->format, 0, x?map_value(x/2, 640, 255):x, map_value(x, 640, 255)); // cyan
+		color = SDL_MapRGB(screen->format,
+				bg_red?map_value(x, 640, 255):0,
+				bg_green?map_value(x, 640, 255):0,
+				bg_blue?map_value(x, 640, 255):0);
+
+		for(y = 0; y < 640; ++y) {
+			pixels[(x*480)+y] = color;
+		}
+		if(!(x % 3)) {
+			if(++blue_color > 255) {
+				blue_color = 0;
+			}
+		}
+	}
+}
+
+static inline int show_message(int x, int y, const char *msg)
+{
+	SDL_Surface *message = NULL;
+	SDL_Rect offset;
+	offset.x = x - 1; // >
+	offset.y = y - 1; // V
+
+	message = TTF_RenderText_Solid(font, msg, hiColor);
+	SDL_BlitSurface(message, NULL, screen, &offset );
+
+	SDL_FreeSurface(message);
+	message = TTF_RenderText_Solid(font, msg, loColor);
+	offset.x += 2;
+	offset.y += 2;
+	SDL_BlitSurface(message, NULL, screen, &offset );
+
+	SDL_FreeSurface(message);
+	message = TTF_RenderText_Solid(font, msg, textColor);
+	offset.x--;
+	offset.y--;
+	SDL_BlitSurface(message, NULL, screen, &offset );
+
+	SDL_FreeSurface(message);
+
+	return(1);
+}
+
+static inline void add_msg(const char *msg)
+{
+	show_message(10, 50, msg);
+}
+
+static inline void draw_rect(infon* color, int x, int y, int size_x, int size_y)
+{
+    	int red,green,blue;
+       getColorComponents(color, &red, &green, &blue);
+	Draw_FillRect(screen, x, y, size_x, size_y, SDL_MapRGB(screen->format, red, green, blue));
+}
+
+static inline void draw_RelLine(infon* color, int x, int y, int size_x, int size_y)
+{
+    	int red,green,blue;
+    	getColorComponents(color, &red, &green, &blue);
+	Draw_Line(screen, x, y, size_x/15+x, size_y/15+y, SDL_MapRGB(screen->format, red, green, blue));
+}
+static inline void draw_line(infon* color, int x, int y, int size_x, int size_y)
+{
+    	int red,green,blue;
+    	getColorComponents(color, &red, &green, &blue);
+	Draw_Line(screen, x, y, size_x, size_y, SDL_MapRGB(screen->format, red, green, blue));
+}
+
+static inline void draw_round(infon* color, int x, int y, int size_x, int size_y, int corner)
+{
+        int red,green,blue;
+       getColorComponents(color, &red, &green, &blue);
+	Draw_FillRound(screen, x, y, size_x, size_y, corner, SDL_MapRGB(screen->format, red, green, blue));
+}
+
+static inline void draw_circle(infon* color, int x, int y, int radius)
+{
+    	int red,green,blue;
+       getColorComponents(color, &red, &green, &blue);
+	if(radius < x && radius < y) {
+		Draw_FillCircle(screen, x, y, radius, SDL_MapRGB(screen->format, red, green, blue));
+	}
+}
+/*
 void DrawTriStrip(int size, int* array){
     glDisable (GL_TEXTURE_2D);glEnable(GL_BLEND);
 
@@ -130,7 +270,7 @@ glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 }
 
 void DrawTriStripTex(int size, int size2){
-    glEnable (GL_TEXTURE_2D); 
+    glEnable (GL_TEXTURE_2D);
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glVertexPointer(3, GL_INT, 0, vertexes);
@@ -148,24 +288,33 @@ void DrawTriFanTex(int size, int size2){
     glDrawArrays(GL_TRIANGLE_FAN, 0, size);
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 }
-
+*/
 
 void DrawProteusDescription(infon* ProteusDesc){
 if (ProteusDesc==0) std::cout << "Err1\n";
 if (ProteusDesc->size==0) std::cout << "Err2\n";
 
-int count=0;
-int size, size2; float a,b,c,d; int Ia,Ib,Ic;
+    int count=0;
+    infon* OldItmPtr;
+int size, size2; float a,b,c,d; int Ia,Ib,Ic,Id,Ie,If,Ih,II; char  *Sa, *Sb;
 int EOT_d1=0; infon* i=0;
 StartTerm(ProteusDesc, i, d1)
 while(!EOT_d1){
 //  std::cout << count<<":[" << printInfon(i).c_str() << "]\n";
         StartTerm(i,ItmPtr,d2);
-//std::cout<<"ival["<<ItmPtr<<"]\n";
+        //std::cout<<"ival["<<ItmPtr<<"]\n";
+        infon* args=gList();
         int cmd=gINT;
 std::cout<<"\n[CMD:"<< cmd << "]";
         switch(cmd){
-            case 0:    Z3          glColor3f(a,b,c);        break;
+            case 0:  		OldItmPtr=ItmPtr; DrawProteusDescription(OldItmPtr); ItmPtr=OldItmPtr;
+            case 1: I4 		draw_rect(args, Ia, Ib, Ic, Id);  break;
+            case 2: I5 		draw_round(args, Ia, Ib, Ic, Id, Ie);  break;
+            case 3: I3		draw_circle(args, Ia, Ib, Ic);  break;
+            case 4: I4 		draw_RelLine(args, Ia, Ib, Ic, Id);  break;
+            case 5: I4 		draw_line(args, Ia, Ib, Ic, Id);  break;
+            case 10: I2 S1	show_message(Ia, Ib, Sa);  break;
+      /*      case 0:    Z3          glColor3f(a,b,c);        break;
             case 1:    Z4         glColor4f(a,b,c,d);    break;
             case 2:             glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texSlots[gINT]);           break;
             case 3:    Z3         glTranslatef(a,b,c);     break;
@@ -179,7 +328,7 @@ std::cout<<"\n[CMD:"<< cmd << "]";
             case 10:       glLoadIdentity(); break;
             case 11:       glPushMatrix();   break;
             case 12:       glPopMatrix();   break;
-            
+            */
 //            case 90:	TextureViaCairoPango(); break;
         }
     if (++count==90) break;
@@ -209,7 +358,7 @@ extern infon *World; World=q.parse();
 
     a.normalize(displayList);
     DEB("Normed.");
-//    DEB(printInfon(displayList))
+    std::cout<< printInfon(displayList) << "\n";
     ProteusDesc=displayList;
 }
 
@@ -217,11 +366,6 @@ extern infon *World; World=q.parse();
 #define FRAME_RATE_SAMPLES 50
 int FrameCount=0;
 float FrameRate=0;
-
-float Light_Ambient[]={0.1f, 0.1f, 0.1f, 1.0f};
-float Light_Diffuse[]={1.2f,1.2f,1.2f,1.0f};
-float Light_Position[]={0.0f, 0.0f, -5000.0f, 1.0f};
-float X_Rot=0.2; float X_Speed=5.0; float Y_Rot=0; float Y_Speed=6.0;
 
 static void ourDoFPS(){
    static clock_t last=0;
@@ -234,79 +378,13 @@ static void ourDoFPS(){
       last = now;
 
       FrameRate = FRAME_RATE_SAMPLES / delta;
-DEB(FrameRate)
       FrameCount = 0;
    }
 }
 
 void DrawScreen(){
-    char buf[120]; // for the strings to print
-    // Need to manipulate the ModelView matrix to move our model around.
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity(); // Reset to 0,0,0; no rotation, no scaling.
-    glTranslatef(0.0,0.0,-20000.0);// Move the object back from the screen.
-    glRotatef(X_Rot,1.0f,0.0f,0.0f); glRotatef(Y_Rot,0.0f,1.0f,0.0f);// Rotate the calculated amount.
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);// Clear the color and depth buffers.
-
-    DrawProteusDescription(ProteusDesc);
-
-{ // Draw any test over the top (change this to use textures?)
-/*   glLoadIdentity();// Move back to the origin (for the text, below).
-   glMatrixMode(GL_PROJECTION);// We need to change the projection matrix for the text rendering.
-   glPushMatrix();// But we like our current view too; so we save it here.
-   glLoadIdentity();glOrtho(0,width,0,height,-1.0,1.0);// Set up a new projection for text.
-   glDisable(GL_TEXTURE_2D); glDisable(GL_LIGHTING);// Lit or textured text looks awful.
-   glDisable(GL_DEPTH_TEST);  // We don't want depth-testing either.
-   glColor4f(0.6,1.0,0.6,.75); // But, for fun, let's make the text partially transparent too.
-
-   // Render our various display mode settings.
-   sprintf(buf,"Mode: %s", TexModesStr[Curr_TexMode]);
-   glRasterPos2i(2,2); //ourPrintString(GLUT_BITMAP_HELVETICA_12,buf);
-
-   sprintf(buf,"AAdd: %d", Alpha_Add);
-   glRasterPos2i(2,14); //ourPrintString(GLUT_BITMAP_HELVETICA_12,buf);
-
-   sprintf(buf,"Blend: %d", Blend_On);
-   glRasterPos2i(2,26); //ourPrintString(GLUT_BITMAP_HELVETICA_12,buf);
-
-   sprintf(buf,"Light: %d", Light_On);
-   glRasterPos2i(2,38); //ourPrintString(GLUT_BITMAP_HELVETICA_12,buf);
-
-   sprintf(buf,"Tex: %d", Texture_On);
-   glRasterPos2i(2,50); //ourPrintString(GLUT_BITMAP_HELVETICA_12,buf);
-
-   sprintf(buf,"Filt: %d", Filtering_On);
-   glRasterPos2i(2,62); //ourPrintString(GLUT_BITMAP_HELVETICA_12,buf);
-
-   // Now we want to render the calulated FPS at the top.
-
-   // To ease, simply translate up.  Note we're working in screen
-   // pixels in this projection.
-
-   glTranslatef(6.0f,Window_Height - 14,0.0f);
-
-   // Make sure we can read the FPS section by first placing a
-   // dark, mostly opaque backdrop rectangle.
-   glColor4f(0.2,0.2,0.2,0.75);
-
-   glBegin(GL_QUADS);
-   glVertex3f(  0.0f, -2.0f, 0.0f);
-   glVertex3f(  0.0f, 12.0f, 0.0f);
-   glVertex3f(140.0f, 12.0f, 0.0f);
-   glVertex3f(140.0f, -2.0f, 0.0f);
-   glEnd();
-
-   glColor4f(0.9,0.2,0.2,.75);
-   sprintf(buf,"FPS: %f F: %2d", FrameRate, FrameCount);
-   glRasterPos2i(6,0);
-   //ourPrintString(GLUT_BITMAP_HELVETICA_12,buf);
-
-   // Done with this special projection matrix.  Throw it away.
-   glPopMatrix();  */
-}
-
-    SDL_GL_SwapBuffers( );// All done drawing.  Let's show it.
+   DrawProteusDescription(ProteusDesc);
+    SDL_Flip(screen); // SDL_GL_SwapBuffers( );// All done drawing.  Let's show it.
 
  //   X_Rot+=X_Speed; Y_Rot+=Y_Speed; // Now let's do the motion calculations.
 std::cout<<"################\n";
@@ -315,74 +393,9 @@ std::cout<<"################\n";
 
 void ResizeScene(int Width,int Height){
    if (Height == 0) Height = 1;
-    GLfloat aspect=(GLfloat)Width/(GLfloat)Height;
-
-   glViewport(0, 0, Width, Height);
-
-   glMatrixMode(GL_PROJECTION);
-   glLoadIdentity();
-   gluPerspective(45.0f, aspect, 5000.0, 150000.0) ;//5000.0f,+15000.0f);
-
-   glMatrixMode(GL_MODELVIEW);
 
    width  = Width;
    height = Height;
-}
-
-// Does everything needed for OpenGL before losing control to the SDL event loop.
-void setupOpenGL(){
- //   ourBuildTextures();
-
-    /* Culling. */
-//    glCullFace( GL_BACK );
-//    glFrontFace( GL_CCW );
-//    glEnable( GL_CULL_FACE );
-
-    glClearColor(0.0f, 0.8f, 0.0f, 0.0f);// Color to clear color buffer to.
-
-    glClearDepth(150000.0);        // Depth to clear depth buffer to;
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);     // type of test.
-    glShadeModel(GL_SMOOTH);  // Enables Smooth Color Shading.
-
-    // Load up the correct perspective matrix; using a callback directly.
-    ResizeScene(width,height);
-
-    // Set up a light, turn it on.
-    glLightfv(GL_LIGHT1, GL_POSITION, Light_Position);
-    glLightfv(GL_LIGHT1, GL_AMBIENT,  Light_Ambient);
-    glLightfv(GL_LIGHT1, GL_DIFFUSE,  Light_Diffuse);
-    glEnable (GL_LIGHT1);
-
-    // A handy trick -- have surface material mirror the color.
-    glColorMaterial(GL_FRONT_AND_BACK,GL_AMBIENT_AND_DIFFUSE);
-    glEnable(GL_COLOR_MATERIAL);
-    
-    //////////
-    // Set up texture system
-    glEnable(GL_TEXTURE_RECTANGLE_ARB);
-	glGenTextures(numOfSlots, texSlots);
-	GLuint texSlot1=texSlots[0];
-
-//	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-for (int i=0; i<=numOfSlots; ++i){
-	glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texSlots[i]);
-	glTexParameteri (GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri (GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri (GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri (GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-	glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE, GL_DECAL);
-}
-glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texSlot1);
-/*	// Autogenerate texture map
-	GLfloat zPlane[]={0.0f, 0.0f, 1.0f, 0.0f};
-	glEnable(GL_TEXTURE_GEN_S);
-	glEnable(GL_TEXTURE_GEN_T);
-	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_OBJECT_LINEAR);
-//	glTexGenfv(GL_S, GL_OBJECT_PLANE, zPlane);
-//	glTexGenfv(GL_T, GL_OBJECT_PLANE, zPlane); */
 }
 
 //////////////////// SDL Init and loop
@@ -413,6 +426,7 @@ void setupSDL(){
     if (QPLATFORM==LINUX || QPLATFORM==MACINTOSH) InitSDLEventThread=SDL_INIT_EVENTTHREAD;
 
     SDL_Init(SDL_INIT_AUDIO|SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_NOPARACHUTE|InitSDLEventThread);
+    TTF_Init();
     FE_Init();
     atexit(cleanup);
 
@@ -429,18 +443,18 @@ void setupSDL(){
     bpp=16;
     DEB("bpp: "<<bpp<<"  w:"<<width<<"  h:"<<height<<" mode:"<<modes);
 
-    // Set the OpenGL attributes
-    SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 5 );
-    SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 5 );
-    SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 5 );
-    SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, bpp );
-    SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 ); // 1 = double buffering in GL, 0 = none
-    DEB("H: " << height << "    W:"<<width << "  bpp:" << bpp);
     // Create a (hopefully) matching screen buffer
-    if (SDL_SetVideoMode( width, height, bpp, SDL_OPENGL|SDL_FULLSCREEN) == 0 ) {
+    screen=SDL_SetVideoMode( width, height, bpp, SDL_SWSURFACE /*SDL_OPENGL|SDL_FULLSCREEN*/ );
+    if (screen == 0 ) {
         DEB( SDL_GetError());
-        EXIT((char*)"Couldn't set GL video mode");
-        }
+        EXIT((char*)"Couldn't set video mode");
+    }
+
+    	SDL_WM_SetCaption("SlypStreem", NULL);
+	if(!(font = TTF_OpenFont("FreeSans.ttf", 32))) {
+		printf("Can't open font.\n");
+		exit(EXIT_FAILURE);
+	}
 }
 
 void eventLoop(int argc, char** argv){
@@ -492,7 +506,7 @@ void eventLoop(int argc, char** argv){
 int main(int argc, char **argv){
     initWorldAndEventQueues();
     setupSDL();
-    setupOpenGL();
+  //  setupOpenGL();
     eventLoop(argc, argv);
     return (0);
 }

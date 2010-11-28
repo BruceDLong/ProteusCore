@@ -17,6 +17,7 @@
 */
 #include <fstream>
 #include "Proteus.h"
+#include "Functions.h"
 #include "remiss.h"
 
 infon* World;
@@ -151,7 +152,8 @@ void InitList(infon* item) {
     int EOT_IL=0; infon* tmp; infNode* IDp;
     if(item->value && (((tmp=item->value->prev)->flags)&isVirtual)){
         tmp->spec2=item->spec2;
-        if(tmp->spec2 && ((tmp->spec2->flags&mRepMode)==asFunc)) StartTerm(tmp->spec2->spec1,tmp->spec1,IL);
+        if(tmp->spec2 && ((tmp->spec2->flags&mRepMode)==asFunc))
+            StartTerm(tmp->spec2->spec1,tmp->spec1,IL);
         processVirtual(tmp); item->flags|=tList;
 //        if((tmp->flags&isTentative) && tmp==item->value) {AddSizeAlternate(item,0, 0, 0);}
     }
@@ -207,7 +209,7 @@ infon* getIdentFromPrev(infon* prev){
 }
 
 int agent::compute(infon* i){
-    infon* p=i->value; uint vAcc, sAcc, sSign, vSign, count=0;
+    infon* p=i->value; int vAcc, sAcc, sSign, vSign, count=0;
     if(p) do{
         normalize(p); // TODO: appending inline rather than here would allow streaming.
         if((p->flags&((tType<<goSize)+tType))==((tUInt<<goSize)+tUInt)){
@@ -217,8 +219,15 @@ int agent::compute(infon* i){
             if (p->flags&fUnknown) return 0;
             if ((p->flags&tType)==tList) compute(p->value);
             if ((p->flags&tType)!=tUInt) return 0;
-            if (++count==1){sAcc=(uint)p->size; vAcc=(uint)p->value;}
-            else {sAcc*=(uint)p->size; vAcc+=(uint)p->value;}
+            int val=(p->flags&fInvert)?-(uint)p->value:(uint)p->value;
+            if(p->flags&(fInvert<<goSize)){
+	            if (++count==1){sAcc=(uint)p->size; vAcc=val;}
+                    else {sAcc/=(uint)p->size; vAcc=(vAcc/(uint)p->size)+val;}
+                }
+                else {
+	            if (++count==1){sAcc=(uint)p->size; vAcc=val;}
+                    else {sAcc*=(uint)p->size; vAcc=(vAcc*(uint)p->size)+val;}
+                    }
             } else return 0;
         p=p->next;
     } while (p!=i->value);
@@ -377,6 +386,8 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     LastTerm(CI, tmp, n);
                     insertID(&tmp->wrkList, CI->spec1,0);
                 }else { //Evaluating Function...
+                    if(autoEval(CI, this)) break;
+                    CI->spec1->top=CI;
                     normalize(CI->spec2,CI->spec1); // norm(func-body-list (CI->spec2))
                     LastTerm(CI->spec2, tmp, n);
                     insertID(&CI->wrkList, tmp,0);
@@ -391,26 +402,24 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                         else tmp=getIdentFromPrev(CI->prev);
                         break;
                     case toWorldCtxt:tmp=&context; break;
-                    case toHomePos:
+                    case toHomePos: //  Handle \, \\, \\\, etc.
+                    case fromHere:  // Handle ^, \^, \\^, \\\^, etc.
                         tmp=CI;
-                        for(uint i=(uint)CI->spec1; i--;) {
-                            if(tmp==0 || ((tmp->flags&mRepMode)==asFunc)) {tmp=0;break;}
-                            tmp=getTop(tmp); DEB("#goUpTo:"<<tmp)
+                        for(uint i=0; i<(uint)CI->spec1; ++i) {  // for each backslash
+                                if(tmp==0 /* || ((tmp->flags&mRepMode)==asFunc)*/) {tmp=0;std::cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';}
+                                else std::cout << "Current tmp: "<<printInfon(tmp)<< '\n';
+                            if(CIRepMode!=toHomePos || i>0) tmp=getTop(tmp);
                         }
-                        if(tmp) {
-                            if(!(tmp->flags&isTop)) {tmp=tmp->top; DEB(" then home to:"<<tmp<<" ")}
+                        if(CIRepMode==toHomePos) {
+                            if(!(tmp->flags&isTop)) {tmp=tmp->top; }
                             if (tmp==0) std::cout<<"Zero TOP in "<< printInfon(CI)<<'\n';
-                            if(!(tmp->flags&isFirst)) tmp=0;
-                        } else std::cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';
-                        break;
-                    case fromHere:
-                    	tmp=CI;
-                    	break;
+                            if(!(tmp->flags&isFirst)) {tmp=0; std::cout<<"Top but not First in "<< printInfon(CI)<<'\n';}
+                        }
                     }
                     if(tmp) { // Now add that to the 'item-list's wrkList...
 // TODO: This 'if' section is a hack to make simple backward references work. Fix for full back-parsing.
                         if ((CI->spec2->flags)&(fInvert<<goSize)){
-                            for(int i=CI->spec2->size; i>0; --i){tmp=tmp->prev;}
+                            for(uint i=(uint)CI->spec2->size; i>0; --i){tmp=tmp->prev;}
                             {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
                             CI->flags|=fUnknown;
                         } else {
@@ -436,20 +445,22 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     }
                 }
             } else if(CIRepMode==asTag){
-                if(CI->wrkList){DEB("Defining: "<<(char*)((stng*)(CI->spec1))->S)
+                if(CI->wrkList){std::cout<<"Defining:'"<<(char*)((stng*)(CI->spec1))->S<<"'\n";
                     std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*(stng*)(CI->spec1));
                     if (tagPtr==tag2Ptr.end()) {tag2Ptr[*(stng*)(CI->spec1)]=CI->wrkList->item; CI->wrkList=0; break;}
                     else{throw("A tag is being redefined, which is illegal");}
                 } else { DEB("Recalling: "<<(char*)((stng*)(CI->spec1))->S)
                     std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*(stng*)(CI->spec1));
                     if (tagPtr!=tag2Ptr.end()) {uint tmpFlags=CI->flags&0xff000000; deepCopy(tagPtr->second,CI); CI->flags|=tmpFlags;}
-                    else{throw("A tag was used but never defined");}
+                    else{std::cout<<"Bad tag:'"<<(char*)((stng*)(CI->spec1))->S<<"'\n";throw("A tag was used but never defined");}
                 }
             }
             CIRepMode=CI->flags&mRepMode;
         }
         if (doShortNorm) return 0;
-        if(CIRepMode==asNone&&cn.IDStatus==2){cn.IDStatus=0; insertID(&CI->wrkList,cn.firstID,0);}
+        if(CIRepMode==asNone&&cn.IDStatus==2)
+            {cn.IDStatus=0; insertID(&CI->wrkList,cn.firstID,0);}
+           //{cn.IDStatus=0; infon*p,*r; for(p=CI,r=cn.firstID; p&&r; p=p->next, r=r->next) insertID(&p->wrkList,r,0);}
         if(CI!=i && (CI->flags&tType)==tList){InitList(CI);}
         nxtLvl=getFollower(&CIfol, CI);
         if((CI->flags&asDesc) && !override) {pushCIsFollower; continue;}

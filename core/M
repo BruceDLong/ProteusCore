@@ -1,1 +1,1 @@
-make && nosetests test_build.py
+cmake . && make && nosetests test_build.py

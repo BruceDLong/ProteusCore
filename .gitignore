@@ -1,0 +1,8 @@
+
+# Build targets
+*.o
+proteus
+
+# Vim backup files
+*~
+*.swp

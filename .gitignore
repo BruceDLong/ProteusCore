@@ -6,3 +6,13 @@ proteus
 # Vim backup files
 *~
 *.swp
+
+# For CMake build system
+Makefile
+CMakeCache.txt
+CMakeFiles/*
+CMakeFiles/
+cmake_install.cmake
+libProteus.so
+ptest
+test_build.pyc

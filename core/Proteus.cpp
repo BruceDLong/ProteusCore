@@ -27,7 +27,7 @@ std::map<infon*,stng> ptr2Tag;
 std::map<dblPtr,uint> alts;
 typedef std::map<dblPtr,uint>::iterator altIter;
 
-void deepCopy(infon* from, infon* to, infon* args=0);
+void deepCopy(infon* from, infon* to, int* args=0);
 
 infNode* copyIdentList(infNode* from){
     infNode* top=0; infNode* follower; infNode* p=from; infNode* q;
@@ -53,7 +53,7 @@ infon* copyList(infon* from){
         p=p->next;
     } while(p!=from);
     top->prev=follower; top->flags|=from->flags&mListPos;
-    follower->next=top; //follower->flags|=from->prev->flags&mListPos;
+    follower->next=top;
     return top;
 }
 
@@ -79,8 +79,9 @@ infon* getVeryTop(infon* i){
 	return j;
 }
 
-void deepCopy(infon* from, infon* to, infon* args){
-	uint fm=from->flags&mRepMode;
+void deepCopy(infon* from, infon* to, int* args){
+    uint fm=from->flags&mRepMode;
+    int EOT_DC=0;
     to->flags=from->flags;
     if(((from->flags>>goSize)&tType)==tList || ((from->flags>>goSize)&fConcat)){to->size=copyList(from->size); if(to->size)to->size->top=to;}
     else to->size=from->size;
@@ -99,8 +100,16 @@ void deepCopy(infon* from, infon* to, infon* args){
 				to->spec1->size=(infon*)((uint)to->prev->spec1->size - (uint)spec2->size);
 			}
 		}
-	}
-	else {to->spec1=new infon; deepCopy((args)?args:from->spec1,to->spec1);}
+    } else if (args){
+        infon *prevNode=0, *tail;
+        for(infon* i=from->spec1; i; i=i->next){
+            tail=new infon;
+            deepCopy(i->prev, tail);
+           getNextTerm(i->prev,DC); if(EOT_DC) *args=1;
+            if(prevNode) prevNode->next=tail; else to->spec1=tail;
+            prevNode=tail;
+        }
+    } else {to->spec1=new infon; deepCopy(from->spec1,to->spec1);}
     if(from->spec2){to->spec2=new infon; deepCopy(from->spec2, to->spec2);}else to->spec2=0;
 }
 
@@ -124,26 +133,26 @@ char isPosLorEorGtoSize(uint pos, infon* item){
 }
 
 void processVirtual(infon* v){
-    infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT_PV=0, mode; uint vSize=(uint)v->size;
+    infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT=0, mode; uint vSize=(uint)v->size;
     char posArea=isPosLorEorGtoSize(vSize, parent);
     if(posArea=='G'){return;} // TODO: go backward, renaming/affirming tentatives. Mark last
     uint tmpFlags=v->flags&0xff000000;
     if (spec){
         if((mode=(spec->flags&mRepMode))==asFunc){
-            deepCopy(spec,v,args);
-            getNextTerm(args,PV)
+            deepCopy(spec,v,&EOT);
+    //        getNextTerm(args,PV)
         } else if(mode<asFunc){
-			deepCopy(spec,v);
-			if(posArea=='?' && v->spec1) posArea= 'N'; // N='Not greater' Is this logic correct?
+		deepCopy(spec,v);
+		if(posArea=='?' && v->spec1) posArea= 'N'; // N='Not greater' Is this logic correct?
         } else deepCopy(spec, v);
     }
     v->flags|=tmpFlags; v->flags&=~isVirtual;
-    if(EOT_PV) if(posArea=='?'){posArea='E'; /* TODO:Set Parent's Size to v->size */ }
+    if(EOT) if(posArea=='?'){posArea='E'; /* TODO:Set Parent's Size to v->size */ }
         else if(posArea!='E') throw "List was too short";
     if (posArea=='E') {v->flags|=isBottom+isLast; return;}
     infon* tmp= new infon;  tmp->size=(infon*)(vSize+1); tmp->spec2=spec;
     tmp->flags|=fUnknown+isBottom+isVirtual+asNone+(tUInt<<goSize);
-    tmp->top=tmp->next=v->next; v->next=tmp; tmp->prev=v; tmp->next->prev=tmp; tmp->spec1=args;
+    tmp->top=tmp->next=v->next; v->next=tmp; tmp->prev=v; tmp->next->prev=tmp;
     v->flags&=~isBottom;
     if (posArea=='?'){ v->flags|=isTentative;}
 }
@@ -152,10 +161,11 @@ void InitList(infon* item) {
     int EOT_IL=0; infon* tmp; infNode* IDp;
     if(item->value && (((tmp=item->value->prev)->flags)&isVirtual)){
         tmp->spec2=item->spec2;
-        if(tmp->spec2 && ((tmp->spec2->flags&mRepMode)==asFunc))
-            StartTerm(tmp->spec2->spec1,tmp->spec1,IL);
+        if(tmp->spec2 && ((tmp->spec2->flags&mRepMode)==asFunc)){
+            for(infon* i=tmp->spec2->spec1; i; i=i->next)
+                StartTerm(i,i->prev,IL);
+        }
         processVirtual(tmp); item->flags|=tList;
-//        if((tmp->flags&isTentative) && tmp==item->value) {AddSizeAlternate(item,0, 0, 0);}
     }
 }
 

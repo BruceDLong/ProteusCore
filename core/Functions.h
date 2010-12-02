@@ -36,7 +36,7 @@ int getIntArg(infon* i, int* Int1, agent* a){
 }
 
 void setIntVal(infon* CI, int i){
-    uint tmpFlags=CI->flags&0xff000000;
+    ptrdiff_t tmpFlags=CI->flags&0xff000000;
     CI->size=CI->spec1->size;
     CI->value=(infon*) abs(i);
     if (i<0)tmpFlags|=fInvert;
@@ -44,7 +44,7 @@ void setIntVal(infon* CI, int i){
 }
 
 void setIntSize(infon* CI, int i){
-    uint tmpFlags=CI->flags&0xff000000;
+    ptrdiff_t tmpFlags=CI->flags&0xff000000;
     CI->size=(infon*) abs(i);
     CI->value=0;
     CI->flags=tmpFlags + (tUInt<<goSize)+asNone+tUInt;

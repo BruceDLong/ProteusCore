@@ -2,7 +2,7 @@ import re
 import pexpect
 
 #def setup_func():
-#   child=pexpect.spawn('../proteus');
+#   child=pexpect.spawn('../ptest');
 #
 #def teardown_func():
 #   child.send "5\ndone\n!\n";
@@ -57,7 +57,7 @@ def test_engine():
 def ChkParser(t):
    try:
        print "PARSE TEST:", t[1]
-       child=pexpect.spawn('./proteus',timeout=2);
+       child=pexpect.spawn('./ptest',timeout=2);
        print "SPAWNED..."
        child.send('0\n')
        child.sendline(t[1])
@@ -78,7 +78,7 @@ def ChkParser(t):
 def ChkNorm(t):
    print "NORM TEST:", t[1],'   ',t[2]
    try:
-       child=pexpect.spawn('./proteus',timeout=4);
+       child=pexpect.spawn('./ptest',timeout=4);
        #print "N1"
        child.send('1\n')
        child.sendline(t[1])
@@ -104,7 +104,7 @@ def ChkNorm(t):
 def ChkWorld(t):
    print "WORLD TEST:", t[1]
    try:
-       child=pexpect.spawn('./proteus',timeout=4);
+       child=pexpect.spawn('./ptest',timeout=4);
        print "W1"
        child.send('2\n')
        child.sendline(t[1])

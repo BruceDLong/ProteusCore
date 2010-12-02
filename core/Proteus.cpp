@@ -24,8 +24,8 @@ infon* World;
 std::map<stng,infon*> tag2Ptr;
 std::map<infon*,stng> ptr2Tag;
 
-std::map<dblPtr,uint> alts;
-typedef std::map<dblPtr,uint>::iterator altIter;
+std::map<dblPtr,ptrdiff_t> alts;
+typedef std::map<dblPtr,ptrdiff_t>::iterator altIter;
 
 void deepCopy(infon* from, infon* to, int* args=0);
 
@@ -79,9 +79,14 @@ infon* getVeryTop(infon* i){
 	return j;
 }
 
+<<<<<<< HEAD
 void deepCopy(infon* from, infon* to, int* args){
     uint fm=from->flags&mRepMode;
     int EOT_DC=0;
+=======
+void deepCopy(infon* from, infon* to, infon* args){
+	ptrdiff_t fm=from->flags&mRepMode;
+>>>>>>> 9b14aaa77a3d997d8e1ca6846de20550c5252c23
     to->flags=from->flags;
     if(((from->flags>>goSize)&tType)==tList || ((from->flags>>goSize)&fConcat)){to->size=copyList(from->size); if(to->size)to->size->top=to;}
     else to->size=from->size;
@@ -90,14 +95,14 @@ void deepCopy(infon* from, infon* to, int* args){
     to->wrkList=copyIdentList(from->wrkList);
     if(fm==toHomePos) to->spec1=from->spec1;
     else if(fm==asTag) to->spec1=from->spec1;
-    else if((uint)(from->spec1)<=20) to->spec1=from->spec1;
+    else if((ptrdiff_t)(from->spec1)<=20) to->spec1=from->spec1;
     else if(fm<asFunc){
 		to->spec1=new infon; copyTo(from->spec1,to->spec1);
 		if(to->prev && to->prev!=to){
 			infon* spec2=to->prev->spec2;
-			if (spec2 && spec2->next==0 && (uint)(spec2->prev)>1){
+			if (spec2 && spec2->next==0 && (ptrdiff_t)(spec2->prev)>1){
 				to->spec1->value=spec2->prev;
-				to->spec1->size=(infon*)((uint)to->prev->spec1->size - (uint)spec2->size);
+				to->spec1->size=(infon*)((ptrdiff_t)to->prev->spec1->size - (ptrdiff_t)spec2->size);
 			}
 		}
     } else if (args){
@@ -114,7 +119,7 @@ void deepCopy(infon* from, infon* to, int* args){
 }
 
 const int simpleUnknownUint=((fUnknown+tUInt)<<goSize) + fUnknown+tUInt+asNone;
-char isPosLorEorGtoSize(uint pos, infon* item){
+char isPosLorEorGtoSize(ptrdiff_t pos, infon* item){
     if(item->flags&(fUnknown<<goSize)) return '?';
     if(((item->flags>>goSize)&tType)!=tUInt) throw "Size as non integer is probably not useful, so not allowed.";
     if(item->flags&(fConcat<<goSize)){
@@ -122,21 +127,25 @@ char isPosLorEorGtoSize(uint pos, infon* item){
     	//if ((size->flags&mRepMode)!=asNone) normalize(size);
     	if ((size->flags&simpleUnknownUint)==simpleUnknownUint)
         	if(size->next!=size && size->next==size->prev && ((size->next->flags&simpleUnknownUint)==simpleUnknownUint)){
-            		if(pos<(uint)size->value) return 'L';
-                        if(pos>(uint)size->size) return 'G';
+            		if(pos<(ptrdiff_t)size->value) return 'L';
+                        if(pos>(ptrdiff_t)size->size) return 'G';
             		return '?';  // later, if pos is in between two ranges, return 'X'
                 }
     }
-    if(pos<(uint)item->size) return 'L';  // Less
-    if(pos==(uint)item->size) return 'E';  // Equal
+    if(pos<(ptrdiff_t)item->size) return 'L';  // Less
+    if(pos==(ptrdiff_t)item->size) return 'E';  // Equal
     else return 'G';  // Greater
 }
 
 void processVirtual(infon* v){
+<<<<<<< HEAD
     infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT=0, mode; uint vSize=(uint)v->size;
+=======
+    infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT_PV=0; ptrdiff_t mode; ptrdiff_t vSize=(ptrdiff_t)v->size;
+>>>>>>> 9b14aaa77a3d997d8e1ca6846de20550c5252c23
     char posArea=isPosLorEorGtoSize(vSize, parent);
     if(posArea=='G'){return;} // TODO: go backward, renaming/affirming tentatives. Mark last
-    uint tmpFlags=v->flags&0xff000000;
+    ptrdiff_t tmpFlags=v->flags&0xff000000;
     if (spec){
         if((mode=(spec->flags&mRepMode))==asFunc){
             deepCopy(spec,v,&EOT);
@@ -158,7 +167,7 @@ void processVirtual(infon* v){
 }
 
 void InitList(infon* item) {
-    int EOT_IL=0; infon* tmp; infNode* IDp;
+    int EOT_IL=0; infon* tmp;
     if(item->value && (((tmp=item->value->prev)->flags)&isVirtual)){
         tmp->spec2=item->spec2;
         if(tmp->spec2 && ((tmp->spec2->flags&mRepMode)==asFunc)){
@@ -191,14 +200,14 @@ int getFollower(infon** lval, infon* i){
 
 void addIDs(infon* Lvals, infon* Rvals, int asAlt=0){
     const int maxAlternates=100;
-    infon* RvlLst[maxAlternates]; infon* crntAlt=Rvals; infon *pred, *Rval, *prev=0; infNode* IDp; uint size;
+    infon* RvlLst[maxAlternates]; infon* crntAlt=Rvals; infon *pred, *Rval, *prev=0; infNode* IDp; ptrdiff_t size;
     int altCnt=1; RvlLst[0]=crntAlt;
     while(crntAlt && (crntAlt->flags&isTentative)){
         getFollower(&crntAlt, getTop(crntAlt));
         RvlLst[altCnt++]=crntAlt;
         if(altCnt>=maxAlternates) throw "Too many nested alternates";
     }
-    size=((uint)Lvals->next->size)-2; crntAlt=Lvals; pred=Lvals->pred;
+    size=((ptrdiff_t)Lvals->next->size)-2; crntAlt=Lvals; pred=Lvals->pred;
     while(crntAlt){  // Lvals
         for(int i=0; i<altCnt; ++i){   // Rvals
             if (!asAlt && altCnt==1 && crntAlt==Lvals){
@@ -208,7 +217,7 @@ void addIDs(infon* Lvals, infon* Rvals, int asAlt=0){
                 AddSizeAlternate(crntAlt, Rval, pred, size, (prev)?prev->prev:0);
             }
         }
-        if(crntAlt->flags&isTentative) {prev=crntAlt; size=((uint)crntAlt->next->size)-2; crntAlt=getTop(crntAlt); if(crntAlt) crntAlt->flags|=hasAlts;}
+        if(crntAlt->flags&isTentative) {prev=crntAlt; size=((ptrdiff_t)crntAlt->next->size)-2; crntAlt=getTop(crntAlt); if(crntAlt) crntAlt->flags|=hasAlts;}
         else crntAlt=0;
     }
 }
@@ -219,7 +228,7 @@ infon* getIdentFromPrev(infon* prev){
 }
 
 int agent::compute(infon* i){
-    infon* p=i->value; int vAcc, sAcc, sSign, vSign, count=0;
+    infon* p=i->value; int vAcc, sAcc, count=0;
     if(p) do{
         normalize(p); // TODO: appending inline rather than here would allow streaming.
         if((p->flags&((tType<<goSize)+tType))==((tUInt<<goSize)+tUInt)){
@@ -229,14 +238,14 @@ int agent::compute(infon* i){
             if (p->flags&fUnknown) return 0;
             if ((p->flags&tType)==tList) compute(p->value);
             if ((p->flags&tType)!=tUInt) return 0;
-            int val=(p->flags&fInvert)?-(uint)p->value:(uint)p->value;
+            int val=(p->flags&fInvert)?-(ptrdiff_t)p->value:(ptrdiff_t)p->value;
             if(p->flags&(fInvert<<goSize)){
-	            if (++count==1){sAcc=(uint)p->size; vAcc=val;}
-                    else {sAcc/=(uint)p->size; vAcc=(vAcc/(uint)p->size)+val;}
+	            if (++count==1){sAcc=(ptrdiff_t)p->size; vAcc=val;}
+                    else {sAcc/=(ptrdiff_t)p->size; vAcc=(vAcc/(ptrdiff_t)p->size)+val;}
                 }
                 else {
-	            if (++count==1){sAcc=(uint)p->size; vAcc=val;}
-                    else {sAcc*=(uint)p->size; vAcc=(vAcc*(uint)p->size)+val;}
+	            if (++count==1){sAcc=(ptrdiff_t)p->size; vAcc=val;}
+                    else {sAcc*=(ptrdiff_t)p->size; vAcc=(vAcc*(ptrdiff_t)p->size)+val;}
                     }
             } else return 0;
         p=p->next;
@@ -247,7 +256,7 @@ int agent::compute(infon* i){
 }
 
 void resolve(infon* i, infon* theOne){
-    infon* parent, *tmp, *prev=0; uint count;
+    infon* parent, *tmp, *prev=0; ptrdiff_t count;
     while(i && theOne){
         if(theOne->flags&isTentative){
             parent=getTop(theOne);
@@ -263,12 +272,12 @@ void resolve(infon* i, infon* theOne){
     } if (theOne){theOne->next=prev->value; theOne->flags|=isLast+isBottom;}
 }
 
-#define SetBypassDeadEnd() {result=BypassDeadEnd; infon* CA=getTop(ci); if (CA) AddSizeAlternate(CA, item, 0, ((uint)ci->next->size)-1, ci); }
+#define SetBypassDeadEnd() {result=BypassDeadEnd; infon* CA=getTop(ci); if (CA) AddSizeAlternate(CA, item, 0, ((ptrdiff_t)ci->next->size)-1, ci); }
 
 enum WorkItemResults {DoNothing, BypassDeadEnd, DoNext};
 int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
-    infNode *wrkNode=ci->wrkList, *iter, *IDp; infon *item, *IDfol, *tmp, *tmp2, *parent, *theOne=0;
-    uint altCount=0, cSize, tempRes, isIndef=0, result=DoNothing, f;
+    infNode *wrkNode=ci->wrkList, *IDp; infon *item, *IDfol, *tmp, *tmp2, *theOne=0;
+    ptrdiff_t altCount=0, cSize, tempRes, isIndef=0, result=DoNothing, f;
     if(CIfol && !CIfol->pred) CIfol->pred=ci;
     if(wrkNode)do{
         wrkNode=wrkNode->next; item=wrkNode->item; IDfol=(infon*)1; DEB(" Doing Work Order:" << item);
@@ -315,7 +324,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                 case tString+4*tString: DEB("(SS)")
                     if (!isIndef && ci->flags&sizeIndef){
                         if(ci->size < item->size) {result=BypassDeadEnd; break;}
-                        if (memcmp(ci->value, item->value, (uint)item->size)!=0)  {result=BypassDeadEnd;break;}
+                        if (memcmp(ci->value, item->value, (ptrdiff_t)item->size)!=0)  {result=BypassDeadEnd;break;}
                         ci->size=item->size;
                         if(CIfol){
                             IDfol=item->next;
@@ -328,20 +337,20 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                     	ci->size=item->size;
                         ci->flags&=~(fUnknown<<goSize);
                      }
-                    cSize=(uint)ci->size;
-                    if(cSize>(uint)item->size) {SetBypassDeadEnd(); break;}
+                    cSize=(ptrdiff_t)ci->size;
+                    if(cSize>(ptrdiff_t)item->size) {SetBypassDeadEnd(); break;}
                     if(ci->flags&fUnknown){ci->flags&=~fUnknown;}
                     else if (memcmp(ci->value, item->value, cSize)!=0) {SetBypassDeadEnd(); break;}
                     ci->value=item->value;
                     result=DoNext;
                     getFollower(&IDfol, item);
                     if(CIfol){
-                        if(cSize==(uint)item->size){
+                        if(cSize==(ptrdiff_t)item->size){
                             if(IDfol) {addIDs(CIfol, IDfol, asAlt);}
                             else if(ci->next && (ci->next->flags&isTentative))
 								SetBypassDeadEnd();
-                        }else if(cSize < (uint)item->size){
-                            tmp=new infon(item->flags,(infon*)((uint)item->size-cSize),(infon*)((uint)item->value+cSize),0,0,item->next);
+                        }else if(cSize < (ptrdiff_t)item->size){
+                            tmp=new infon(item->flags,(infon*)((ptrdiff_t)item->size-cSize),(infon*)((ptrdiff_t)item->value+cSize),0,0,item->next);
                             addIDs(CIfol, tmp, asAlt);
                         }
                     }
@@ -380,7 +389,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
 
 infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
     if (i==0) return 0;
-    int cnt=0; int nxtLvl, override, EOT_n; infon *CI, *CIfol, *tmp; infNode* IDp;
+    int nxtLvl, override, EOT_n; infon *CI, *CIfol, *tmp; infNode* IDp;
     if((i->flags&tType)==tList) InitList(i);
     infQ ItmQ; ItmQ.push(Qitem(i,firstID,(firstID)?1:0,0));
 //    DEB("\n<h2>Normalizing: " << i << "</h2>\n<table border=\"3\" cellpadding=\"5\" width=\"100%\"><tr><td>\n");
@@ -415,7 +424,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     case toHomePos: //  Handle \, \\, \\\, etc.
                     case fromHere:  // Handle ^, \^, \\^, \\\^, etc.
                         tmp=CI;
-                        for(uint i=0; i<(uint)CI->spec1; ++i) {  // for each backslash
+                        for(ptrdiff_t i=0; i<(ptrdiff_t)CI->spec1; ++i) {  // for each backslash
                                 if(tmp==0 /* || ((tmp->flags&mRepMode)==asFunc)*/) {tmp=0;std::cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';}
                                 else std::cout << "Current tmp: "<<printInfon(tmp)<< '\n';
                             if(CIRepMode!=toHomePos || i>0) tmp=getTop(tmp);
@@ -429,7 +438,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     if(tmp) { // Now add that to the 'item-list's wrkList...
 // TODO: This 'if' section is a hack to make simple backward references work. Fix for full back-parsing.
                         if ((CI->spec2->flags)&(fInvert<<goSize)){
-                            for(uint i=(uint)CI->spec2->size; i>0; --i){tmp=tmp->prev;}
+                            for(ptrdiff_t i=(ptrdiff_t)CI->spec2->size; i>0; --i){tmp=tmp->prev;}
                             {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
                             CI->flags|=fUnknown;
                         } else {
@@ -461,7 +470,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     else{throw("A tag is being redefined, which is illegal");}
                 } else { DEB("Recalling: "<<(char*)((stng*)(CI->spec1))->S)
                     std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*(stng*)(CI->spec1));
-                    if (tagPtr!=tag2Ptr.end()) {uint tmpFlags=CI->flags&0xff000000; deepCopy(tagPtr->second,CI); CI->flags|=tmpFlags;}
+                    if (tagPtr!=tag2Ptr.end()) {ptrdiff_t tmpFlags=CI->flags&0xff000000; deepCopy(tagPtr->second,CI); CI->flags|=tmpFlags;}
                     else{std::cout<<"Bad tag:'"<<(char*)((stng*)(CI->spec1))->S<<"'\n";throw("A tag was used but never defined");}
                 }
             }

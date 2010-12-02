@@ -21,8 +21,8 @@ inline int iscsym(int ch){
 
 //#define BIG_ENDIAN	1
 #if defined (BIG_ENDIAN)
-#define reendian(A) ((((uint)(A)&0xff000000)>>24)|(((uint)(A)&0x00ff0000)>>8)|\
-		(((uint)(A)&0x0000ff00)<<8)|(((uint)(A)&0x000000ff)<<24))
+#define reendian(A) ((((ptrdiff_t)(A)&0xff000000)>>24)|(((ptrdiff_t)(A)&0x00ff0000)>>8)|\
+		(((ptrdiff_t)(A)&0x0000ff00)<<8)|(((ptrdiff_t)(A)&0x000000ff)<<24))
 #define doCopy(mode, to, from) {if(mode==1||mode==2)to=reendian(from);else to=from;}
 #else
 #define reendian(A) (A)

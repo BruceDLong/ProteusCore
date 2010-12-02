@@ -124,7 +124,7 @@ char isPosLorEorGtoSize(ptrdiff_t pos, infon* item){
 }
 
 void processVirtual(infon* v){
-    infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT_PV=0, mode; ptrdiff_t vSize=(ptrdiff_t)v->size;
+    infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT_PV=0; ptrdiff_t mode; ptrdiff_t vSize=(ptrdiff_t)v->size;
     char posArea=isPosLorEorGtoSize(vSize, parent);
     if(posArea=='G'){return;} // TODO: go backward, renaming/affirming tentatives. Mark last
     ptrdiff_t tmpFlags=v->flags&0xff000000;

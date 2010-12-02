@@ -79,14 +79,9 @@ infon* getVeryTop(infon* i){
 	return j;
 }
 
-<<<<<<< HEAD
 void deepCopy(infon* from, infon* to, int* args){
-    uint fm=from->flags&mRepMode;
+    ptrdiff_t fm=from->flags&mRepMode;
     int EOT_DC=0;
-=======
-void deepCopy(infon* from, infon* to, infon* args){
-	ptrdiff_t fm=from->flags&mRepMode;
->>>>>>> 9b14aaa77a3d997d8e1ca6846de20550c5252c23
     to->flags=from->flags;
     if(((from->flags>>goSize)&tType)==tList || ((from->flags>>goSize)&fConcat)){to->size=copyList(from->size); if(to->size)to->size->top=to;}
     else to->size=from->size;
@@ -138,11 +133,7 @@ char isPosLorEorGtoSize(ptrdiff_t pos, infon* item){
 }
 
 void processVirtual(infon* v){
-<<<<<<< HEAD
-    infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT=0, mode; uint vSize=(uint)v->size;
-=======
-    infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT_PV=0; ptrdiff_t mode; ptrdiff_t vSize=(ptrdiff_t)v->size;
->>>>>>> 9b14aaa77a3d997d8e1ca6846de20550c5252c23
+    infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT=0; ptrdiff_t mode; ptrdiff_t vSize=(ptrdiff_t)v->size;
     char posArea=isPosLorEorGtoSize(vSize, parent);
     if(posArea=='G'){return;} // TODO: go backward, renaming/affirming tentatives. Mark last
     ptrdiff_t tmpFlags=v->flags&0xff000000;

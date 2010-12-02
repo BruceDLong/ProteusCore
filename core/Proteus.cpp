@@ -149,7 +149,7 @@ void processVirtual(infon* v){
 }
 
 void InitList(infon* item) {
-    int EOT_IL=0; infon* tmp; infNode* IDp;
+    int EOT_IL=0; infon* tmp;
     if(item->value && (((tmp=item->value->prev)->flags)&isVirtual)){
         tmp->spec2=item->spec2;
         if(tmp->spec2 && ((tmp->spec2->flags&mRepMode)==asFunc))
@@ -209,7 +209,7 @@ infon* getIdentFromPrev(infon* prev){
 }
 
 int agent::compute(infon* i){
-    infon* p=i->value; int vAcc, sAcc, sSign, vSign, count=0;
+    infon* p=i->value; int vAcc, sAcc, count=0;
     if(p) do{
         normalize(p); // TODO: appending inline rather than here would allow streaming.
         if((p->flags&((tType<<goSize)+tType))==((tUInt<<goSize)+tUInt)){
@@ -257,7 +257,7 @@ void resolve(infon* i, infon* theOne){
 
 enum WorkItemResults {DoNothing, BypassDeadEnd, DoNext};
 int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
-    infNode *wrkNode=ci->wrkList, *iter, *IDp; infon *item, *IDfol, *tmp, *tmp2, *parent, *theOne=0;
+    infNode *wrkNode=ci->wrkList, *IDp; infon *item, *IDfol, *tmp, *tmp2, *theOne=0;
     ptrdiff_t altCount=0, cSize, tempRes, isIndef=0, result=DoNothing, f;
     if(CIfol && !CIfol->pred) CIfol->pred=ci;
     if(wrkNode)do{
@@ -370,7 +370,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
 
 infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
     if (i==0) return 0;
-    int cnt=0; int nxtLvl, override, EOT_n; infon *CI, *CIfol, *tmp; infNode* IDp;
+    int nxtLvl, override, EOT_n; infon *CI, *CIfol, *tmp; infNode* IDp;
     if((i->flags&tType)==tList) InitList(i);
     infQ ItmQ; ItmQ.push(Qitem(i,firstID,(firstID)?1:0,0));
 //    DEB("\n<h2>Normalizing: " << i << "</h2>\n<table border=\"3\" cellpadding=\"5\" width=\"100%\"><tr><td>\n");

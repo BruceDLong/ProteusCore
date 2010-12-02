@@ -80,7 +80,7 @@ std::string printInfon(infon* i, infon* CI){
             switch (f&mRepMode){
             case toGiven: s+="%["; s+=printInfon(i->spec1, CI); s+="]"; break;
             case toWorldCtxt: s+="&"; break;
-            case toHomePos: for(int h=(int)(i->spec1); h; h--) s+="\\["; s+=printInfon(i->spec2,CI); s+="]"; break;
+            case toHomePos: for(ptrdiff_t h=(ptrdiff_t)(i->spec1); h; h--) s+="\\["; s+=printInfon(i->spec2,CI); s+="]"; break;
             case fromHere: s+="^"; break;
             case asFunc:  s+="[";s+=printInfon(i->spec2, CI); s+="]:";s+=printInfon(i->spec1, CI); break;
             }

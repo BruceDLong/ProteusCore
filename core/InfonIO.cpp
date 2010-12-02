@@ -35,13 +35,13 @@ std::string printHTMLFooter(std::string ErrorMsg){
 }
 
 #define Indent {for (int x=0;x<indent;++x) s+=" ";}
-std::string printPure (infon* i, uint f, uint wSize, infon* CI){
+std::string printPure (infon* i, ptrdiff_t f, ptrdiff_t wSize, infon* CI){
     std::string s;
     if ((f&fIncomplete+fUnknown) && !(f&tUInt)) s+="?";
-    uint type=f&tType;
+    ptrdiff_t type=f&tType;
     if (type==tUInt){
         if (f & fUnknown) s+='_';
-        else {char buf[70]; itoa((uint)i, buf); s.append(buf);}
+        else {char buf[70]; itoa((ptrdiff_t)i, buf); s.append(buf);}
     } else if(type==tString){s+="\"";s.append((char*)i,wSize);s+="\""; }
     else if(type==tList||(f&fConcat)){
         s+=(f&fConcat)?"(":"{";
@@ -58,8 +58,8 @@ std::string printInfon(infon* i, infon* CI){
     std::string s; //Indent;
     if(i==0) {s+="null"; return s;}
     if(i==CI)s+="<font color=green>";
-    uint f=i->flags;
-    uint mode=f&mRepMode;
+    ptrdiff_t f=i->flags;
+    ptrdiff_t mode=f&mRepMode;
 //    if(f&toExec) s+="@";
     if(f&asDesc) s+="#";
     if (mode==asTag) {
@@ -73,7 +73,7 @@ std::string printInfon(infon* i, infon* CI){
         else{
             if((f&tType)==tUInt) {s+=((f>>goSize)&fInvert)?"/":"*"; s+=printPure(i->size, f>>goSize, 0,CI);}
              if((f&tType)==tUInt) s+=(f&fInvert)?"-":"+";
-            s+=printPure(i->value,f, (uint)i->size, CI);
+            s+=printPure(i->value,f, (ptrdiff_t)i->size, CI);
         }
     } else {
         if (!(f&isNormed)) {
@@ -135,8 +135,8 @@ char QParser::peek(){
 #define chk(ch) {if(stream.peek()==ch) stream.get(); else throw "Expected something else";}
 
 char errMsg[100];
-uint QParser::ReadPureInfon(char &tok, infon** i, uint* flags, infon** s2){
-    uint p=0, size=0, stay=1; char rchr; infon *head=0, *prev; infon* j;
+ptrdiff_t QParser::ReadPureInfon(char &tok, infon** i, ptrdiff_t* flags, infon** s2){
+    ptrdiff_t p=0, size=0, stay=1; char rchr; infon *head=0, *prev; infon* j;
     //if(tok=='$'){*flags|=fLoop+tList+fUnknown; *i=ReadInfon(1); return 0;}
     if(tok=='('||tok=='{'||tok=='['){
         if(tok=='(') {rchr=')'; *flags|=(fConcat+tUInt);}
@@ -179,7 +179,7 @@ uint QParser::ReadPureInfon(char &tok, infon** i, uint* flags, infon** s2){
 }
 
 infon* QParser::ReadInfon(int noIDs){
-    char tok, op=0; uint p=0, size=0; infon*i1=0,*i2=0,*s1=0,*s2=0; uint flags=0,f1=0,f2=0;
+    char tok, op=0; ptrdiff_t p=0, size=0; infon*i1=0,*i2=0,*s1=0,*s2=0; ptrdiff_t flags=0,f1=0,f2=0;
     getToken(tok); //DEB(tok)
     if(tok=='@'){flags|=toExec; getToken(tok);}
     if(tok=='#'){flags|=asDesc; getToken(tok);}
@@ -197,7 +197,7 @@ infon* QParser::ReadInfon(int noIDs){
         flags|=fUnknown;
         if (tok=='%'){flags|=toGiven; s1=ReadInfon();} // % search
         else if (tok=='\\' || tok=='^') {
-            for(s1=0; tok=='\\';  tok=stream.get()) {s1=(infon*)((uint)s1+1); ChkNEOF;}
+            for(s1=0; tok=='\\';  tok=stream.get()) {s1=(infon*)((ptrdiff_t)s1+1); ChkNEOF;}
              if (tok=='^') flags|=fromHere; else {flags|=toHomePos; stream.putback(tok);}
         } else if (tok=='&') flags|=toWorldCtxt;
         s2=ReadInfon(3);
@@ -230,7 +230,7 @@ infon* QParser::ReadInfon(int noIDs){
         }
     }
     Peek(tok);
-    infNode *ID=0, *IDp=0; uint modeBit=0;
+    infNode *ID=0, *IDp=0; ptrdiff_t modeBit=0;
     if(!(noIDs&1)) while(tok=='=') {
         getToken(tok);
         infon* tmp= ReadInfon(1); insertID(&ID, tmp,0);

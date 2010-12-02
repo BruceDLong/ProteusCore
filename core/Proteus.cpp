@@ -105,7 +105,8 @@ void deepCopy(infon* from, infon* to, int* args){
         for(infon* i=from->spec1; i; i=i->next){
             tail=new infon;
             deepCopy(i->prev, tail);
-           getNextTerm(i->prev,DC); if(EOT_DC) *args=1;
+            getNextTerm(i->prev,DC);
+            if(EOT_DC) {*args=1;}
             if(prevNode) prevNode->next=tail; else to->spec1=tail;
             prevNode=tail;
         }
@@ -133,7 +134,7 @@ char isPosLorEorGtoSize(ptrdiff_t pos, infon* item){
 }
 
 void processVirtual(infon* v){
-    infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT=0; ptrdiff_t mode; ptrdiff_t vSize=(ptrdiff_t)v->size;
+    infon *spec=v->spec2, *parent=getTop(v); int EOT=0; ptrdiff_t mode; ptrdiff_t vSize=(ptrdiff_t)v->size;
     char posArea=isPosLorEorGtoSize(vSize, parent);
     if(posArea=='G'){return;} // TODO: go backward, renaming/affirming tentatives. Mark last
     ptrdiff_t tmpFlags=v->flags&0xff000000;
@@ -147,8 +148,8 @@ void processVirtual(infon* v){
         } else deepCopy(spec, v);
     }
     v->flags|=tmpFlags; v->flags&=~isVirtual;
-    if(EOT) if(posArea=='?'){posArea='E'; /* TODO:Set Parent's Size to v->size */ }
-        else if(posArea!='E') throw "List was too short";
+    if(EOT){ if(posArea=='?'){posArea='E'; /* TODO:Set Parent's Size to v->size */ }
+        else if(posArea!='E') throw "List was too short";}
     if (posArea=='E') {v->flags|=isBottom+isLast; return;}
     infon* tmp= new infon;  tmp->size=(infon*)(vSize+1); tmp->spec2=spec;
     tmp->flags|=fUnknown+isBottom+isVirtual+asNone+(tUInt<<goSize);
@@ -179,7 +180,7 @@ int getFollower(infon** lval, infon* i){
 		i=getTop(i); i->size=size; i->flags&= ~fLoop; ++levels;
 		goto gnsTop;
 	}
-    if(i->flags&isLast){
+    if(i->flags&isLast && i->prev){
         i=getTop(i); ++levels;
         if(i) goto gnsTop;
         else {*lval=0; return levels;}
@@ -304,10 +305,11 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                   case tString+4*tUnknown:
                     result=DoNext;
                     getFollower(&IDfol, item);
-                    if(CIfol)
+                    if(CIfol){
 		        if(IDfol) addIDs(CIfol, IDfol, asAlt);
 			else if(ci->next && (ci->next->flags&isTentative))
-			SetBypassDeadEnd();
+                                    SetBypassDeadEnd();
+                         }
                     break;
                 case tUInt+4*tString: DEB("(US)") result=DoNext; break;
                 case tUInt+4*tList:DEB("(UL)") InitList(item); addIDs(ci,item->value,asAlt); result=DoNext;break;
@@ -390,7 +392,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
         DEB("<br>CI:"<<cnt++<<" "<<CI<<":<b>"<<printInfon(i,CI)<<"</b><br>\n")
         while (CIRepMode!=asNone){
             if(CI->flags&toExec) override=1;
-            if(CI->flags&asDesc) if(override) override=0; else break;
+            if(CI->flags&asDesc) {if(override) override=0; else break;}
             if(CIRepMode==asFunc){
                 if(CI->flags&mMode){//Evaluating Inverse function...
                     LastTerm(CI, tmp, n);
@@ -478,9 +480,9 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
         case DoNext:
             if((CI->flags&(fConcat+tType))==(fConcat+tUInt))
                 {compute(CI); if(CIfol){pushCIsFollower;}} // push CI's follower
-            else if(!((CI->flags&asDesc)&&!override)&&(CI->value&&((CI->flags&tType)==tList)||(CI->flags&fConcat))){
+            else if(!((CI->flags&asDesc)&&!override)&&((CI->value&&((CI->flags&tType)==tList))||(CI->flags&fConcat))){
                 // push CI's value
-                ItmQ.push(Qitem(CI->value,cn.firstID,(cn.IDStatus==1&!(CI->flags&fConcat))?2:cn.IDStatus,cn.level+1));
+                ItmQ.push(Qitem(CI->value,cn.firstID,((cn.IDStatus==1)&!(CI->flags&fConcat))?2:cn.IDStatus,cn.level+1));
             }else if (CIfol){pushCIsFollower;} // push CI's follower
             break;
         case BypassDeadEnd: {nxtLvl=getFollower(&CIfol,getTop(CI))+1; pushCIsFollower;} break;

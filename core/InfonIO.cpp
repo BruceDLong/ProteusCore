@@ -37,7 +37,7 @@ std::string printHTMLFooter(std::string ErrorMsg){
 #define Indent {for (int x=0;x<indent;++x) s+=" ";}
 std::string printPure (infon* i, ptrdiff_t f, ptrdiff_t wSize, infon* CI){
     std::string s;
-    if ((f&fIncomplete+fUnknown) && !(f&tUInt)) s+="?";
+    if ((f&(fIncomplete+fUnknown)) && !(f&tUInt)) s+="?";
     ptrdiff_t type=f&tType;
     if (type==tUInt){
         if (f & fUnknown) s+='_';
@@ -238,8 +238,8 @@ infon* QParser::ReadInfon(int noIDs){
     }
     infon* i=new infon((f1<<goSize)+f2+flags, i1,i2,ID,s1,s2);
     i->wSize=size;
-    if (i->size && ((f1&tType)==tList)||(f1&fConcat)) i->size->top=i;
-    if (i->value&& ((f2&tType)==tList)||(f2&fConcat))i->value->top=i;
+    if ((i->size && ((f1&tType)==tList))||(f1&fConcat)) i->size->top=i;
+    if ((i->value&& ((f2&tType)==tList))||(f2&fConcat))i->value->top=i;
     if(!(noIDs&2)){
         if (tok=='!'){modeBit=mMode; getToken(tok); if(peek()!=':') throw"Expected ':'";}
         if (tok==':'){

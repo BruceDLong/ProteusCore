@@ -117,21 +117,20 @@ else if((varIn->flags&tType)!=tList) EOT_##tag=1;     \
 else {varOut=varIn->value->prev; if (varOut==0) EOT_##tag=1;}}
 
 #define getNextTerm(p,tag) { gnt1##tag:                         \
-    if(p->flags&isBottom)                                           \
+    if(p->flags&isBottom) {                                          \
         if (p->flags&isLast){                                 \
           infon* parent=(p->flags&isFirst)?p->top:p->top->top; \
            if(parent==0){EOT_##tag=true; p=p->top;}    \
            else if(!(parent->flags&fConcat)||(p->next!=parent->value)) {EOT_##tag=true; p=p->top;} \
             else {p=parent; goto gnt1##tag;}          \
-            }                                                  \
-        else {EOT_##tag=true;} /*Bottom but not end, make subscription*/    \
-    else {                                                   \
+            }  else {EOT_##tag=true;} /*Bottom but not end, make subscription*/    \
+    }else {                                                   \
         p=p->next;                                            \
 gnt2##tag:                                                  \
-      if (p==0) EOT_##tag=true;                             \
-      else if (p&&(p->flags&fConcat)) \
+      if (p==0) {EOT_##tag=true; }                            \
+      else { if (p&&(p->flags&fConcat)){ \
             if (p->value==0) {goto gnt1##tag;}                  \
-            else {p=p->value; goto gnt2##tag;}                  \
+            else {p=p->value; goto gnt2##tag;} }  }               \
    }}
 
 #define getPrevTerm(p,tag) { gpt1##tag:                                 \

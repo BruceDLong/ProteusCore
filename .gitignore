@@ -7,6 +7,14 @@ proteus
 *~
 *.swp
 
+# Tag files
+tags
+GPATH
+GRTAGS
+GSYMS
+GTAGS
+ID
+
 # For CMake build system
 Makefile
 CMakeCache.txt

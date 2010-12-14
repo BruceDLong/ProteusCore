@@ -140,11 +140,10 @@ void processVirtual(infon* v){
     ptrdiff_t tmpFlags=v->flags&0xff000000;
     if (spec){
         if((mode=(spec->flags&mRepMode))==asFunc){
-            deepCopy(spec,v,&EOT);
-    //        getNextTerm(args,PV)
+            deepCopy(spec,v,&EOT); // The '&EOT' causes deepCopy to do getNextTerm().
         } else if(mode<asFunc){
 		deepCopy(spec,v);
-		if(posArea=='?' && v->spec1) posArea= 'N'; // N='Not greater' Is this logic correct?
+		if(posArea=='?' && v->spec1) posArea= 'N'; // N='Not greater'
         } else deepCopy(spec, v);
     }
     v->flags|=tmpFlags; v->flags&=~isVirtual;
@@ -389,12 +388,11 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
     while (!ItmQ.empty()){
         Qitem cn=ItmQ.front(); ItmQ.pop(); CI=cn.item;
         int CIRepMode=CI->flags&mRepMode; override=0;
-        DEB("<br>CI:"<<cnt++<<" "<<CI<<":<b>"<<printInfon(i,CI)<<"</b><br>\n")
         while (CIRepMode!=asNone){
             if(CI->flags&toExec) override=1;
             if(CI->flags&asDesc) {if(override) override=0; else break;}
             if(CIRepMode==asFunc){
-                if(CI->flags&mMode){//Evaluating Inverse function...
+                if(CI->flags&mMode){//Evaluating Inverse function... TODO: this is broken
                     LastTerm(CI, tmp, n);
                     insertID(&tmp->wrkList, CI->spec1,0);
                 }else { //Evaluating Function...
@@ -402,6 +400,11 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     CI->spec1->top=CI;
                     normalize(CI->spec2,CI->spec1); // norm(func-body-list (CI->spec2))
                     LastTerm(CI->spec2, tmp, n);
+                    if(tmp->flags&fUnknown && tmp->wrkList==0 && CI->next && CI->next->flags&isVirtual){
+                        // To John N.:
+                        // Here is where I think the bug should be fixed. I BELEIVE the above condition will detect  the situation
+                        // Here in the body we need to handle it.
+                        }
                     insertID(&CI->wrkList, tmp,0);
                     cpFlags(tmp,CI); CI->flags|=fUnknown+(fUnknown<<goSize);
                 }
@@ -419,7 +422,6 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                         tmp=CI;
                         for(ptrdiff_t i=0; i<(ptrdiff_t)CI->spec1; ++i) {  // for each backslash
                                 if(tmp==0 /* || ((tmp->flags&mRepMode)==asFunc)*/) {tmp=0;std::cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';}
-                                else std::cout << "Current tmp: "<<printInfon(tmp)<< '\n';
                             if(CIRepMode!=toHomePos || i>0) tmp=getTop(tmp);
                         }
                         if(CIRepMode==toHomePos) {

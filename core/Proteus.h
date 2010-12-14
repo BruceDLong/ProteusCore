@@ -23,6 +23,9 @@
 #include <queue>
 #include <iostream>
 #include <string.h>
+
+typedef ptrdiff_t UInt;
+
 struct stng {char* S; int L; stng(char* s=0, int l=0):S(s),L(l){};};
 #define stngCpy(s,ch) {s.L=strlen(ch); s.S=new char[s.L+1]; memcpy(s.S,ch,s.L+1);}
 #define lstngCpy(s,ch,len) {s.L=len; s.S=new char[s.L+1]; memcpy(s.S,ch,s.L); s.S[s.L]=0;}
@@ -45,14 +48,14 @@ enum vals {toGiven=0, toWorldCtxt=0x0100, toHomePos=0x0200, fromHere=0x0300, asF
     };
 
 struct infon;
-struct infNode {infon* item; infon* slot; ptrdiff_t idFlags; infNode* next; infNode(infon* itm=0, ptrdiff_t f=0):item(itm),idFlags(f){};};
+struct infNode {infon* item; infon* slot; UInt idFlags; infNode* next; infNode(infon* itm=0, UInt f=0):item(itm),idFlags(f){};};
 enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, CountSize=2, SetComplete=3, EliminateAlts=4, NodeDoneFlag=8, NoMatch=16,isRawFlag=32};
 
 struct infon {
-    infon(ptrdiff_t f=0,infon* s=0, infon*v=0,infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0):
+    infon(UInt f=0,infon* s=0, infon*v=0,infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0):
         flags(f), size(s), value(v), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {prev=0; top=0;};
-    ptrdiff_t  flags;
-    ptrdiff_t wSize; // get rid if this. disallow strings and lists in "size"
+    UInt  flags;
+    UInt wSize; // get rid if this. disallow strings and lists in "size"
     infon *size;        // The *-term; perhaps just a number of states
     infon *value;       // Summand List
     infon *next, *prev, *top, *pred;
@@ -60,8 +63,8 @@ struct infon {
     infNode* wrkList;
 };
 
-struct Qitem{infon* item; infon* firstID; ptrdiff_t IDStatus; ptrdiff_t level;
-     Qitem(infon* i=0,infon* f=0,ptrdiff_t s=0,ptrdiff_t l=0):item(i),firstID(f),IDStatus(s),level(l){};};
+struct Qitem{infon* item; infon* firstID; UInt IDStatus; UInt level;
+     Qitem(infon* i=0,infon* f=0,UInt s=0,UInt l=0):item(i),firstID(f),IDStatus(s),level(l){};};
 typedef std::queue<Qitem> infQ;
 
 extern infon* World;
@@ -77,12 +80,12 @@ struct agent {
 std::string printHTMLHeader(std::string ItemToNorm);
 std::string printHTMLFooter(std::string ErrorMsg);
 std::string printInfon(infon* i, infon* CI=0);
-std::string printPure (infon* i, ptrdiff_t f, ptrdiff_t wSize, infon* CI=0);
+std::string printPure (infon* i, UInt f, UInt wSize, infon* CI=0);
 const int bufmax=1024*32;
 struct QParser{
     QParser(std::istream& _stream):stream(_stream){};
     infon* parse(); // if there is an error it is returned in buf as a char* string.
-    ptrdiff_t ReadPureInfon(char &tag, infon** i, ptrdiff_t* flags, infon** s2);
+    UInt ReadPureInfon(char &tag, infon** i, UInt* flags, infon** s2);
     infon* ReadInfon(int noIDs=0);
     void scanPast(char* str);
     void RmvWSC ();
@@ -97,8 +100,8 @@ struct QParser{
 #define OUT(msg) /*{std::cout<< msg;}*/
 #define DEB(msg) /*{std::cout<< msg << "\n";}*/
 #define getInt(inf, num, sign) {/*normalize(inf);  */           \
-  ptrdiff_t f=inf->flags;                           \
-  if((f&tType)==tUInt && !(f&fUnknown)) num=(ptrdiff_t)inf->value; else num=0;     \
+  UInt f=inf->flags;                           \
+  if((f&tType)==tUInt && !(f&fUnknown)) num=(UInt)inf->value; else num=0;     \
   sign=f&fInvert;}
 
 #define insertID(list, itm, flag) {IDp=(*list); (*list)=new infNode(itm,flag); \

@@ -21,6 +21,7 @@ void readln(std::string &str){
 static void reportFault(int Signal){DEB(printHTMLFooter("Segmentation Fault.")) fflush(stdout); abort();}
 extern infon *World;
 infon* topInfon;
+
 int main(int argc, char **argv)
 {
 signal(SIGSEGV, reportFault);
@@ -72,7 +73,7 @@ DEB(printHTMLFooter(D.buf))
  return 0;
 }
 /*
-int main2(int argc, char **argv)
+int main(int argc, char **argv)
 {
   //log.open("log.txt");
     // Load World
@@ -87,24 +88,25 @@ int main2(int argc, char **argv)
 
     // Load DispList
     std::cout << "Loading display.pr\n";
-    std::fstream fin2("../slyp/display.pr");
+    std::fstream fin2("testScanConcat.pr");   //("../slyp/display.pr");
     QParser D(fin2);
     infon* displayList=D.parse(); std::cout << "parsed\n";
- //   if(displayList) std::cout<<"["<<printInfon(displayList).c_str()<<"]\n";
- //   else {std::cout<<"Error:"<<D.buf<<"\n"; exit(1);}
+    if(displayList) std::cout<<"["<<printInfon(displayList).c_str()<<"]\n";
+    else {std::cout<<"Error:"<<D.buf<<"\n"; exit(1);}
 
     a.normalize(displayList);
 //    DEB("Normed.");
 //    DEB(printInfon(displayList))
 
-int count=0;
-int EOT_test=0; infon* i=0;
-
-StartTerm(displayList, i, test)
-while(!EOT_test){
-    std::cout << count<<":[" << printInfon(i).c_str() << "]\n";
-    if (++count==20) return 0;
- getNextTerm(i,test);
+	int count=0;
+	int EOT=0;
+	infon* i=0;
+	infon* CI=displayList; topInfon=displayList;
+	EOT=StartTerm(CI, &i);
+	while(!EOT){
+		std::cout << count<<":[" << printInfon(i).c_str() << "]\n";
+		if (++count==20) return 0;
+		EOT= getNextTerm(&i);
 }
 std::cout << "DONE\n";
 

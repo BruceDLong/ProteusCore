@@ -91,7 +91,7 @@ void deepCopy(infon* from, infon* to, int* args){
     if(fm==toHomePos) to->spec1=from->spec1;
     else if(fm==asTag) to->spec1=from->spec1;
     else if((UInt)(from->spec1)<=20) to->spec1=from->spec1;
-    else if(fm<asFunc){
+    else if(fm<(UInt)asFunc){
 		to->spec1=new infon; copyTo(from->spec1,to->spec1);
 		if(to->prev && to->prev!=to){
 			infon* spec2=to->prev->spec2;
@@ -105,7 +105,7 @@ void deepCopy(infon* from, infon* to, int* args){
         for(infon* i=from->spec1; i; i=i->next){
             tail=new infon;
             deepCopy(i->prev, tail);
-            getNextTerm(i->prev,DC);
+            EOT_DC=getNextTerm(&i->prev);
             if(EOT_DC) {*args=1;}
             if(prevNode) prevNode->next=tail; else to->spec1=tail;
             prevNode=tail;
@@ -141,7 +141,7 @@ void processVirtual(infon* v){
     if (spec){
         if((mode=(spec->flags&mRepMode))==asFunc){
             deepCopy(spec,v,&EOT); // The '&EOT' causes deepCopy to do getNextTerm().
-        } else if(mode<asFunc){
+        } else if(mode<(UInt)asFunc){
 		deepCopy(spec,v);
 		if(posArea=='?' && v->spec1) posArea= 'N'; // N='Not greater'
         } else deepCopy(spec, v);
@@ -158,12 +158,12 @@ void processVirtual(infon* v){
 }
 
 void InitList(infon* item) {
-    int EOT_IL=0; infon* tmp;
+     infon* tmp;
     if(item->value && (((tmp=item->value->prev)->flags)&isVirtual)){
         tmp->spec2=item->spec2;
         if(tmp->spec2 && ((tmp->spec2->flags&mRepMode)==asFunc)){
             for(infon* i=tmp->spec2->spec1; i; i=i->next)
-                StartTerm(i,i->prev,IL);
+                StartTerm(i, &i->prev);
         }
         processVirtual(tmp); item->flags|=tList;
     }
@@ -233,8 +233,7 @@ int agent::compute(infon* i){
             if(p->flags&(fInvert<<goSize)){
 	            if (++count==1){sAcc=(UInt)p->size; vAcc=val;}
                     else {sAcc/=(UInt)p->size; vAcc=(vAcc/(UInt)p->size)+val;}
-                }
-                else {
+                } else {
 	            if (++count==1){sAcc=(UInt)p->size; vAcc=val;}
                     else {sAcc*=(UInt)p->size; vAcc=(vAcc*(UInt)p->size)+val;}
                     }
@@ -274,7 +273,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
         wrkNode=wrkNode->next; item=wrkNode->item; IDfol=(infon*)1; DEB(" Doing Work Order:" << item);
         switch (wrkNode->idFlags&WorkType){
         case ProcessAlternatives:
-			if (altCount>=1) break; // don't keep looking after found
+            if (altCount>=1) break; // don't keep looking after found
             if(wrkNode->idFlags&isRawFlag){
               tmp=new infon(ci->flags,ci->size,ci->value,0,ci->spec1,ci->spec2,ci->next);
               tmp->prev=ci->prev; tmp->top=ci->top;
@@ -293,8 +292,10 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             if((ci->flags&tType)==0) {
                 ci->flags|=((item->flags&tType)+(tUInt<<goSize)+sizeIndef); isIndef=1;
                 ci->size=item->size;if (!(item->flags&(fUnknown<<goSize))) ci->flags&=~(fUnknown<<goSize);
-            } else isIndef=0;
-            switch((ci->flags&tType)+4*(item->flags&tType)){
+                    } else isIndef=0;
+             if ((ci->flags&matchType) && ((ci->flags&tType) != (item->flags&tType)))
+                        {result=BypassDeadEnd; std::cout << "Non-matching types\n";}
+             else switch((ci->flags&tType)+4*(item->flags&tType)){
                 case tUInt+4*tUInt: DEB("(UU)")
                     if(!(ci->flags&fUnknown) && ci->value!=item->value) {SetBypassDeadEnd(); break;}
                     if(!(ci->flags&(fUnknown<<goSize)) && ci->size!=item->size) {SetBypassDeadEnd(); break;}
@@ -350,7 +351,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                 case tString+4*tList:DEB("(SL)") InitList(item);  result=DoNext;
                     break;
                 case tList+4*tList: InitList(item);
-					result=DoNext;
+		    result=DoNext;
                     if(ci->value) {addIDs(ci->value, item->value, asAlt);}
                     else{
                         copyTo(item, ci); item->value->top=ci;
@@ -381,7 +382,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
 
 infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
     if (i==0) return 0;
-    int nxtLvl, override, EOT_n; infon *CI, *CIfol, *tmp; infNode* IDp;
+    int nxtLvl, override; infon *CI, *CIfol, *tmp; infNode* IDp;
     if((i->flags&tType)==tList) InitList(i);
     infQ ItmQ; ItmQ.push(Qitem(i,firstID,(firstID)?1:0,0));
 //    DEB("\n<h2>Normalizing: " << i << "</h2>\n<table border=\"3\" cellpadding=\"5\" width=\"100%\"><tr><td>\n");
@@ -393,13 +394,13 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
             if(CI->flags&asDesc) {if(override) override=0; else break;}
             if(CIRepMode==asFunc){
                 if(CI->flags&mMode){//Evaluating Inverse function... TODO: this is broken
-                    LastTerm(CI, tmp, n);
+                    LastTerm(CI, &tmp);
                     insertID(&tmp->wrkList, CI->spec1,0);
                 }else { //Evaluating Function...
                     if(autoEval(CI, this)) break;
                     CI->spec1->top=CI;
                     normalize(CI->spec2,CI->spec1); // norm(func-body-list (CI->spec2))
-                    LastTerm(CI->spec2, tmp, n);
+                    LastTerm(CI->spec2, &tmp);
                     if(tmp->flags&fUnknown && tmp->wrkList==0 && CI->next && CI->next->flags&isVirtual){
                         // To John N.:
                         // Here is where I think the bug should be fixed. I BELEIVE the above condition will detect  the situation
@@ -408,12 +409,12 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     insertID(&CI->wrkList, tmp,0);
                     cpFlags(tmp,CI); CI->flags|=fUnknown+(fUnknown<<goSize);
                 }
-            } else if(CIRepMode<asFunc){ // Processing Index...
+            } else if(CIRepMode<(UInt)asFunc){ // Processing Index...
                if(CI->flags&mMode){insertID(&CI->wrkList, CI->spec2,0); fetchFirstItem(CIfol,getTop(CI->spec2))}
                else {
                     switch (CIRepMode){
                     case toGiven:
-                        if (CI->spec1>(infon*)1) {normalize(CI->spec1,0,1); StartTerm(CI->spec1, tmp, n);}
+                        if (CI->spec1>(infon*)1) {normalize(CI->spec1,0,1); StartTerm(CI->spec1, &tmp);}
                         else tmp=getIdentFromPrev(CI->prev);
                         break;
                     case toWorldCtxt:tmp=&context; break;
@@ -441,7 +442,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                         CI->spec2->prev=(infon*)1;  // Set sentinal value so this can tell it is an index
                         normalize(CI->spec2);
                         tmp->flags|=toExec;
-                        LastTerm(CI->spec2, tmp, n); // Add that last term to CI's wrkList.
+                        LastTerm(CI->spec2, &tmp); // Add that last term to CI's wrkList.
                         if (tmp->flags&isLast) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
                         else {  // migrate alternates from spec2 to CI...
                             infNode *wrkNode=CI->spec2->wrkList; infon* item=0;

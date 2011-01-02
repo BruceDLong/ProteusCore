@@ -145,9 +145,13 @@ UInt QParser::ReadPureInfon(char &tok, infon** i, UInt* flags, infon** s2){
         RmvWSC(); int foundRet=0; int foundBar=0;
         for(tok=peek(); tok != rchr && stay; tok=peek()){
             if(tok=='<') {foundRet=1; getToken(tok); j=ReadInfon();}
-            else if(tok=='.'){stream.get();chk('.');chk('.');
-                j=new infon(fUnknown+isVirtual+asNone+(tUInt<<goSize),(infon*)(size+1));stay=0;}
-            else j=ReadInfon();
+            else if(tok=='.'){
+                stream.get();
+                if(stream.peek()=='.'){
+                    stream.get(); chk('.');
+                    j=new infon(fUnknown+isVirtual+asNone+(tUInt<<goSize),(infon*)(size+1));stay=0;
+                    } else {stream.putback(tok);  j=ReadInfon();}
+            } else j=ReadInfon();
             if(++size==1){
                 Peek(tok);
                 if(!foundRet && !foundBar && stay && tok=='|'){
@@ -183,6 +187,7 @@ infon* QParser::ReadInfon(int noIDs){
     getToken(tok); //DEB(tok)
     if(tok=='@'){flags|=toExec; getToken(tok);}
     if(tok=='#'){flags|=asDesc; getToken(tok);}
+    if(tok=='.'){flags|=matchType; getToken(tok);} // This is a hint that idents must match type, not just value.
     if(tok=='?'){f1=f2=fUnknown; flags=asNone;}
     else if(iscsym(tok)&&!isdigit(tok)&&(tok!='_')){
         stream.putback(tok); flags|=asTag; stng tag; stng* tags=new stng;

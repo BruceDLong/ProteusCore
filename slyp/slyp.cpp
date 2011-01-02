@@ -94,7 +94,7 @@ char textBuff[1024];
 
 int gInt(){
     getInt(ItmPtr,j,sign);  // std::cout << j << ", ";
-    getNextTerm(ItmPtr,d2);
+    getNextTerm(&ItmPtr);
     return (sign)?-j:j;
 }
 
@@ -103,13 +103,13 @@ char* gStr() {
 		memcpy(textBuff, ItmPtr->value, (uint)ItmPtr->size);
 		textBuff[(uint)(ItmPtr->size)]=0;
 	}
-	getNextTerm(ItmPtr,d2);
+	getNextTerm(&ItmPtr);
 	return textBuff;
 }
 
 infon* gList(){
     infon* ret=ItmPtr;
-    getNextTerm(ItmPtr,d2);
+    getNextTerm(&ItmPtr);
     return ret;
 }
 
@@ -150,9 +150,9 @@ static inline SDL_Surface *load_image(const char *filename)
 }
 
 int getColorComponents(infon* color, int* red, int* green, int* blue){
-    color=color->value; *red=color->value;
-    color=color->next; *green=color->value;
-    color=color->next; *blue=color->value;
+    color=color->value; *red=(int)color->value;
+    color=color->next; *green=(int)color->value;
+    color=color->next; *blue=(int)color->value;
 }
 
 static inline void render_bg(void)
@@ -298,10 +298,10 @@ if (ProteusDesc->size==0) std::cout << "Err2\n";
     infon* OldItmPtr;
 int size, size2; float a,b,c,d; int Ia,Ib,Ic,Id,Ie,If,Ih,II; char  *Sa, *Sb;
 int EOT_d1=0; infon* i=0;
-StartTerm(ProteusDesc, i, d1)
+EOT_d1=StartTerm(ProteusDesc, &i);
 while(!EOT_d1){
 //  std::cout << count<<":[" << printInfon(i).c_str() << "]\n";
-        StartTerm(i,ItmPtr,d2);
+        EOT_d2=StartTerm(i, &ItmPtr);
         //std::cout<<"ival["<<ItmPtr<<"]\n";
         infon* args=gList();
         int cmd=gINT;
@@ -332,7 +332,7 @@ std::cout<<"\n[CMD:"<< cmd << "]";
 //            case 90:	TextureViaCairoPango(); break;
         }
     if (++count==90) break;
-    getNextTerm(i,d1);
+    EOT_d1=getNextTerm(&i);
     }
     std::cout << "\nCount: " << count << "\n======================\n";
 }

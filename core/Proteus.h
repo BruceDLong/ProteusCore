@@ -42,7 +42,7 @@ inline bool operator==(const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) ret
 enum masks {mRepMode=0x0700, mMode=0x0800, isNormed=0x1000, asDesc=0x2000, toExec=0x4000, sizeIndef=0x8000, mListPos=0xff000000, goSize=16};
 enum vals {toGiven=0, toWorldCtxt=0x0100, toHomePos=0x0200, fromHere=0x0300, asFunc=0x0400, intersect=0x0500, asTag=0x0600, asNone=0x0700,
     fMode=0xf8, fConcat=0x08, fLoop=0x10, fInvert=0x20, fIncomplete=0x40, fUnknown=0x80,
-    tType=3, tUnknown=0, tUInt=1, tString=2, tList=3,
+    tType=3, tUnknown=0, tUInt=1, tString=2, tList=3,   matchType=0x04,  notLast=(0x04<<goSize),
     isFirst=0x01000000, isLast=0x02000000, isTop=0x04000000, isBottom=0x8000000,
     noAlts=0, hasAlts=0x10000000, noMoreAlts=0x20000000, isTentative=0x40000000, isVirtual=0x80000000
     };
@@ -107,47 +107,83 @@ struct QParser{
 #define insertID(list, itm, flag) {IDp=(*list); (*list)=new infNode(itm,flag); \
     if(IDp){(*list)->next=IDp->next; IDp->next=(*list);} else (*list)->next=(*list); }
 
-#define StartTerm(varIn,varOut,tag) { EOT_##tag=0;           \
-while(varIn &&(varIn->flags&fConcat)) {varIn=varIn->value;}\
-if (varIn==0) EOT_##tag=2;      \
-else if ((varIn->flags&tType)!=tList) {EOT_##tag=3;}  \
-else {varOut=varIn->value; if (varOut==0) EOT_##tag=4;}} \
+int  getNextTerm(infon** p);  // forward decl
 
-#define LastTerm(varIn,varOut,tag) { EOT_##tag=0;     \
-while(varIn && (varIn->flags&fConcat)) {varIn=varIn->value->prev;}\
-if (varIn==0) EOT_##tag=1;               \
-else if((varIn->flags&tType)!=tList) EOT_##tag=1;     \
-else {varOut=varIn->value->prev; if (varOut==0) EOT_##tag=1;}}
+inline int StartTerm(infon* varIn, infon** varOut) {
+	infon* tmp;
+	if (varIn==0) return 1;
+	if (varIn->flags&fConcat){
+		if ((*varOut=varIn->value)==0) return 2;
+		do {
+			switch(varIn->flags&tType){
+				case tUnknown: *varOut=0; return -1;
+				case tUInt: case tString: return 0;
+				case tList: if(StartTerm(*varOut, &tmp)==0) {
+					*varOut=tmp;
+					return 0;
+					}
+				}
+			if (getNextTerm(varOut)) return 4;
+		} while(1);
+	}
+	if ((varIn->flags&tType)!=tList) {return 3;}
+	else {*varOut=varIn->value; if (*varOut==0) return 4;}
+	return 0;
+}
 
-#define getNextTerm(p,tag) { gnt1##tag:                         \
-    if(p->flags&isBottom) {                                          \
-        if (p->flags&isLast){                                 \
-          infon* parent=(p->flags&isFirst)?p->top:p->top->top; \
-           if(parent==0){EOT_##tag=true; p=p->top;}    \
-           else if(!(parent->flags&fConcat)||(p->next!=parent->value)) {EOT_##tag=true; p=p->top;} \
-            else {p=parent; goto gnt1##tag;}          \
-            }  else {EOT_##tag=true;} /*Bottom but not end, make subscription*/    \
-    }else {                                                   \
-        p=p->next;                                            \
-gnt2##tag:                                                  \
-      if (p==0) {EOT_##tag=true; }                            \
-      else { if (p&&(p->flags&fConcat)){ \
-            if (p->value==0) {goto gnt1##tag;}                  \
-            else {p=p->value; goto gnt2##tag;} }  }               \
-   }}
+inline int LastTerm(infon* varIn, infon** varOut) {
+	if (varIn==0) return 1;
+	if (varIn->flags&fConcat) {varIn=varIn->value->prev;}
+	else if((varIn->flags&tType)!=tList)  return 2;
+	else {*varOut=varIn->value->prev; if (*varOut==0) return 3;}
+	return 0;
+}
 
-#define getPrevTerm(p,tag) { gpt1##tag:                                 \
-    if(p->flags&isTop)                                             \
-        if (p->flags&isFirst)                                 \
-            if (p!=p->first->size){EOT_##tag=true; p=p->prev;}       \
-            else {p=p->first->first; goto gpt1##tag;}         \
-        else {EOT_##tag=true;} /*Bottom but not end, make subscription*/    \
-    else {                                                   \
-        p=p->prev;                                            \
-gpt2##tag:  if ((((p->flags&mFlags1)>>8)&rType)==rList)     \
-            if (p->size==0) {goto gpt1##tag;}                  \
-            else {p=p->size->prev; goto gpt2##tag;}            \
-        else if(p==0) EOT_##tag=true;                         \
-   }}
+inline int  getNextTerm(infon** p) {
+	infon *parent, *Gparent=0, *GGparent=0;
+	if((*p)->flags&isBottom) {
+		if ((*p)->flags&isLast){
+			parent=((*p)->flags&isFirst)?(*p)->top:(*p)->top->top;
+			if(parent==0){(*p)=(*p)->next; return 1;}
+			if(parent->top) Gparent=(parent->flags&isFirst)?parent->top:parent->top->top;
+			if(Gparent && (Gparent->flags&fConcat)) {
+				if(Gparent->top) GGparent=(Gparent->flags&isFirst)?Gparent->top:Gparent->top->top;
+				do {
+					if(getNextTerm(&parent)) return 4;
+// TODO: the next line fixes one problem but causes another: nested list-concats.
+// test it with:  (   ({} {"X", "Y"} ({} {9,8} {7,6}) {5} ) {1} {{}} {2, 3, 4} )
+					if(GGparent && (GGparent->flags&fConcat)) {*p=parent; return 0;}
+					switch(parent->flags&tType){
+						case tUnknown: (*p)=0; return -1;
+						case tUInt: case tString: throw("Item in list concat is not a list.");
+						case tList: if(!StartTerm(parent, p)) return 0;
+						}
+				} while (1);
+			}
+			return 2;
+		} else {return 5;} /*Bottom but not end, make subscription*/
+	}else {
+		(*p)=(*p)->next;
+	 	if ((*p)==0) {return 3; }
+	}
+	return 0;
+}
+
+// TODO: This function is out-of-date but not used yet anyhow.
+inline int getPrevTerm(infon** p) { gpt1:
+	if((*p)->flags&isTop)
+		if ((*p)->flags&isFirst) {}
+//			if ((*p)!=(*p)->first->size){(*p)=(*p)->prev; return 1;}
+//			else {(*p)=(*p)->first->first; goto gpt1;}
+        	else {return 2;} /*Bottom but not end, make subscription*/
+	else {
+		(*p)=(*p)->prev;
+gpt2:	//if (((((*p)->flags&mFlags1)>>8)&rType)==rList)
+		if ((*p)->size==0) {goto gpt1;}
+		else {(*p)=(*p)->size->prev; goto gpt2;}
+		if((*p)==0) return 3;
+	}
+	return 0;
+}
 
 #endif

@@ -2,6 +2,7 @@
 # Build targets
 *.o
 proteus
+slyp
 
 # Vim backup files
 *~

@@ -66,6 +66,7 @@ int bg_blue = 0;
 #include <strstream>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include "../core/Proteus.h"
 
 #define gINT gInt()
@@ -248,47 +249,6 @@ static inline void draw_circle(infon* color, int x, int y, int radius)
 		Draw_FillCircle(screen, x, y, radius, SDL_MapRGB(screen->format, red, green, blue));
 	}
 }
-/*
-void DrawTriStrip(int size, int* array){
-    glDisable (GL_TEXTURE_2D);glEnable(GL_BLEND);
-
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glVertexPointer(3, GL_INT, 0, array);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, size);
-}
-
-void DrawTriFan(int size, int* array){
-     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-   glDisable (GL_TEXTURE_2D);
-glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glVertexPointer(3, GL_INT, 0, array);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, size);
-}
-
-void DrawTriStripTex(int size, int size2){
-    glEnable (GL_TEXTURE_2D);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glVertexPointer(3, GL_INT, 0, vertexes);
-    glTexCoordPointer(2, GL_FLOAT, 0, texCoords);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, size);
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-}
-
-void DrawTriFanTex(int size, int size2){
-    glEnable (GL_TEXTURE_2D);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glVertexPointer(3, GL_INT, 0, vertexes);
-    glTexCoordPointer(2, GL_FLOAT, 0, texCoords);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, size);
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-}
-*/
 
 void DrawProteusDescription(infon* ProteusDesc){
 if (ProteusDesc==0) std::cout << "Err1\n";
@@ -305,7 +265,7 @@ while(!EOT_d1){
         //std::cout<<"ival["<<ItmPtr<<"]\n";
         infon* args=gList();
         int cmd=gINT;
-std::cout<<"\n[CMD:"<< cmd << "]";
+//std::cout<<"\n[CMD:"<< cmd << "]";
         switch(cmd){
             case 0:  		OldItmPtr=ItmPtr; DrawProteusDescription(OldItmPtr); ItmPtr=OldItmPtr;
             case 1: I4 		draw_rect(args, Ia, Ib, Ic, Id);  break;
@@ -334,24 +294,29 @@ std::cout<<"\n[CMD:"<< cmd << "]";
     if (++count==90) break;
     EOT_d1=getNextTerm(&i);
     }
-    std::cout << "\nCount: " << count << "\n======================\n";
+//    std::cout << "\nCount: " << count << "\n======================\n";
 }
 //////////////////// End of Slyp Drawing, Begin Interface to Proteus Engine
 int initWorldAndEventQueues(){
     // Load World
-    std::cout << "Loading world.pr\n";
-    std::fstream fin("world.pr");
-    QParser q(fin);
+    std::cout << "Loading world\n";
+    std::fstream InfonInW("world.pr");
+//    std::string worldStr("<% eval=#+{{?{}, ?{}}, @\[?{}]: \[?{}, ?{}]} %> \n");
+//    std::istringstream InfonInW(worldStr);
+    QParser q(InfonInW);
 extern infon *World; World=q.parse();
     if (World) std::cout<<"["<<printInfon(World)<<"]\n";
     else {std::cout<<"Error:"<<q.buf<<"\n"; exit(1);}
     agent a;
     a.normalize(World);
 
-    // Load DispList
-    std::cout << "Loading display.pr\n";
-    std::fstream fin2("display.pr");
-    QParser D(fin2);
+// Load DispList
+    std::cout << "Loading display\n";
+//    std::fstream InfonInD("display.pr");
+//    std::string dispList("<% \n( {  @eval: { show_clock, +{*1+0 *15+0 *30+0} } /*{XXX}:<ref_to_myStuff>|...}*/ |...} ) %> \n");
+    std::string dispList("<% { @eval::{show_clock +{*1+0 *15+0 *30+0}} }  %> \n");
+    std::istringstream InfonInD(dispList);
+    QParser D(InfonInD);
     infon* displayList=D.parse(); std::cout << "parsed\n";
     if(displayList) std::cout<<"["<<printInfon(displayList).c_str()<<"]\n";
     else {std::cout<<"Error:"<<D.buf<<"\n"; exit(1);}
@@ -387,7 +352,7 @@ void DrawScreen(){
     SDL_Flip(screen); // SDL_GL_SwapBuffers( );// All done drawing.  Let's show it.
 
  //   X_Rot+=X_Speed; Y_Rot+=Y_Speed; // Now let's do the motion calculations.
-std::cout<<"################\n";
+std::cout<<"."<<std::flush;
     ourDoFPS();// And collect our statistics.
     }
 

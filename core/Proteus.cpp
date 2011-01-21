@@ -27,9 +27,86 @@ std::map<infon*,stng> ptr2Tag;
 std::map<dblPtr,UInt> alts;
 typedef std::map<dblPtr,UInt>::iterator altIter;
 
-void deepCopy(infon* from, infon* to, int* args=0);
+inline int agent::StartTerm(infon* varIn, infon** varOut) {
+  infon* tmp;
+  if (varIn==0) return 1;
+  if (varIn->flags&fConcat){
+    if ((*varOut=varIn->value)==0) return 2;
+    do {
+      switch(varIn->flags&tType){
+        case tUnknown: *varOut=0; return -1;
+        case tUInt: case tString: return 0;
+        case tList: if(StartTerm(*varOut, &tmp)==0) {
+          *varOut=tmp;
+          return 0;
+          }
+        }
+      if (getNextTerm(varOut)) return 4;
+    } while(1);
+  }
+  if ((varIn->flags&tType)!=tList) {return 3;}
+  else {*varOut=varIn->value; if (*varOut==0) return 4;}
+  return 0;
+}
 
-infNode* copyIdentList(infNode* from){
+inline int agent::LastTerm(infon* varIn, infon** varOut) {
+  if (varIn==0) return 1;
+  if (varIn->flags&fConcat) {varIn=varIn->value->prev;}
+  else if((varIn->flags&tType)!=tList)  return 2;
+  else {*varOut=varIn->value->prev; if (*varOut==0) return 3;}
+  return 0;
+}
+
+inline int agent::getNextTerm(infon** p) {
+  infon *parent, *Gparent=0, *GGparent=0;
+  if((*p)->flags&isBottom) {
+    if ((*p)->flags&isLast){
+      parent=((*p)->flags&isFirst)?(*p)->top:(*p)->top->top;
+      if(parent==0){(*p)=(*p)->next; return 1;}
+      if(parent->top) Gparent=(parent->flags&isFirst)?parent->top:parent->top->top;
+      if(Gparent && (Gparent->flags&fConcat)) {
+        if(Gparent->top) GGparent=(Gparent->flags&isFirst)?Gparent->top:Gparent->top->top;
+        do {
+          if(getNextTerm(&parent)) return 4;
+// TODO: the next line fixes one problem but causes another: nested list-concats.
+// test it with:  (   ({} {"X", "Y"} ({} {9,8} {7,6}) {5} ) {1} {{}} {2, 3, 4} )
+          if(GGparent && (GGparent->flags&fConcat)) {*p=parent; return 0;}
+	  normalize(parent);
+          switch(parent->flags&tType){
+            case tUnknown: (*p)=0; return -1;
+            case tUInt: case tString: throw("Item in list concat is not a list.");
+            case tList: if(!StartTerm(parent, p)) return 0;
+            }
+        } while (1);
+      }
+      return 2;
+    } else {return 5;} /*Bottom but not end, make subscription*/
+  }else {
+    (*p)=(*p)->next;
+    if ((*p)==0) {return 3; }
+  }
+  return 0;
+}
+
+// TODO: This function is out-of-date but not used yet anyhow.
+inline int agent::getPrevTerm(infon** p) { gpt1:
+  if((*p)->flags&isTop)
+    if ((*p)->flags&isFirst) {}
+//      if ((*p)!=(*p)->first->size){(*p)=(*p)->prev; return 1;}
+//      else {(*p)=(*p)->first->first; goto gpt1;}
+          else {return 2;} /*Bottom but not end, make subscription*/
+  else {
+    (*p)=(*p)->prev;
+gpt2: //if (((((*p)->flags&mFlags1)>>8)&rType)==rList)
+    if ((*p)->size==0) {goto gpt1;}
+    else {(*p)=(*p)->size->prev; goto gpt2;}
+    if((*p)==0) return 3;
+  }
+  return 0;
+}
+
+
+infNode* agent::copyIdentList(infNode* from){
     infNode* top=0; infNode* follower; infNode* p=from; infNode* q;
     if(from==0)return 0;
     do {
@@ -42,7 +119,7 @@ infNode* copyIdentList(infNode* from){
     follower->next=top;
     return top;
 }
-infon* copyList(infon* from){
+infon* agent::copyList(infon* from){
     infon* top=0; infon* follower; infon* p=from;
     if(from==0)return 0;
     do {
@@ -79,7 +156,7 @@ infon* getVeryTop(infon* i){
 	return j;
 }
 
-void deepCopy(infon* from, infon* to, int* args){
+void agent::deepCopy(infon* from, infon* to, int* args){
     UInt fm=from->flags&mRepMode;
     int EOT_DC=0;
     to->flags=from->flags;
@@ -133,7 +210,7 @@ char isPosLorEorGtoSize(UInt pos, infon* item){
     else return 'G';  // Greater
 }
 
-void processVirtual(infon* v){
+void agent::processVirtual(infon* v){
     infon *spec=v->spec2, *parent=getTop(v); int EOT=0; UInt mode; UInt vSize=(UInt)v->size;
     char posArea=isPosLorEorGtoSize(vSize, parent);
     if(posArea=='G'){return;} // TODO: go backward, renaming/affirming tentatives. Mark last
@@ -157,7 +234,7 @@ void processVirtual(infon* v){
     if (posArea=='?'){ v->flags|=isTentative;}
 }
 
-void InitList(infon* item) {
+void agent::InitList(infon* item) {
      infon* tmp;
     if(item->value && (((tmp=item->value->prev)->flags)&isVirtual)){
         tmp->spec2=item->spec2;
@@ -169,7 +246,7 @@ void InitList(infon* item) {
     }
 }
 
-int getFollower(infon** lval, infon* i){
+int agent::getFollower(infon** lval, infon* i){
     infon* size; int levels=0;
     gnsTop: if(i->next==0) {*lval=0; return levels;}
     if((i->next->flags&isVirtual) && i->spec2 && i->spec2->prev==(infon*)2){
@@ -189,7 +266,7 @@ int getFollower(infon** lval, infon* i){
     return levels;
 }
 
-void addIDs(infon* Lvals, infon* Rvals, int asAlt=0){
+void agent::addIDs(infon* Lvals, infon* Rvals, int asAlt){
     const int maxAlternates=100;
     infon* RvlLst[maxAlternates]; infon* crntAlt=Rvals; infon *pred, *Rval, *prev=0; infNode* IDp; UInt size;
     int altCnt=1; RvlLst[0]=crntAlt;

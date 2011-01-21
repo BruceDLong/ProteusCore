@@ -1,12 +1,12 @@
 2
 Two argument function defined with a tag then executed via execute command.
-+{
-	execute=@+{{?{}, ?{}}, #\[?{}]: \[?{}, ?{}]}
-	func=@+{{_, _}, {\\[_,_] \\[_]} }	
+<% +{
+	execute=#+{{{...} {...}} @\\[{...}]:: \\[{...} {...}]}
+	func=#+{{_, _} {\\\[_,_] \\\[_]} }
 }
-!
-#execute: +{func +{9,4}}
-!
+%>
+
+<% @execute:: +{func +{9,4}}   %>
 5
 done
 !

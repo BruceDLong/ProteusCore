@@ -72,10 +72,22 @@ extern std::map<stng,infon*> tag2Ptr;
 extern std::map<infon*,stng> ptr2Tag;
 struct agent {
     agent(){world=World;};
+    inline int StartTerm(infon* varIn, infon** varOut);
+    inline int LastTerm(infon* varIn, infon** varOut);
+    inline int getNextTerm(infon** p);
+    inline int getPrevTerm(infon** p);
     int compute(infon* i);
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
     infon* normalize(infon* i, infon* firstID=0, bool doShortNorm=false);
     infon *world, context;
+    private:
+        void InitList(infon* item);
+        void deepCopy(infon* from, infon* to, int* args=0);
+        infNode* copyIdentList(infNode* from);
+        infon* copyList(infon* from);
+        void processVirtual(infon* v);
+        int getFollower(infon** lval, infon* i);
+        void addIDs(infon* Lvals, infon* Rvals, int asAlt=0);
 };
 std::string printHTMLHeader(std::string ItemToNorm);
 std::string printHTMLFooter(std::string ErrorMsg);
@@ -108,82 +120,5 @@ struct QParser{
     if(IDp){(*list)->next=IDp->next; IDp->next=(*list);} else (*list)->next=(*list); }
 
 int  getNextTerm(infon** p);  // forward decl
-
-inline int StartTerm(infon* varIn, infon** varOut) {
-	infon* tmp;
-	if (varIn==0) return 1;
-	if (varIn->flags&fConcat){
-		if ((*varOut=varIn->value)==0) return 2;
-		do {
-			switch(varIn->flags&tType){
-				case tUnknown: *varOut=0; return -1;
-				case tUInt: case tString: return 0;
-				case tList: if(StartTerm(*varOut, &tmp)==0) {
-					*varOut=tmp;
-					return 0;
-					}
-				}
-			if (getNextTerm(varOut)) return 4;
-		} while(1);
-	}
-	if ((varIn->flags&tType)!=tList) {return 3;}
-	else {*varOut=varIn->value; if (*varOut==0) return 4;}
-	return 0;
-}
-
-inline int LastTerm(infon* varIn, infon** varOut) {
-	if (varIn==0) return 1;
-	if (varIn->flags&fConcat) {varIn=varIn->value->prev;}
-	else if((varIn->flags&tType)!=tList)  return 2;
-	else {*varOut=varIn->value->prev; if (*varOut==0) return 3;}
-	return 0;
-}
-
-inline int  getNextTerm(infon** p) {
-	infon *parent, *Gparent=0, *GGparent=0;
-	if((*p)->flags&isBottom) {
-		if ((*p)->flags&isLast){
-			parent=((*p)->flags&isFirst)?(*p)->top:(*p)->top->top;
-			if(parent==0){(*p)=(*p)->next; return 1;}
-			if(parent->top) Gparent=(parent->flags&isFirst)?parent->top:parent->top->top;
-			if(Gparent && (Gparent->flags&fConcat)) {
-				if(Gparent->top) GGparent=(Gparent->flags&isFirst)?Gparent->top:Gparent->top->top;
-				do {
-					if(getNextTerm(&parent)) return 4;
-// TODO: the next line fixes one problem but causes another: nested list-concats.
-// test it with:  (   ({} {"X", "Y"} ({} {9,8} {7,6}) {5} ) {1} {{}} {2, 3, 4} )
-					if(GGparent && (GGparent->flags&fConcat)) {*p=parent; return 0;}
-					switch(parent->flags&tType){
-						case tUnknown: (*p)=0; return -1;
-						case tUInt: case tString: throw("Item in list concat is not a list.");
-						case tList: if(!StartTerm(parent, p)) return 0;
-						}
-				} while (1);
-			}
-			return 2;
-		} else {return 5;} /*Bottom but not end, make subscription*/
-	}else {
-		(*p)=(*p)->next;
-	 	if ((*p)==0) {return 3; }
-	}
-	return 0;
-}
-
-// TODO: This function is out-of-date but not used yet anyhow.
-inline int getPrevTerm(infon** p) { gpt1:
-	if((*p)->flags&isTop)
-		if ((*p)->flags&isFirst) {}
-//			if ((*p)!=(*p)->first->size){(*p)=(*p)->prev; return 1;}
-//			else {(*p)=(*p)->first->first; goto gpt1;}
-        	else {return 2;} /*Bottom but not end, make subscription*/
-	else {
-		(*p)=(*p)->prev;
-gpt2:	//if (((((*p)->flags&mFlags1)>>8)&rType)==rList)
-		if ((*p)->size==0) {goto gpt1;}
-		else {(*p)=(*p)->size->prev; goto gpt2;}
-		if((*p)==0) return 3;
-	}
-	return 0;
-}
 
 #endif

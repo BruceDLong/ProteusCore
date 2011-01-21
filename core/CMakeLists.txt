@@ -4,7 +4,7 @@ add_definitions(-Wno-deprecated -g -Wall)
 
 set(PROTEUS_SRCS Proteus.cpp InfonIO.cpp)
 
-add_library(Proteus SHARED ${PROTEUS_SRCS})
+#add_library(Proteus SHARED ${PROTEUS_SRCS})
 
 add_executable(ptest ptest.cpp ${PROTEUS_SRCS})
 

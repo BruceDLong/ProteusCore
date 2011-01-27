@@ -90,12 +90,13 @@ infon* ProteusDesc=0;
 #define S1 {Sa=gSTR;}
 
 infon* ItmPtr=0;
+agent theAgent;
 int EOT_d2,j,sign;
 char textBuff[1024];
 
 int gInt(){
     getInt(ItmPtr,j,sign);  // std::cout << j << ", ";
-    getNextTerm(&ItmPtr);
+    theAgent.getNextTerm(&ItmPtr);
     return (sign)?-j:j;
 }
 
@@ -104,13 +105,13 @@ char* gStr() {
 		memcpy(textBuff, ItmPtr->value, (uint)ItmPtr->size);
 		textBuff[(uint)(ItmPtr->size)]=0;
 	}
-	getNextTerm(&ItmPtr);
+	theAgent.getNextTerm(&ItmPtr);
 	return textBuff;
 }
 
 infon* gList(){
     infon* ret=ItmPtr;
-    getNextTerm(&ItmPtr);
+    theAgent.getNextTerm(&ItmPtr);
     return ret;
 }
 
@@ -258,10 +259,10 @@ if (ProteusDesc->size==0) std::cout << "Err2\n";
     infon* OldItmPtr;
 int size, size2; float a,b,c,d; int Ia,Ib,Ic,Id,Ie,If,Ih,II; char  *Sa, *Sb;
 int EOT_d1=0; infon* i=0;
-EOT_d1=StartTerm(ProteusDesc, &i);
+EOT_d1=theAgent.StartTerm(ProteusDesc, &i);
 while(!EOT_d1){
 //  std::cout << count<<":[" << printInfon(i).c_str() << "]\n";
-        EOT_d2=StartTerm(i, &ItmPtr);
+        EOT_d2=theAgent.StartTerm(i, &ItmPtr);
         //std::cout<<"ival["<<ItmPtr<<"]\n";
         infon* args=gList();
         int cmd=gINT;
@@ -292,7 +293,7 @@ while(!EOT_d1){
 //            case 90:	TextureViaCairoPango(); break;
         }
     if (++count==90) break;
-    EOT_d1=getNextTerm(&i);
+    EOT_d1=theAgent.getNextTerm(&i);
     }
 //    std::cout << "\nCount: " << count << "\n======================\n";
 }
@@ -307,21 +308,20 @@ int initWorldAndEventQueues(){
 extern infon *World; World=q.parse();
     if (World) std::cout<<"["<<printInfon(World)<<"]\n";
     else {std::cout<<"Error:"<<q.buf<<"\n"; exit(1);}
-    agent a;
-    a.normalize(World);
+    theAgent.normalize(World);
 
 // Load DispList
     std::cout << "Loading display\n";
-//    std::fstream InfonInD("display.pr");
+    std::fstream InfonInD("display.pr");
 //    std::string dispList("<% \n( {  @eval: { show_clock, +{*1+0 *15+0 *30+0} } /*{XXX}:<ref_to_myStuff>|...}*/ |...} ) %> \n");
-    std::string dispList("<% { @eval::{show_clock +{*1+0 *15+0 *30+0}} }  %> \n");
-    std::istringstream InfonInD(dispList);
+//    std::string dispList("<% { @eval::{show_clock +{*1+0 *15+0 *30+0}} }  %> \n");
+//    std::istringstream InfonInD(dispList);
     QParser D(InfonInD);
     infon* displayList=D.parse(); std::cout << "parsed\n";
     if(displayList) std::cout<<"["<<printInfon(displayList).c_str()<<"]\n";
     else {std::cout<<"Error:"<<D.buf<<"\n"; exit(1);}
 
-    a.normalize(displayList);
+    theAgent.normalize(displayList);
     DEB("Normed.");
     std::cout<< printInfon(displayList) << "\n";
     ProteusDesc=displayList;

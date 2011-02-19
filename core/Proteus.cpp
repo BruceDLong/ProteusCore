@@ -274,10 +274,8 @@ void agent::addIDs(infon* Lvals, infon* Rvals, int asAlt){
     int altCnt=1; RvlLst[0]=crntAlt;
     while(crntAlt && (crntAlt->flags&isTentative)){
         getFollower(&crntAlt, getTop(crntAlt));
-	if(crntAlt){
-	        RvlLst[altCnt++]=crntAlt;
-        	if(altCnt>=maxAlternates) throw "Too many nested alternates";
-	}
+        RvlLst[altCnt++]=crntAlt;
+      	if(altCnt>=maxAlternates) throw "Too many nested alternates";
     }
     size=((UInt)Lvals->next->size)-2; crntAlt=Lvals; pred=Lvals->pred;
     while(crntAlt){  // Lvals

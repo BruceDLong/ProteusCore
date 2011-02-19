@@ -159,6 +159,7 @@ infon* getVeryTop(infon* i){
 void agent::deepCopy(infon* from, infon* to, int* args){
     UInt fm=from->flags&mRepMode;
     int EOT_DC=0;
+    to->assoc=from->assoc;
     to->flags=from->flags;
     if(((from->flags>>goSize)&tType)==tList || ((from->flags>>goSize)&fConcat)){to->size=copyList(from->size); if(to->size)to->size->top=to;}
     else to->size=from->size;
@@ -230,6 +231,7 @@ void agent::processVirtual(infon* v){
     infon* tmp= new infon;  tmp->size=(infon*)(vSize+1); tmp->spec2=spec;
     tmp->flags|=fUnknown+isBottom+isVirtual+asNone+(tUInt<<goSize);
     tmp->top=tmp->next=v->next; v->next=tmp; tmp->prev=v; tmp->next->prev=tmp;
+    tmp->assoc=v->assoc;
     v->flags&=~isBottom;
     if (posArea=='?'){ v->flags|=isTentative;}
 }
@@ -272,8 +274,10 @@ void agent::addIDs(infon* Lvals, infon* Rvals, int asAlt){
     int altCnt=1; RvlLst[0]=crntAlt;
     while(crntAlt && (crntAlt->flags&isTentative)){
         getFollower(&crntAlt, getTop(crntAlt));
-        RvlLst[altCnt++]=crntAlt;
-        if(altCnt>=maxAlternates) throw "Too many nested alternates";
+	if(crntAlt){
+	        RvlLst[altCnt++]=crntAlt;
+        	if(altCnt>=maxAlternates) throw "Too many nested alternates";
+	}
     }
     size=((UInt)Lvals->next->size)-2; crntAlt=Lvals; pred=Lvals->pred;
     while(crntAlt){  // Lvals
@@ -520,7 +524,25 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                         normalize(CI->spec2);
                         tmp->flags|=toExec;
                         LastTerm(CI->spec2, &tmp); // Add that last term to CI's wrkList.
-                        if (tmp->flags&isLast) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
+	if (CI->assoc){ // handle '.' items. find the associated item.
+		if(CI->assoc==(infon*)1) {  // search for the associate
+			std::cout << "Assoc 1\n";
+			infon* CiSide=CI; infon* tmpSide=tmp;
+			while(!(CiSide->flags&isTop)){
+				CiSide=CiSide->prev;
+				if(tmpSide->flags&isBottom) {tmp=0; break;}
+				tmpSide=tmpSide->next;
+				}
+			if(tmp) tmp=tmpSide;
+		} else {// use assoc to find associate
+			std::cout << "Assoc >1\n";
+		}
+		 if (tmp) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
+		}
+		// set tmp to associate. (integrate with the code below, i.e., 'if tmp-<flags&isLast)
+
+
+                   else if (tmp->flags&isLast) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
                         else {  // migrate alternates from spec2 to CI...
                             infNode *wrkNode=CI->spec2->wrkList; infon* item=0;
                             if(wrkNode)do{

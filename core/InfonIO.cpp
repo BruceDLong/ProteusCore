@@ -183,7 +183,7 @@ UInt QParser::ReadPureInfon(char &tok, infon** i, UInt* flags, infon** s2){
 }
 
 infon* QParser::ReadInfon(int noIDs){
-    char tok, op=0; UInt p=0, size=0; infon*i1=0,*i2=0,*s1=0,*s2=0; UInt flags=0,f1=0,f2=0;
+    char tok, op=0; UInt p=0, size=0; infon*i1=0,*i2=0,*s1=0,*s2=0, *assoc=0; UInt flags=0,f1=0,f2=0;
     getToken(tok); //DEB(tok)
     if(tok=='@'){flags|=toExec; getToken(tok);}
     if(tok=='#'){flags|=asDesc; getToken(tok);}
@@ -206,6 +206,8 @@ infon* QParser::ReadInfon(int noIDs){
              if (tok=='^') flags|=fromHere; else {flags|=toHomePos; stream.putback(tok);}
         } else if (tok=='&') flags|=toWorldCtxt;
         s2=ReadInfon(3);
+	 Peek(tok);
+         if(tok=='.') {assoc=(infon*)1; getToken(tok);}
     }else{
         flags|=asNone;
         if(tok=='~') {f1|=fInvert; getToken(tok);}
@@ -241,7 +243,7 @@ infon* QParser::ReadInfon(int noIDs){
         infon* tmp= ReadInfon(1); insertID(&ID, tmp,0);
         Peek(tok);
     }
-    infon* i=new infon((f1<<goSize)+f2+flags, i1,i2,ID,s1,s2);
+    infon* i=new infon((f1<<goSize)+f2+flags, i1,i2,ID,s1,s2); i->assoc=assoc;
     i->wSize=size;
     if ((i->size && ((f1&tType)==tList))||(f1&fConcat)) i->size->top=i;
     if ((i->value&& ((f2&tType)==tList))||(f2&fConcat))i->value->top=i;

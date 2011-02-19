@@ -1,5 +1,5 @@
 /////////////////////////////////////////////////
-// Proteus.h 6.0  Copyright (c) 1997-2007 Bruce Long
+// Proteus.h 6.0  Copyright (c) 1997-2011 Bruce Long
 /*    This file is part of the "Proteus Engine"
 
     The Proteus Engine is free software: you can redistribute it and/or modify
@@ -53,12 +53,12 @@ enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, CountSize=2, SetComplet
 
 struct infon {
     infon(UInt f=0,infon* s=0, infon*v=0,infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0):
-        flags(f), size(s), value(v), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {prev=0; top=0;};
+        flags(f), size(s), value(v), next(n), pred(0), assoc(0), spec1(s1), spec2(s2), wrkList(ID) {prev=0; top=0;};
     UInt  flags;
     UInt wSize; // get rid if this. disallow strings and lists in "size"
     infon *size;        // The *-term; perhaps just a number of states
     infon *value;       // Summand List
-    infon *next, *prev, *top, *pred;
+    infon *next, *prev, *top, *pred, *assoc;
     infon *spec1, *spec2;   // Used to store indexes, functions args, etc.
     infNode* wrkList;
 };

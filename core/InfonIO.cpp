@@ -249,20 +249,7 @@ infon* QParser::ReadInfon(int noIDs){
     if ((i->value&& ((f2&tType)==tList))||(f2&fConcat))i->value->top=i;
     if(!(noIDs&2)){
         if (tok=='!'){modeBit=mMode; getToken(tok); if(peek()!=':') throw"Expected ':'";}
-        if (tok==':'){
-            getToken(tok);
-            infon *p=0, *q=0, *head=0;
-            for(tok=peek(); tok==':'; tok=peek()){
-                getToken(tok);
-                p=ReadInfon(3);
-                if (!head) head=p;
-                else q->next=p;
-                q=p;
-                RmvWSC();
-            }
-            i=new infon(asFunc+modeBit,0,0,0,head,i);
-            head->top=i; head->flags|=(isFirst+isTop);
-        }
+        if (tok==':'){getToken(tok); i=new infon(asFunc+modeBit,0,0,0,ReadInfon(1),i);}
     }
     return i;
 }

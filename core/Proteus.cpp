@@ -156,9 +156,8 @@ infon* getVeryTop(infon* i){
 	return j;
 }
 
-void agent::deepCopy(infon* from, infon* to, int* args){
+void agent::deepCopy(infon* from, infon* to, infon* args){
     UInt fm=from->flags&mRepMode;
-    int EOT_DC=0;
     to->assoc=from->assoc;
     to->flags=from->flags;
     if(((from->flags>>goSize)&tType)==tList || ((from->flags>>goSize)&fConcat)){to->size=copyList(from->size); if(to->size)to->size->top=to;}
@@ -178,18 +177,19 @@ void agent::deepCopy(infon* from, infon* to, int* args){
 				to->spec1->size=(infon*)((UInt)to->prev->spec1->size - (UInt)spec2->size);
 			}
 		}
-    } else if (args){
-        infon *prevNode=0, *tail;
-        for(infon* i=from->spec1; i; i=i->next){
-            tail=new infon;
-            deepCopy(i->prev, tail);
-            EOT_DC=getNextTerm(&i->prev);
-            if(EOT_DC) {*args=1;}
-            if(prevNode) prevNode->next=tail; else to->spec1=tail;
-            prevNode=tail;
-        }
-    } else {to->spec1=new infon; deepCopy(from->spec1,to->spec1);}
+    } else {to->spec1=new infon; deepCopy((args)?args:from->spec1,to->spec1);}
     if(from->spec2){to->spec2=new infon; deepCopy(from->spec2, to->spec2);}else to->spec2=0;
+}
+
+void recover(infon* i){ delete i;}
+
+void closeListAtItem(infon* lastItem){ // removes (no-longer tentative) items to the right of lastItem in a list.
+	infon *itemAfterLast, *nextItem;
+	for(itemAfterLast=lastItem->next; !(itemAfterLast->flags&isTop); itemAfterLast=nextItem){
+		nextItem=itemAfterLast->next;
+		recover(itemAfterLast);
+	}
+	lastItem->next=itemAfterLast; itemAfterLast->prev=lastItem; lastItem->flags|=(isBottom+isLast);
 }
 
 const int simpleUnknownUint=((fUnknown+tUInt)<<goSize) + fUnknown+tUInt+asNone;
@@ -212,13 +212,14 @@ char isPosLorEorGtoSize(UInt pos, infon* item){
 }
 
 void agent::processVirtual(infon* v){
-    infon *spec=v->spec2, *parent=getTop(v); int EOT=0; UInt mode; UInt vSize=(UInt)v->size;
+    infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT=0; UInt mode; UInt vSize=(UInt)v->size;
     char posArea=isPosLorEorGtoSize(vSize, parent);
     if(posArea=='G'){return;} // TODO: go backward, renaming/affirming tentatives. Mark last
     UInt tmpFlags=v->flags&0xff000000;
     if (spec){
         if((mode=(spec->flags&mRepMode))==asFunc){
-            deepCopy(spec,v,&EOT); // The '&EOT' causes deepCopy to do getNextTerm().
+            deepCopy(spec,v,args);
+	    EOT=getNextTerm(&args);
         } else if(mode<(UInt)asFunc){
 		deepCopy(spec,v);
 		if(posArea=='?' && v->spec1) posArea= 'N'; // N='Not greater'
@@ -230,7 +231,7 @@ void agent::processVirtual(infon* v){
     if (posArea=='E') {v->flags|=isBottom+isLast; return;}
     infon* tmp= new infon;  tmp->size=(infon*)(vSize+1); tmp->spec2=spec;
     tmp->flags|=fUnknown+isBottom+isVirtual+asNone+(tUInt<<goSize);
-    tmp->top=tmp->next=v->next; v->next=tmp; tmp->prev=v; tmp->next->prev=tmp;
+    tmp->top=tmp->next=v->next; v->next=tmp; tmp->prev=v; tmp->next->prev=tmp; tmp->spec1=args;
     tmp->assoc=v->assoc;
     v->flags&=~isBottom;
     if (posArea=='?'){ v->flags|=isTentative;}
@@ -240,10 +241,8 @@ void agent::InitList(infon* item) {
      infon* tmp;
     if(item->value && (((tmp=item->value->prev)->flags)&isVirtual)){
         tmp->spec2=item->spec2;
-        if(tmp->spec2 && ((tmp->spec2->flags&mRepMode)==asFunc)){
-            for(infon* i=tmp->spec2->spec1; i; i=i->next)
-                StartTerm(i, &i->prev);
-        }
+        if(tmp->spec2 && ((tmp->spec2->flags&mRepMode)==asFunc))
+                StartTerm(tmp->spec2->spec1, &tmp->spec1);
         processVirtual(tmp); item->flags|=tList;
     }
 }
@@ -511,8 +510,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                         }
                     }
                     if(tmp) { // Now add that to the 'item-list's wrkList...
-// TODO: This 'if' section is a hack to make simple backward references work. Fix for full back-parsing.
-                        if ((CI->spec2->flags)&(fInvert<<goSize)){
+                        if ((CI->spec2->flags)&(fInvert<<goSize)){ // TODO: This block is a hack to make simple backward references work. Fix for full back-parsing.
                             for(UInt i=(UInt)CI->spec2->size; i>0; --i){tmp=tmp->prev;}
                             {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
                             CI->flags|=fUnknown;
@@ -521,26 +519,27 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                         CI->spec2->prev=(infon*)1;  // Set sentinal value so this can tell it is an index
                         normalize(CI->spec2);
                         tmp->flags|=toExec;
-                        LastTerm(CI->spec2, &tmp); // Add that last term to CI's wrkList.
-	if (CI->assoc){ // handle '.' items. find the associated item.
-		if(CI->assoc==(infon*)1) {  // search for the associate
-			std::cout << "Assoc 1\n";
-			infon* CiSide=CI; infon* tmpSide=tmp;
-			while(!(CiSide->flags&isTop)){
-				CiSide=CiSide->prev;
-				if(tmpSide->flags&isBottom) {tmp=0; break;}
-				tmpSide=tmpSide->next;
+                        LastTerm(CI->spec2, &tmp);
+
+			if (CI->assoc){ // handle '.' items. find the associated item.
+				if(CI->assoc==(infon*)1) {  // search for the associate
+					std::cout << "Assoc 1\n";
+			/*		infon* CiSide=CI; infon* tmpSide=tmp->value;
+					while(!(CiSide->flags&isTop)){
+						CiSide=CiSide->prev;
+						tmpSide=tmpSide->next;
+						if(tmpSide->flags&isBottom) {closeListAtItem(CI);}
+					}
+					if(tmp) tmp=tmpSide;
+			*/
+					tmp=tmp->value;
+				} else {// use assoc to find associate
+					std::cout << "Assoc >1\n";
 				}
-			if(tmp) tmp=tmpSide;
-		} else {// use assoc to find associate
-			std::cout << "Assoc >1\n";
-		}
-		 if (tmp) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
-		}
-		// set tmp to associate. (integrate with the code below, i.e., 'if tmp-<flags&isLast)
+			 if (tmp) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
 
-
-                   else if (tmp->flags&isLast) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
+			}// else
+			if (tmp->flags&isLast) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
                         else {  // migrate alternates from spec2 to CI...
                             infNode *wrkNode=CI->spec2->wrkList; infon* item=0;
                             if(wrkNode)do{

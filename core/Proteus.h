@@ -82,7 +82,7 @@ struct agent {
     infon *world, context;
     private:
         void InitList(infon* item);
-        void deepCopy(infon* from, infon* to, int* args=0);
+        void deepCopy(infon* from, infon* to, infon* args=0);
         infNode* copyIdentList(infNode* from);
         infon* copyList(infon* from);
         void processVirtual(infon* v);

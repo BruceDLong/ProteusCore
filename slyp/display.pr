@@ -5,15 +5,15 @@
 
 show_clock:: +{*1+0 *15+0 *30+0}
 /*	{blue circle 200,210,80}
-	{purple RelLine 200,210,  cos::*1+(*1-30 time::*1+0 +90)  sin::*1+(*1-30 time::*1+0 +90 ) }  // second hand
-	{red RelLine 200,210,  cos::*1+(*1-30*4+90)  sin::*1+(*1-30*4+90)}   // minute hand
-	{green RelLine 200,210,  cos::*1+(*1-6*48+90)  sin::*1+(*1-6*48+90 ) }  // hour hand
+	{purple RelLine 200,210,  cos:*1+(*1-30 time:*1+0 +90)  sin:*1+(*1-30 time:*1+0 +90 ) }  // second hand
+	{red RelLine 200,210,  cos:*1+(*1-30*4+90)  sin:*1+(*1-30*4+90)}   // minute hand
+	{green RelLine 200,210,  cos:*1+(*1-6*48+90)  sin:*1+(*1-6*48+90 ) }  // hour hand
 */
  {
 	{1}
 	drawComplex
 	{
-		[ _, {green line 10, \\[_] 500, \\[_]}]::{100,200,300,400,500}
+		[ _, {green line 10, \\[_] 500, \\[_]}]:{100,200,300,400,500}
 	|...}
 
  }

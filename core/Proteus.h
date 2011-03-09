@@ -48,17 +48,20 @@ enum vals {toGiven=0, toWorldCtxt=0x0100, toHomePos=0x0200, fromHere=0x0300, asF
     };
 
 struct infon;
+struct assocInfon {infon *VarRef, *nextRef; assocInfon(infon* first=0):VarRef(first),nextRef(0){};};
+enum {miscWorldCtxt, miscFindAssociate};
+
 struct infNode {infon* item; infon* slot; UInt idFlags; infNode* next; infNode(infon* itm=0, UInt f=0):item(itm),idFlags(f){};};
 enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, CountSize=2, SetComplete=3, EliminateAlts=4, NodeDoneFlag=8, NoMatch=16,isRawFlag=32};
 
 struct infon {
     infon(UInt f=0,infon* s=0, infon*v=0,infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0):
-        flags(f), size(s), value(v), next(n), pred(0), assoc(0), spec1(s1), spec2(s2), wrkList(ID) {prev=0; top=0;};
+        flags(f), size(s), value(v), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {prev=0; top=0;};
     UInt  flags;
     UInt wSize; // get rid if this. disallow strings and lists in "size"
     infon *size;        // The *-term; perhaps just a number of states
     infon *value;       // Summand List
-    infon *next, *prev, *top, *pred, *assoc;
+    infon *next, *prev, *top, *pred;
     infon *spec1, *spec2;   // Used to store indexes, functions args, etc.
     infNode* wrkList;
 };

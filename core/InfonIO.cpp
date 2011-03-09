@@ -1,5 +1,5 @@
 /////////////////////////////////////////////////////
-// Proteus Parser 6.0  Copyright (c) 1997-2008 Bruce Long
+// Proteus Parser 6.0  Copyright (c) 1997-2011 Bruce Long
 /*    This file is part of the "Proteus Engine"
 
     The Proteus Engine is free software: you can redistribute it and/or modify
@@ -183,7 +183,7 @@ UInt QParser::ReadPureInfon(char &tok, infon** i, UInt* flags, infon** s2){
 }
 
 infon* QParser::ReadInfon(int noIDs){
-    char tok, op=0; UInt p=0, size=0; infon*i1=0,*i2=0,*s1=0,*s2=0, *assoc=0; UInt flags=0,f1=0,f2=0;
+    char tok, op=0; UInt p=0, size=0; infon*i1=0,*i2=0,*s1=0,*s2=0; UInt flags=0,f1=0,f2=0;
     getToken(tok); //DEB(tok)
     if(tok=='@'){flags|=toExec; getToken(tok);}
     if(tok=='#'){flags|=asDesc; getToken(tok);}
@@ -197,17 +197,20 @@ infon* QParser::ReadInfon(int noIDs){
             Peek(tok);
         }
         s1=(infon*)tags;
-    }
-    else if(tok=='\\'||tok=='%'||tok=='&'||tok=='^'){
+    } else if(tok=='\\'||tok=='%'||tok=='&'||tok=='^'){
         flags|=fUnknown;
         if (tok=='%'){flags|=toGiven; s1=ReadInfon();} // % search
         else if (tok=='\\' || tok=='^') {
             for(s1=0; tok=='\\';  tok=stream.get()) {s1=(infon*)((UInt)s1+1); ChkNEOF;}
              if (tok=='^') flags|=fromHere; else {flags|=toHomePos; stream.putback(tok);}
-        } else if (tok=='&') flags|=toWorldCtxt;
+        } else if (tok=='&') {flags|=toWorldCtxt; s1=(infon*)miscWorldCtxt;}
         s2=ReadInfon(3);
 	 Peek(tok);
-         if(tok=='.') {assoc=(infon*)1; getToken(tok);}
+         if(tok=='.') {
+	 	getToken(tok);
+		s2=(infon*)new assocInfon(new infon(flags, i1,i2,0,s1,s2));
+		flags=toWorldCtxt; s1=(infon*)miscFindAssociate;
+	}
     }else{
         flags|=asNone;
         if(tok=='~') {f1|=fInvert; getToken(tok);}
@@ -243,7 +246,7 @@ infon* QParser::ReadInfon(int noIDs){
         infon* tmp= ReadInfon(1); insertID(&ID, tmp,0);
         Peek(tok);
     }
-    infon* i=new infon((f1<<goSize)+f2+flags, i1,i2,ID,s1,s2); i->assoc=assoc;
+    infon* i=new infon((f1<<goSize)+f2+flags, i1,i2,ID,s1,s2);
     i->wSize=size;
     if ((i->size && ((f1&tType)==tList))||(f1&fConcat)) i->size->top=i;
     if ((i->value&& ((f2&tType)==tList))||(f2&fConcat))i->value->top=i;

@@ -158,7 +158,6 @@ infon* getVeryTop(infon* i){
 
 void agent::deepCopy(infon* from, infon* to, infon* args){
     UInt fm=from->flags&mRepMode;
-    to->assoc=from->assoc;
     to->flags=from->flags;
     if(((from->flags>>goSize)&tType)==tList || ((from->flags>>goSize)&fConcat)){to->size=copyList(from->size); if(to->size)to->size->top=to;}
     else to->size=from->size;
@@ -232,7 +231,6 @@ void agent::processVirtual(infon* v){
     infon* tmp= new infon;  tmp->size=(infon*)(vSize+1); tmp->spec2=spec;
     tmp->flags|=fUnknown+isBottom+isVirtual+asNone+(tUInt<<goSize);
     tmp->top=tmp->next=v->next; v->next=tmp; tmp->prev=v; tmp->next->prev=tmp; tmp->spec1=args;
-    tmp->assoc=v->assoc;
     v->flags&=~isBottom;
     if (posArea=='?'){ v->flags|=isTentative;}
 }
@@ -490,12 +488,27 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
             } else if(CIRepMode<(UInt)asFunc){ // Processing Index...
                if(CI->flags&mMode){insertID(&CI->wrkList, CI->spec2,0); fetchFirstItem(CIfol,getTop(CI->spec2))}
                else {
+	       { //  TODO: This block really needs to be part of a  re-structuring involving CI->flags
+	       		if(CIRepMode==toWorldCtxt && CI->spec1==(infon*)miscFindAssociate){
+				infon* nxtRef=(assocInfon)(CI->spec2)->nextRef;
+				if((nxtRef) {
+					tmp=nxtRef->next;
+					// END THIS IF EOL
+					// process tmp but skip switch
+				}else{
+					deepCopy((assocInfon)(CI->spec2)->VarRef, CI);
+					CIRepMode=CI->flags&mRepMode;
+					// Set flag so that after switch we can get the nextRef (Maybe use WorldCtxt section?
+				}
+			}
+	       }
                     switch (CIRepMode){
                     case toGiven:
                         if (CI->spec1>(infon*)1) {normalize(CI->spec1,0,1); StartTerm(CI->spec1, &tmp);}
                         else tmp=getIdentFromPrev(CI->prev);
                         break;
-                    case toWorldCtxt:tmp=&context; break;
+                    case toWorldCtxt:
+		    	if(CI->spec1==(infon*)miscWorldCtxt) {tmp=&context; break;}
                     case toHomePos: //  Handle \, \\, \\\, etc.
                     case fromHere:  // Handle ^, \^, \\^, \\\^, etc.
                         tmp=CI;
@@ -515,30 +528,15 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                             {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
                             CI->flags|=fUnknown;
                         } else {
-                        insertID(&CI->spec2->wrkList, tmp,0);
-                        CI->spec2->prev=(infon*)1;  // Set sentinal value so this can tell it is an index
-                        normalize(CI->spec2);
-                        tmp->flags|=toExec;
-                        LastTerm(CI->spec2, &tmp);
+                          insertID(&CI->spec2->wrkList, tmp,0);
+                          CI->spec2->prev=(infon*)1;  // Set sentinal value so this can tell it is an index
+                          normalize(CI->spec2);
+                          tmp->flags|=toExec;
+                          LastTerm(CI->spec2, &tmp);
 
-			if (CI->assoc){ // handle '.' items. find the associated item.
-				if(CI->assoc==(infon*)1) {  // search for the associate
-					std::cout << "Assoc 1\n";
-			/*		infon* CiSide=CI; infon* tmpSide=tmp->value;
-					while(!(CiSide->flags&isTop)){
-						CiSide=CiSide->prev;
-						tmpSide=tmpSide->next;
-						if(tmpSide->flags&isBottom) {closeListAtItem(CI);}
-					}
-					if(tmp) tmp=tmpSide;
-			*/
-					tmp=tmp->value;
-				} else {// use assoc to find associate
-					std::cout << "Assoc >1\n";
-				}
-			 if (tmp) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
-
-			}// else
+  			  if (assoc){tmp=tmp->value; assoc=0; /* Set nextRef here */ }
+  			  if (tmp) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
+			} else
 			if (tmp->flags&isLast) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
                         else {  // migrate alternates from spec2 to CI...
                             infNode *wrkNode=CI->spec2->wrkList; infon* item=0;

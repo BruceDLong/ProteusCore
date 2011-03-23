@@ -21,19 +21,6 @@
 #include <stdlib.h>
 #include "remiss.h"
 
-std::string printHTMLHeader(std::string ItemToNorm){
-    std::string s;
-    s="<html><head><title>Normalize Log</title></head><body>\n";
-    s+="<h2>Text that was parsed</h2>\n<tt>"; s+=ItemToNorm; s+="</tt><br><hr>";
-    return s;
-}
-
-std::string printHTMLFooter(std::string ErrorMsg){
-    std::string s;
-    s="<hr>Result: "; s+=ErrorMsg; s+="<br></body></html>\n";
-    return s;
-}
-
 #define Indent {for (int x=0;x<indent;++x) s+=" ";}
 std::string printPure (infon* i, UInt f, UInt wSize, infon* CI){
     std::string s;
@@ -94,30 +81,38 @@ std::string printInfon(infon* i, infon* CI){
     return s;
 }
 
+char QParser::streamGet(){
+	char ch=stream.get();
+	txtPos++;
+	textParsed+=ch;
+	return ch;
+}
+#define streamPut(ch) {stream.putback(ch); txtPos--; textParsed.resize(textParsed.size()-1);}
+
 void QParser::scanPast(char* str){
     char p; char* ch=str;
     while(*ch!='\0'){
-        p=stream.get();
+        p=streamGet();
         if (stream.eof() || stream.fail()) throw "Expected String not found before end-of-file";
         if (*ch==p) ch++; else ch=str;
         if (p=='\n') ++line;
     }
 }
 
-void QParser::RmvWSC (){
+void QParser::RmvWSC (){ // Remove whitespace and comments.
     char p,p2;
     for (p=stream.peek(); (p==' '||p=='/'||p=='\n'||p=='\r'||p=='\t'); p=stream.peek()){
         if (p=='/') {
-            stream.get(); p2=stream.peek();
+            streamGet(); p2=stream.peek();
             if (p2=='/') {
-                for (p=stream.peek(); !(stream.eof() || stream.fail()) && p!='\n'; p=stream.peek()) stream.get();
+                for (p=stream.peek(); !(stream.eof() || stream.fail()) && p!='\n'; p=stream.peek()) streamGet();
             } else if (p2=='*') {
-                for (p=stream.get(); !(stream.eof() || stream.fail()) && !(p=='*' && stream.peek()=='/'); p=stream.get())
+                for (p=streamGet(); !(stream.eof() || stream.fail()) && !(p=='*' && stream.peek()=='/'); p=streamGet())
                     if (p=='\n') ++line;
                 if (stream.eof() || stream.fail()) throw "'/*' Block comment never terminated";
-            } else {stream.putback('/'); return;}
+            } else {streamPut('/'); return;}
         }
-        if (stream.get()=='\n') ++line;
+        if (streamGet()=='\n') ++line;
     }
 }
 
@@ -127,12 +122,12 @@ char QParser::peek(){
 }
 
 #define ChkNEOF {if(stream.eof() || stream.fail()) throw "Unexpected End of file";}
-#define getToken(tok) {RmvWSC(); ChkNEOF; tok=stream.get();}
-#define getbuf(c) {ChkNEOF; for(p=0;(c);buf[p++]=stream.get()){if (p>=bufmax) throw "String Overflow";} buf[p]=0;}
+#define getToken(tok) {RmvWSC(); ChkNEOF; tok=streamGet();}
+#define getbuf(c) {ChkNEOF; for(p=0;(c);buf[p++]=streamGet()){if (p>=bufmax) throw "String Overflow";} buf[p]=0;}
 #define readTag(tag)  {getbuf(iscsym(peek())); if(!p){throw "Tag expected";} else {lstngCpy(tag,buf,p);}}
 #define Peek(tok) {RmvWSC(); tok=stream.peek();}
 #define check(ch) {getToken(tok);  if(tok != ch) {std::cout<<"Expected "<<ch<<"\n"; throw "Unexpected character";}}
-#define chk(ch) {if(stream.peek()==ch) stream.get(); else throw "Expected something else";}
+#define chk(ch) {if(stream.peek()==ch) streamGet(); else throw "Expected something else";}
 
 char errMsg[100];
 UInt QParser::ReadPureInfon(char &tok, infon** i, UInt* flags, infon** s2){
@@ -146,11 +141,11 @@ UInt QParser::ReadPureInfon(char &tok, infon** i, UInt* flags, infon** s2){
         for(tok=peek(); tok != rchr && stay; tok=peek()){
             if(tok=='<') {foundRet=1; getToken(tok); j=ReadInfon();}
             else if(tok=='.'){
-                stream.get();
+                streamGet();
                 if(stream.peek()=='.'){
-                    stream.get(); chk('.');
+                    streamGet(); chk('.');
                     j=new infon(fUnknown+isVirtual+asNone+(tUInt<<goSize),(infon*)(size+1));stay=0;
-                    } else {stream.putback(tok);  j=ReadInfon();}
+                    } else {streamPut(tok);  j=ReadInfon();}
             } else j=ReadInfon();
             if(++size==1){
                 Peek(tok);
@@ -169,13 +164,13 @@ UInt QParser::ReadPureInfon(char &tok, infon** i, UInt* flags, infon** s2){
         }
         check(rchr);
     } else if (isdigit(tok)) {   // read number
-        stream.putback(tok); getbuf(isdigit(peek()));
+        streamPut(tok); getbuf(isdigit(peek()));
         *flags+=tUInt; *i=(infon*)atoi(buf);
         size=1;
     } else if (tok=='_'){*flags+=fUnknown+tUInt;
     } else if (tok=='$'){*flags+=fUnknown+tString;
     } else if (tok=='"' || tok=='\''){   // read string
-        getbuf(peek()!=tok); stream.get();
+        getbuf(peek()!=tok); streamGet();
         *flags+=tString; *i=(((*flags)&fUnknown)? 0 : (infon*)new char[p]); memcpy(*i,buf,p);
         size=p;
     } else {strcpy(errMsg, "'X' was not expected"); errMsg[1]=tok; throw errMsg;}
@@ -184,13 +179,14 @@ UInt QParser::ReadPureInfon(char &tok, infon** i, UInt* flags, infon** s2){
 
 infon* QParser::ReadInfon(int noIDs){
     char tok, op=0; UInt p=0, size=0; infon*i1=0,*i2=0,*s1=0,*s2=0; UInt flags=0,f1=0,f2=0;
+	int textStart=txtPos; int textEnd=0;
     getToken(tok); //DEB(tok)
     if(tok=='@'){flags|=toExec; getToken(tok);}
     if(tok=='#'){flags|=asDesc; getToken(tok);}
     if(tok=='.'){flags|=matchType; getToken(tok);} // This is a hint that idents must match type, not just value.
     if(tok=='?'){f1=f2=fUnknown; flags=asNone;}
     else if(iscsym(tok)&&!isdigit(tok)&&(tok!='_')){
-        stream.putback(tok); flags|=asTag; stng tag; stng* tags=new stng;
+        streamPut(tok); flags|=asTag; stng tag; stng* tags=new stng;
         if(iscsym(tok)&&!isdigit(tok)){  // change 'if' to 'while' when tag-chains are ready.
             readTag(tag);
             stngApnd((*tags),tag.S,tag.L+1);
@@ -201,15 +197,15 @@ infon* QParser::ReadInfon(int noIDs){
         flags|=fUnknown;
         if (tok=='%'){flags|=toGiven; s1=ReadInfon();} // % search
         else if (tok=='\\' || tok=='^') {
-            for(s1=0; tok=='\\';  tok=stream.get()) {s1=(infon*)((UInt)s1+1); ChkNEOF;}
-             if (tok=='^') flags|=fromHere; else {flags|=toHomePos; stream.putback(tok);}
+            for(s1=0; tok=='\\';  tok=streamGet()) {s1=(infon*)((UInt)s1+1); ChkNEOF;}
+             if (tok=='^') flags|=fromHere; else {flags|=toHomePos; streamPut(tok);}
         } else if (tok=='&') {flags|=toWorldCtxt; s1=(infon*)miscWorldCtxt;}
         s2=ReadInfon(3);
 	 Peek(tok);
          if(tok=='.') {
 	 	getToken(tok);
 		s2=(infon*)new assocInfon(new infon(flags, i1,i2,0,s1,s2));
-		flags=toWorldCtxt; s1=(infon*)miscFindAssociate;
+		flags=toWorldCtxt; s1=(infon*)miscFindAssociate; f1=f2=fUnknown;
 	}
     }else{
         flags|=asNone;
@@ -226,7 +222,7 @@ infon* QParser::ReadInfon(int noIDs){
             if((f1&tType)==tList){throw("Terms cannot be lists");}
             getToken(tok); if(tok=='~'){f2|=fInvert; getToken(tok);}
             if(tok=='-'||tok=='+'){op='+'; if(tok=='-')f2^=fInvert; getToken(tok);}
-            else {stream.putback('~'); f2^=fInvert;}
+            else {streamPut('~'); f2^=fInvert;}
             if (op=='+'){size=ReadPureInfon(tok,&i2,&f2,&s2);}
             else {i2=0; f2=tUInt;}    // use identity summand '0'
         } else { // no operator
@@ -254,14 +250,17 @@ infon* QParser::ReadInfon(int noIDs){
         if (tok=='!'){modeBit=mMode; getToken(tok); if(peek()!=':') throw"Expected ':'";}
         if (tok==':'){getToken(tok); i=new infon(asFunc+modeBit,0,0,0,ReadInfon(1),i);}
     }
+	textEnd=txtPos; std::cout<<"<<"<<textParsed.substr(textStart, textEnd-textStart)<<">>\n";
     return i;
 }
 
 infon* QParser::parse(){
     char tok;
     try{
+		textParsed=""; txtPos=0;
         line=1; scanPast((char*)"<%");
         infon*i=ReadInfon();
+		std::cout<<"\n["<<textParsed<<"]\n";
         check('%'); check('>'); buf[0]=0; return i;
     }
     catch(char const* err){char l[30]; itoa(line,l); strcpy(buf,"An Error Occured: "); strcat(buf,err);

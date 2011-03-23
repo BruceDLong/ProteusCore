@@ -52,7 +52,7 @@ struct assocInfon {infon *VarRef, *nextRef; assocInfon(infon* first=0):VarRef(fi
 enum {miscWorldCtxt, miscFindAssociate};
 
 struct infNode {infon* item; infon* slot; UInt idFlags; infNode* next; infNode(infon* itm=0, UInt f=0):item(itm),idFlags(f){};};
-enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, CountSize=2, SetComplete=3, EliminateAlts=4, NodeDoneFlag=8, NoMatch=16,isRawFlag=32};
+enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, CountSize=2, SetComplete=3, NodeDoneFlag=8, NoMatch=16,isRawFlag=32, skipFollower=64};
 
 struct infon {
     infon(UInt f=0,infon* s=0, infon*v=0,infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0):
@@ -79,6 +79,7 @@ struct agent {
     inline int LastTerm(infon* varIn, infon** varOut);
     inline int getNextTerm(infon** p);
     inline int getPrevTerm(infon** p);
+	void append(infon* i);
     int compute(infon* i);
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
     infon* normalize(infon* i, infon* firstID=0, bool doShortNorm=false);
@@ -92,8 +93,7 @@ struct agent {
         int getFollower(infon** lval, infon* i);
         void addIDs(infon* Lvals, infon* Rvals, int asAlt=0);
 };
-std::string printHTMLHeader(std::string ItemToNorm);
-std::string printHTMLFooter(std::string ErrorMsg);
+
 std::string printInfon(infon* i, infon* CI=0);
 std::string printPure (infon* i, UInt f, UInt wSize, infon* CI=0);
 const int bufmax=1024*32;
@@ -102,13 +102,15 @@ struct QParser{
     infon* parse(); // if there is an error it is returned in buf as a char* string.
     UInt ReadPureInfon(char &tag, infon** i, UInt* flags, infon** s2);
     infon* ReadInfon(int noIDs=0);
+	char streamGet();
     void scanPast(char* str);
     void RmvWSC ();
     char peek();
     std::istream& stream;
     std::string s;
     char buf[bufmax];
-    int line;  // linenumber
+    int line, txtPos;  // linenumber, position in text
+	std::string textParsed;
     infon* ti; // top infon
 };
 //extern std::fstream log;

@@ -71,7 +71,7 @@ inline int agent::getNextTerm(infon** p) {
 // TODO: the next line fixes one problem but causes another: nested list-concats.
 // test it with:  (   ({} {"X", "Y"} ({} {9,8} {7,6}) {5} ) {1} {{}} {2, 3, 4} )
           if(GGparent && (GGparent->flags&fConcat)) {*p=parent; return 0;}
-	  normalize(parent);
+//	  normalize(parent);
           switch(parent->flags&tType){
             case tUnknown: (*p)=0; return -1;
             case tUInt: case tString: throw("Item in list concat is not a list.");
@@ -105,6 +105,11 @@ gpt2: //if (((((*p)->flags&mFlags1)>>8)&rType)==rList)
   return 0;
 }
 
+void agent::append(infon* i){ // appends an item to the end of the world
+	i->next=i->top=world->value; i->prev=i->next->prev; i->next->prev=i;
+	i->prev->flags^=isBottom; i->flags|=isBottom;
+//	signalSubscriptions();
+}
 
 infNode* agent::copyIdentList(infNode* from){
     infNode* top=0; infNode* follower; infNode* p=from; infNode* q;
@@ -177,7 +182,11 @@ void agent::deepCopy(infon* from, infon* to, infon* args){
 			}
 		}
     } else {to->spec1=new infon; deepCopy((args)?args:from->spec1,to->spec1);}
-    if(from->spec2){to->spec2=new infon; deepCopy(from->spec2, to->spec2);}else to->spec2=0;
+    if(from->spec2){
+	    	if(fm==toWorldCtxt && from-> spec1==(infon*)miscFindAssociate){
+			to->spec2=from->spec2;
+    		}else {to->spec2=new infon; deepCopy(from->spec2, to->spec2);}
+	}else to->spec2=0;
 }
 
 void recover(infon* i){ delete i;}
@@ -347,6 +356,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
     if(CIfol && !CIfol->pred) CIfol->pred=ci;
     if(wrkNode)do{
         wrkNode=wrkNode->next; item=wrkNode->item; IDfol=(infon*)1; DEB(" Doing Work Order:" << item);
+		if (wrkNode->idFlags&skipFollower) CIfol=0;
         switch (wrkNode->idFlags&WorkType){
         case ProcessAlternatives:
             if (altCount>=1) break; // don't keep looking after found
@@ -369,9 +379,10 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                 ci->flags|=((item->flags&tType)+(tUInt<<goSize)+sizeIndef); isIndef=1;
                 ci->size=item->size;if (!(item->flags&(fUnknown<<goSize))) ci->flags&=~(fUnknown<<goSize);
                     } else isIndef=0;
-             if ((ci->flags&matchType) && ((ci->flags&tType) != (item->flags&tType)))
+			if (item->flags&fConcat) std::cout << "WARNING: Trying to merge a concatenation.\n";
+            if ((ci->flags&matchType) && ((ci->flags&tType) != (item->flags&tType)))
                         {result=BypassDeadEnd; std::cout << "Non-matching types\n";}
-             else switch((ci->flags&tType)+4*(item->flags&tType)){
+            else switch((ci->flags&tType)+4*(item->flags&tType)){
                 case tUInt+4*tUInt: DEB("(UU)")
                     if(!(ci->flags&fUnknown) && ci->value!=item->value) {SetBypassDeadEnd(); break;}
                     if(!(ci->flags&(fUnknown<<goSize)) && ci->size!=item->size) {SetBypassDeadEnd(); break;}
@@ -488,27 +499,36 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
             } else if(CIRepMode<(UInt)asFunc){ // Processing Index...
                if(CI->flags&mMode){insertID(&CI->wrkList, CI->spec2,0); fetchFirstItem(CIfol,getTop(CI->spec2))}
                else {
-	       { //  TODO: This block really needs to be part of a  re-structuring involving CI->flags
+	       		assocInfon* assoc=0; tmp=0;
+	       		{ //  TODO: This block really needs to be part of a  re-structuring involving CI->flags
 	       		if(CIRepMode==toWorldCtxt && CI->spec1==(infon*)miscFindAssociate){
-				infon* nxtRef=(assocInfon)(CI->spec2)->nextRef;
-				if((nxtRef) {
-					tmp=nxtRef->next;
-					// END THIS IF EOL
-					// process tmp but skip switch
-				}else{
-					deepCopy((assocInfon)(CI->spec2)->VarRef, CI);
-					CIRepMode=CI->flags&mRepMode;
-					// Set flag so that after switch we can get the nextRef (Maybe use WorldCtxt section?
-				}
-			}
-	       }
+				   assoc=((assocInfon*)(CI->spec2));
+				    if(assoc->nextRef) {
+					    tmp=assoc->nextRef; getNextTerm (&tmp);
+						if(tmp->flags&isLast){ // set that this is the last one.
+							for(infon* findLast=CI; findLast; findLast=findLast->top)
+									if((findLast->next==0) || (findLast->next->flags&isVirtual)){
+										closeListAtItem(findLast);
+										break;
+									}
+						}
+					    assoc->nextRef=tmp;
+				    }else{
+					//	UInt tmpFlags=CI->flags&0xff000000;
+					    deepCopy(assoc->VarRef, CI);
+					//	CI->flags|=tmpFlags;
+					    CIRepMode=CI->flags&mRepMode;
+				    }
+		        }
+	      		}
+		if(tmp==0){
                     switch (CIRepMode){
                     case toGiven:
                         if (CI->spec1>(infon*)1) {normalize(CI->spec1,0,1); StartTerm(CI->spec1, &tmp);}
                         else tmp=getIdentFromPrev(CI->prev);
                         break;
                     case toWorldCtxt:
-		    	if(CI->spec1==(infon*)miscWorldCtxt) {tmp=&context; break;}
+		    	        if(CI->spec1==(infon*)miscWorldCtxt) {tmp=&context; break;}
                     case toHomePos: //  Handle \, \\, \\\, etc.
                     case fromHere:  // Handle ^, \^, \\^, \\\^, etc.
                         tmp=CI;
@@ -533,12 +553,15 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                           normalize(CI->spec2);
                           tmp->flags|=toExec;
                           LastTerm(CI->spec2, &tmp);
-
-  			  if (assoc){tmp=tmp->value; assoc=0; /* Set nextRef here */ }
-  			  if (tmp) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
-			} else
-			if (tmp->flags&isLast) {insertID(&CI->wrkList, tmp,0); if(CI->flags&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
-                        else {  // migrate alternates from spec2 to CI...
+  			  if (assoc){assoc->nextRef=tmp->wrkList->item;}
+			 }
+			 }
+			 }
+			 if (tmp->flags&isLast||assoc) {
+				 insertID(&CI->wrkList, tmp,(assoc)?skipFollower:0); 
+				 if(CI->flags&fUnknown) {CI->size=tmp->size;} 
+				 cpFlags(tmp, CI);
+			 } else {  // migrate alternates from spec2 to CI...
                             infNode *wrkNode=CI->spec2->wrkList; infon* item=0;
                             if(wrkNode)do{
                                 wrkNode=wrkNode->next; item=wrkNode->item;
@@ -550,8 +573,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                             CI->flags|=asNone;
                         }
                         CI->flags|=fUnknown;
-                        }
-                    }
+
                 }
             } else if(CIRepMode==asTag){
                 if(CI->wrkList){std::cout<<"Defining:'"<<(char*)((stng*)(CI->spec1))->S<<"'\n";
@@ -576,7 +598,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
         switch (doWorkList(CI, CIfol)) {
         case DoNext:
             if((CI->flags&(fConcat+tType))==(fConcat+tUInt))
-                {compute(CI); if(CIfol){pushCIsFollower;}} // push CI's follower
+                {compute(CI); if(CIfol && !(CI->flags&isLast)){pushCIsFollower;}} // push CI's follower
             else if(!((CI->flags&asDesc)&&!override)&&((CI->value&&((CI->flags&tType)==tList))||(CI->flags&fConcat))){
                 // push CI's value
                 ItmQ.push(Qitem(CI->value,cn.firstID,((cn.IDStatus==1)&!(CI->flags&fConcat))?2:cn.IDStatus,cn.level+1));

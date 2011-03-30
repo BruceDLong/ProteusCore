@@ -1,0 +1,23 @@
+There are two projects here, the Proteus language engine (core) and the Slipstream program which uses Proteus (slyp).
+
+In ./core, run 
+
+cd core
+cmake .
+
+No need to run cmake again. To builf and run just do:
+
+make
+./clip
+
+clip is the CLI.
+
+This will also make ptest which is used to test the build. To test the build see the file ./core/README_TO_TEST_BUILDS.
+
+------
+To run the Slipstream engine 
+
+cd slyp
+make
+./slyp
+

@@ -250,7 +250,7 @@ infon* QParser::ReadInfon(int noIDs){
         if (tok=='!'){modeBit=mMode; getToken(tok); if(peek()!=':') throw"Expected ':'";}
         if (tok==':'){getToken(tok); i=new infon(asFunc+modeBit,0,0,0,ReadInfon(1),i);}
     }
-	textEnd=txtPos; std::cout<<"<<"<<textParsed.substr(textStart, textEnd-textStart)<<">>\n";
+	textEnd=txtPos; //std::cout<<"<<"<<textParsed.substr(textStart, textEnd-textStart)<<">>\n";
     return i;
 }
 
@@ -260,7 +260,7 @@ infon* QParser::parse(){
 		textParsed=""; txtPos=0;
         line=1; scanPast((char*)"<%");
         infon*i=ReadInfon();
-		std::cout<<"\n["<<textParsed<<"]\n";
+		//std::cout<<"\n["<<textParsed<<"]\n";
         check('%'); check('>'); buf[0]=0; return i;
     }
     catch(char const* err){char l[30]; itoa(line,l); strcpy(buf,"An Error Occured: "); strcat(buf,err);

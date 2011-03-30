@@ -79,7 +79,7 @@ struct agent {
     inline int LastTerm(infon* varIn, infon** varOut);
     inline int getNextTerm(infon** p);
     inline int getPrevTerm(infon** p);
-	void append(infon* i);
+	void append(infon* i, infon* list);
     int compute(infon* i);
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
     infon* normalize(infon* i, infon* firstID=0, bool doShortNorm=false);

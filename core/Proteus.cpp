@@ -105,8 +105,8 @@ gpt2: //if (((((*p)->flags&mFlags1)>>8)&rType)==rList)
   return 0;
 }
 
-void agent::append(infon* i){ // appends an item to the end of the world
-	i->next=i->top=world->value; i->prev=i->next->prev; i->next->prev=i;
+void agent::append(infon* i, infon* list){ // appends an item to the end of a list
+	i->next=i->top=list->value; i->prev=i->next->prev; i->next->prev=i;
 	i->prev->flags^=isBottom; i->flags|=isBottom;
 //	signalSubscriptions();
 }
@@ -393,10 +393,10 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                     result=DoNext;
                     getFollower(&IDfol, item);
                     if(CIfol){
-		        if(IDfol) addIDs(CIfol, IDfol, asAlt);
-			else if(ci->next && (ci->next->flags&isTentative))
-                                    SetBypassDeadEnd();
-                         }
+						if(IDfol) addIDs(CIfol, IDfol, asAlt);
+						else if(ci->next && (ci->next->flags&isTentative))
+						{SetBypassDeadEnd(); closeListAtItem(ci);}
+					}
                     break;
                 case tUInt+4*tString: DEB("(US)") result=DoNext; break;
                 case tUInt+4*tList:DEB("(UL)") InitList(item); addIDs(ci,item->value,asAlt); result=DoNext;break;
@@ -438,7 +438,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                 case tString+4*tList:DEB("(SL)") InitList(item);  result=DoNext;
                     break;
                 case tList+4*tList: InitList(item);
-		    result=DoNext;
+					result=DoNext;
                     if(ci->value) {addIDs(ci->value, item->value, asAlt);}
                     else{
                         copyTo(item, ci); item->value->top=ci;
@@ -507,16 +507,16 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
 					    tmp=assoc->nextRef; getNextTerm (&tmp);
 						if(tmp->flags&isLast){ // set that this is the last one.
 							for(infon* findLast=CI; findLast; findLast=findLast->top)
-									if((findLast->next==0) || (findLast->next->flags&isVirtual)){
-										closeListAtItem(findLast);
-										break;
-									}
+								if(findLast->next->flags&(isTentative+isVirtual)){
+									closeListAtItem(findLast);
+									break;
+								}
 						}
 					    assoc->nextRef=tmp;
 				    }else{
-					//	UInt tmpFlags=CI->flags&0xff000000;
+						UInt tmpFlags=CI->flags&0xff000000;
 					    deepCopy(assoc->VarRef, CI);
-					//	CI->flags|=tmpFlags;
+						CI->flags|=tmpFlags;
 					    CIRepMode=CI->flags&mRepMode;
 				    }
 		        }

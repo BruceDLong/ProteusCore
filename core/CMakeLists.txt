@@ -7,5 +7,6 @@ set(PROTEUS_SRCS Proteus.cpp InfonIO.cpp)
 #add_library(Proteus SHARED ${PROTEUS_SRCS})
 
 add_executable(ptest ptest.cpp ${PROTEUS_SRCS})
+add_executable(clip clip.cpp ${PROTEUS_SRCS})
 
 # target_link_libraries(ptest Proteus)

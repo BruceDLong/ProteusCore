@@ -42,7 +42,7 @@ int main(int argc, char **argv){
 		QParser q(fin);
 		infon* Entry=q.parse(); // cout <<"Parsed.\n";
 		a.normalize(Entry); // cout << "Normalizd\n";
-		a.append(Entry, World);
+	//	a.append(Entry, World);
 		
 		if (Entry) cout<<"\n"<<printInfon(Entry)<<"\n\n";
 		else {cout<<"\nError: "<<q.buf<<"\n\n";}

@@ -30,7 +30,7 @@
 #include "fastevents.h"
 #include <SDL/SDL_image.h>
 #include <SDL/SDL_ttf.h>
-#include <SDL/SDL_draw.h>
+#include <SDL/SDL_gfxPrimitives.h>
 
 #ifdef GraphicsEngine_OPENGL
 #include "SDLUtils.h"
@@ -218,28 +218,28 @@ static inline void add_msg(const char *msg)
 static inline void draw_rect(infon* color, int x, int y, int size_x, int size_y)
 {
     	int red,green,blue;
-       getColorComponents(color, &red, &green, &blue);
-	Draw_FillRect(screen, x, y, size_x, size_y, SDL_MapRGB(screen->format, red, green, blue));
+    	getColorComponents(color, &red, &green, &blue);
+	boxRGBA(screen, x, y, size_x+x, size_y+y, red, green, blue, 255);
 }
 
 static inline void draw_RelLine(infon* color, int x, int y, int size_x, int size_y)
 {
     	int red,green,blue;
     	getColorComponents(color, &red, &green, &blue);
-	Draw_Line(screen, x, y, size_x/15+x, size_y/15+y, SDL_MapRGB(screen->format, red, green, blue));
+	lineRGBA(screen, x, y, size_x/15+x, size_y/15+x, red, green, blue, 255);
 }
 static inline void draw_line(infon* color, int x, int y, int size_x, int size_y)
 {
     	int red,green,blue;
     	getColorComponents(color, &red, &green, &blue);
-	Draw_Line(screen, x, y, size_x, size_y, SDL_MapRGB(screen->format, red, green, blue));
+	lineRGBA(screen, x, y, size_x, size_y, red, green, blue, 255);
 }
 
 static inline void draw_round(infon* color, int x, int y, int size_x, int size_y, int corner)
 {
         int red,green,blue;
        getColorComponents(color, &red, &green, &blue);
-	Draw_FillRound(screen, x, y, size_x, size_y, corner, SDL_MapRGB(screen->format, red, green, blue));
+	roundedBoxRGBA(screen, x, y, size_x+x, size_y+y, corner, red, green, blue, 255);
 }
 
 static inline void draw_circle(infon* color, int x, int y, int radius)
@@ -247,7 +247,7 @@ static inline void draw_circle(infon* color, int x, int y, int radius)
     	int red,green,blue;
        getColorComponents(color, &red, &green, &blue);
 	if(radius < x && radius < y) {
-		Draw_FillCircle(screen, x, y, radius, SDL_MapRGB(screen->format, red, green, blue));
+		filledCircleRGBA(screen, x, y, radius, red, green, blue, 255);
 	}
 }
 

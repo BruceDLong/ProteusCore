@@ -11,7 +11,7 @@ CC = g++
 CFLAGS = $(COMPILERFLAGS) $(UNCOMMENT_TO_DO_GCOVERAGE)
 
 slyp: slyp.o Proteus.o InfonIO.o fastevents.o
-	g++ $(CFLAGS)  -L/usr/local/lib -lSDL_draw slyp.o fastevents.o ./Proteus.o InfonIO.o ${SDL_LDFLAGS} -lSDL_ttf  -o slyp
+	g++ $(CFLAGS)  -L/usr/local/lib -lSDL_gfx slyp.o fastevents.o ./Proteus.o InfonIO.o ${SDL_LDFLAGS} -lSDL_ttf  -o slyp
 
 slyp.o: slyp.cpp ../core/Proteus.h ../core/Functions.h
 	g++ $(CFLAGS)  ${SDL_CFLAGS} -I. -c slyp.cpp

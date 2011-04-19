@@ -151,36 +151,11 @@ static inline SDL_Surface *load_image(const char *filename)
 	return optimizedImage;
 }
 
-int getColorComponents(infon* color, int* red, int* green, int* blue){
+int getColorComponents(infon* color, int* red, int* green, int* blue, int* alpha){
     color=color->value; *red=(int)color->value;
     color=color->next; *green=(int)color->value;
     color=color->next; *blue=(int)color->value;
-}
-
-static inline void render_bg(void)
-{
-	int x;
-	int y;
-	uint32_t blue_color = 0;
-	uint32_t color = 0;
-	uint32_t *pixels = (uint32_t*)screen->pixels;
-	memset(pixels, SDL_MapRGB(screen->format, 0, 0, 0), 640*480);
-	for(x = 0; x < 640; ++x) {
-		// color = SDL_MapRGB(screen->format, 0, x?map_value(x/2, 640, 255):x, map_value(x, 640, 255)); // cyan
-		color = SDL_MapRGB(screen->format,
-				bg_red?map_value(x, 640, 255):0,
-				bg_green?map_value(x, 640, 255):0,
-				bg_blue?map_value(x, 640, 255):0);
-
-		for(y = 0; y < 640; ++y) {
-			pixels[(x*480)+y] = color;
-		}
-		if(!(x % 3)) {
-			if(++blue_color > 255) {
-				blue_color = 0;
-			}
-		}
-	}
+    color=color->next; *alpha=(int)color->value;
 }
 
 static inline int show_message(int x, int y, const char *msg)
@@ -217,37 +192,37 @@ static inline void add_msg(const char *msg)
 
 static inline void draw_rect(infon* color, int x, int y, int size_x, int size_y)
 {
-    	int red,green,blue;
-    	getColorComponents(color, &red, &green, &blue);
-	boxRGBA(screen, x, y, size_x+x, size_y+y, red, green, blue, 255);
+    	int red,green,blue,alpha;
+    	getColorComponents(color, &red, &green, &blue, &alpha);
+	boxRGBA(screen, x, y, size_x+x, size_y+y, red, green, blue, alpha);
 }
 
 static inline void draw_RelLine(infon* color, int x, int y, int size_x, int size_y)
 {
-    	int red,green,blue;
-    	getColorComponents(color, &red, &green, &blue);
-	lineRGBA(screen, x, y, size_x/15+x, size_y/15+x, red, green, blue, 255);
+    	int red,green,blue,alpha;
+    	getColorComponents(color, &red, &green, &blue, &alpha);
+	lineRGBA(screen, x, y, size_x/15+x, size_y/15+x, red, green, blue, alpha);
 }
 static inline void draw_line(infon* color, int x, int y, int size_x, int size_y)
 {
-    	int red,green,blue;
-    	getColorComponents(color, &red, &green, &blue);
-	lineRGBA(screen, x, y, size_x, size_y, red, green, blue, 255);
+    	int red,green,blue,alpha;
+    	getColorComponents(color, &red, &green, &blue, &alpha);
+	lineRGBA(screen, x, y, size_x, size_y, red, green, blue, alpha);
 }
 
 static inline void draw_round(infon* color, int x, int y, int size_x, int size_y, int corner)
 {
-        int red,green,blue;
-       getColorComponents(color, &red, &green, &blue);
-	roundedBoxRGBA(screen, x, y, size_x+x, size_y+y, corner, red, green, blue, 255);
+        int red,green,blue,alpha;
+       getColorComponents(color, &red, &green, &blue, &alpha);
+	roundedBoxRGBA(screen, x, y, size_x+x, size_y+y, corner, red, green, blue, alpha);
 }
 
 static inline void draw_circle(infon* color, int x, int y, int radius)
 {
-    	int red,green,blue;
-       getColorComponents(color, &red, &green, &blue);
+    	int red,green,blue,alpha;
+       getColorComponents(color, &red, &green, &blue, &alpha);
 	if(radius < x && radius < y) {
-		filledCircleRGBA(screen, x, y, radius, red, green, blue, 255);
+		filledCircleRGBA(screen, x, y, radius, red, green, blue, alpha);
 	}
 }
 

@@ -1,7 +1,7 @@
 2
 Two argument function defined with a tag then executed via execute command.
 <% +{
-	execute=#+{{{...} {...}} @\\[{...}]: \\[{...} {...}]}
+	execute=#+{{? ?} @\\[{...}]: \\[{...} {...}]}
 	func=#+{{_, _} {\\\[_,_] \\\[_]} }
 }
 %>

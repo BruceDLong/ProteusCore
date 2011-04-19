@@ -27,6 +27,7 @@
 typedef ptrdiff_t UInt;
 
 struct stng {char* S; int L; stng(char* s=0, int l=0):S(s),L(l){};};
+
 #define stngCpy(s,ch) {s.L=strlen(ch); s.S=new char[s.L+1]; memcpy(s.S,ch,s.L+1);}
 #define lstngCpy(s,ch,len) {s.L=len; s.S=new char[s.L+1]; memcpy(s.S,ch,s.L); s.S[s.L]=0;}
 #define stngApnd(s,ch,len) {int l=s.L+len;char*tmp=new char[l+1];memcpy(tmp,s.S,s.L);memcpy(tmp+s.L,ch,len);delete s.S;s.S=tmp;s.L=l;tmp[l]=0;}
@@ -57,7 +58,7 @@ enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, CountSize=2, SetComplet
 struct infon {
     infon(UInt f=0,infon* s=0, infon*v=0,infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0):
         flags(f), size(s), value(v), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {prev=0; top=0;};
-    UInt  flags;
+    UInt flags;
     UInt wSize; // get rid if this. disallow strings and lists in "size"
     infon *size;        // The *-term; perhaps just a number of states
     infon *value;       // Summand List
@@ -120,6 +121,12 @@ struct QParser{
   UInt f=inf->flags;                           \
   if((f&tType)==tUInt && !(f&fUnknown)) num=(UInt)inf->value; else num=0;     \
   sign=f&fInvert;}
+
+inline void getStng(infon* i, stng* str) {
+	if((i->flags&tType)==tString && !(i->flags&fUnknown)) {
+		str->S=(char*)i->value; str->L=(UInt)i->size;
+	}
+}
 
 #define insertID(list, itm, flag) {IDp=(*list); (*list)=new infNode(itm,flag); \
     if(IDp){(*list)->next=IDp->next; IDp->next=(*list);} else (*list)->next=(*list); }

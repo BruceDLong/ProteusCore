@@ -18,6 +18,9 @@
 #ifndef _Functions
 #define _Functions
 
+#include <strstream>
+#include <iostream>
+#include <fstream>
 #include "Proteus.h"
 #include <stdlib.h>
 #include <math.h>
@@ -25,6 +28,23 @@
 
 #define pi 3.14159
 #define Zto1(gInt) (float)(((float)gInt)  /* / 1024.0*/)
+
+#define cpFlags(from, to) {to->flags=(to->flags&0xff000000)+(from->flags&0x00ffffff);}
+#define copyTo(from, to) {if(from!=to){to->size=from->size; to->value=from->value; cpFlags(from,to);}}
+
+int getStrArg(infon* i, stng* str, agent* a){
+    i->spec1->top=i;
+    a->normalize(i->spec1);
+    getStng(i->spec1, str);
+    return 1;
+}
+
+void setString(infon* CI, stng *s){
+    UInt tmpFlags=CI->flags&0xff000000;
+    CI->size=(infon*) s->L;
+    CI->value=(infon*)s->S;
+    CI->flags=tmpFlags + (tUInt<<goSize)+asNone+tString;
+}
 
 int getIntArg(infon* i, int* Int1, agent* a){
     int sign;
@@ -71,7 +91,28 @@ int autoEval(infon* CI, agent* a){
         now=*localtime(&rawtime);
         if (!getIntArg(CI, &int1, a)) return 0;
         if (int1==0)  setIntVal(CI, now.tm_sec);
-    } else return 0;
+    } else if (strcmp(funcName.S, "draw")==0){
+		// get list {mainType, subType, item, sizeLoc, args}
+		// search theme for mainType/subType
+		// call the function, return the results.
+		if (!getIntArg(CI, &int1, a)) return 0;
+        setIntVal(CI, int1+1);
+		
+    } else if (strcmp(funcName.S, "loadInfon")==0){
+		stng str1;
+		if (!getStrArg(CI, &str1, a)) return 0;
+		str1.S[str1.L]=0;
+		std::fstream fin(str1.S);
+//		while (!fin.eof() && !fin.fail()) {std::cout<<(char)fin.get();} exit(0);
+		QParser q(fin);
+		infon* I=q.parse();// std::cout <<"P "; std::cout<<"<"<<printInfon(I)<<"> \n";
+		agent a;
+		a.normalize(I); // std::cout << "N ";
+		if (I==0) {std::cout<<"Error: "<<q.buf<<"\n";}
+		
+        copyTo(I,CI);
+		
+    }else return 0;
 
     return 1;
 }

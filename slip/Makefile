@@ -10,11 +10,11 @@ COMPILERFLAGS = -fpermissive -Wno-deprecated -g
 CC = g++
 CFLAGS = $(COMPILERFLAGS) $(UNCOMMENT_TO_DO_GCOVERAGE)
 
-slyp: slyp.o Proteus.o InfonIO.o fastevents.o
-	g++ $(CFLAGS)  -L/usr/local/lib -lSDL_gfx slyp.o fastevents.o ./Proteus.o InfonIO.o ${SDL_LDFLAGS} -lSDL_ttf  -o slyp
+slip: slip.o Proteus.o InfonIO.o fastevents.o
+	g++ $(CFLAGS)  -L/usr/local/lib -lSDL_gfx slip.o fastevents.o ./Proteus.o InfonIO.o ${SDL_LDFLAGS} -lSDL_ttf  -o slip
 
-slyp.o: slyp.cpp ../core/Proteus.h ../core/Functions.h
-	g++ $(CFLAGS)  ${SDL_CFLAGS} -I. -c slyp.cpp
+slip.o: slip.cpp ../core/Proteus.h ../core/Functions.h
+	g++ $(CFLAGS)  ${SDL_CFLAGS} -I. -c slip.cpp
 
 Proteus.o: ../core/Proteus.h  ../core/Proteus.cpp
 	g++ $(CFLAGS) -c -I../core/  ../core/Proteus.cpp
@@ -28,7 +28,7 @@ fastevents.o: fastevents.c
 .PHONY: clean
 
 clean:
-	@rm -f slyp $(PROTEUS_OBJS)
+	@rm -f slip $(PROTEUS_OBJS)
 
 .PHONY: distclean
 

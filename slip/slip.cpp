@@ -1,18 +1,18 @@
-// The SDL SlypStreem Engine. Copyright 2008 by Bruce Long
-/*    This file is part of the "SlypStreem Engine"
+// The SDL SlipStream Engine. Copyright 2008 by Bruce Long
+/*    This file is part of the "SlipStream Engine"
 
-    The SlypStreem Engine is free software: you can redistribute it and/or modify
+    The SlipStream Engine is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    The SlypStrem Engine is distributed in the hope that it will be useful,
+    The SlipStream Engine is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with the SlypStreem Engine.  If not, see <http://www.gnu.org/licenses/>.
+    along with the SlipStream Engine.  If not, see <http://www.gnu.org/licenses/>.
 */
 //#define OUT(msg) {std::cout<< msg;}
 //#define DEB(msg) {std::cout<< msg << "\n";}
@@ -62,7 +62,7 @@ int bg_red = 0;
 int bg_green = 0;
 int bg_blue = 0;
 
-//////////////////// Slyp Code
+//////////////////// Slip Code
 #include <strstream>
 #include <iostream>
 #include <fstream>
@@ -297,7 +297,7 @@ while(!EOT_d1){
     }
 //    std::cout << "\nCount: " << count << "\n======================\n";
 }
-//////////////////// End of Slyp Drawing, Begin Interface to Proteus Engine
+//////////////////// End of Slip Drawing, Begin Interface to Proteus Engine
 int initWorldAndEventQueues(){
     // Load World
     std::cout << "Loading world\n";
@@ -327,7 +327,7 @@ extern infon *World; World=q.parse();
     ProteusDesc=displayList;
 }
 
-//////////////////// End of Slyp Specific Code, Begin OpenGL Code
+//////////////////// End of Slip Specific Code, Begin OpenGL Code
 #define FRAME_RATE_SAMPLES 50
 int FrameCount=0;
 float FrameRate=0;
@@ -415,7 +415,7 @@ void setupSDL(){
         EXIT((char*)"Couldn't set video mode");
     }
 
-    	SDL_WM_SetCaption("SlypStreem", NULL);
+    	SDL_WM_SetCaption("SlipStream", NULL);
 	if(!(font = TTF_OpenFont("FreeSans.ttf", 32))) {
 		printf("Can't open font.\n");
 		exit(EXIT_FAILURE);

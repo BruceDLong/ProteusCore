@@ -32,6 +32,8 @@
 #define cpFlags(from, to) {to->flags=(to->flags&0xff000000)+(from->flags&0x00ffffff);}
 #define copyTo(from, to) {if(from!=to){to->size=from->size; to->value=from->value; cpFlags(from,to);}}
 
+char tmpStng[100];
+
 int getStrArg(infon* i, stng* str, agent* a){
     i->spec1->top=i;
     a->normalize(i->spec1);
@@ -92,11 +94,50 @@ int autoEval(infon* CI, agent* a){
         if (!getIntArg(CI, &int1, a)) return 0;
         if (int1==0)  setIntVal(CI, now.tm_sec);
     } else if (strcmp(funcName.S, "draw")==0){
-		// get list {mainType, subType, item, sizeLoc, args}
+        char* majorType;
+        char* minorType;
+        int hours,minutes;
+        int x,y, oX,oY;
+        infon* args=CI->spec1;
+        if ((args->flags&tType) != tList) {
+            std::cout<<"Error: Argument to draw not a list\n";
+            return 0;
+        } else {
+            args=args->value;
+            if ((args->flags&tType) != tString) {
+                std::cout<<"Error: majorType in draw not a string\n";
+                return 0;
+            } else {
+                majorType=(char*)args->value;
+                args=args->next;
+            }
+            if ((args->flags&tType) != tString) {
+                std::cout<<"Error: minorType in draw not a string\n";
+            } else {
+                minorType=(char*)args->value;
+                args=args->next;
+            }
+                hours=(int)args->value->value;
+                minutes=(int)args->value->next->value;
+                x=(int)args->value->next->next->value;
+                y=(int)args->value->next->next->next->value;
+                oX=(int)args->value->next->next->next->next->value;
+                oY=(int)args->value->next->next->next->next->next->value;
+                //majorType.S[majorType.L]=0;
+                //memcpy(tmpStng, majorType.S, majorType.L); tmpStng[majorType.L]=0;
+                std::cout<<"Major type: "<<majorType << "\n";
+                std::cout<<"Minor type: "<<minorType << "\n";
+                std::cout<<"hours: "<<hours<< "\n";
+                std::cout<<"minutes: "<<minutes<< "\n";
+                std::cout<<"x: "<< x << "\n";
+                std::cout<<"y: "<< y << "\n";
+                std::cout<<"oX: "<< oX << "\n";
+                std::cout<<"oY: "<< oY << "\n";
+                //std::cout<<"Major type: "<<tmpStng << "\n";
+        }
+		// get list {mainType, subType, item, sizeLoc}
 		// search theme for mainType/subType
 		// call the function, return the results.
-		if (!getIntArg(CI, &int1, a)) return 0;
-        setIntVal(CI, int1+1);
 		
     } else if (strcmp(funcName.S, "loadInfon")==0){
 		stng str1;

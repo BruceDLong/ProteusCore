@@ -1,14 +1,9 @@
 <% {
 // Rectangle 1
-	{ blue curvedRect 50,50,200,80, 10}
+	{ transparent_blue curvedRect 50,50,200,80, 10}
 	{ green text 60,60, "Hello World!"}
 
 show_clock: +{*1+0 *15+0 *30+0}
-/*	{blue circle 200,210,80}
-	{purple RelLine 200,210,  cos:*1+(*1-30 time:*1+0 +90)  sin:*1+(*1-30 time:*1+0 +90 ) }  // second hand
-	{red RelLine 200,210,  cos:*1+(*1-30*4+90)  sin:*1+(*1-30*4+90)}   // minute hand
-	{green RelLine 200,210,  cos:*1+(*1-6*48+90)  sin:*1+(*1-6*48+90 ) }  // hour hand
-*/
  {
 	{1}
 	drawComplex

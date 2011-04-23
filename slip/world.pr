@@ -20,8 +20,8 @@
 	text=+10
 
 
-+{show_clock= {
-  +{_, _, _} // hours, minutes, seconds
+{show_clock= {
+  {_, _, _} // hours, minutes, seconds
 	{ {1,2,3} drawComplex
 		{
 		{blue circle 200,210,80}

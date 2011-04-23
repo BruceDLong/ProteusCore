@@ -3,7 +3,7 @@
 	{ transparent_blue curvedRect 50,50,200,80, 10}
 	{ green text 60,60, "Hello World!"}
 
-show_clock: +{*1+0 *15+0 *30+0}
+show_clock: {*1+0 *15+0 *30+0}
  {
 	{1}
 	drawComplex

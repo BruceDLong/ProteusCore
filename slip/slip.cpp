@@ -285,6 +285,15 @@ extern infon *World; World=q.parse();
     else {std::cout<<"Error:"<<q.buf<<"\n"; exit(1);}
     theAgent.normalize(World);
 
+    //Load Theme
+    std::cout << "Loading theme\n";
+    std::fstream InfonInT("theme.pr");
+    QParser T(InfonInT);
+    infon *Theme; Theme=T.parse();
+    if (Theme) std::cout<<"["<<printInfon(Theme)<<"]\n";
+    else {std::cout<<"Error:"<<T.buf<<"\n"; exit(1);}
+    theAgent.normalize(Theme);
+
 // Load DispList
     std::cout << "Loading display\n";
     std::fstream InfonInD("display.pr");

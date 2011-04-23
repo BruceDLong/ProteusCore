@@ -32,7 +32,7 @@
 #define cpFlags(from, to) {to->flags=(to->flags&0xff000000)+(from->flags&0x00ffffff);}
 #define copyTo(from, to) {if(from!=to){to->size=from->size; to->value=from->value; cpFlags(from,to);}}
 
-char tmpStng[100];
+extern infon* Theme;
 
 int getStrArg(infon* i, stng* str, agent* a){
     i->spec1->top=i;
@@ -117,14 +117,14 @@ int autoEval(infon* CI, agent* a){
                 minorType=(char*)args->value;
                 args=args->next;
             }
+                // still playing with the test case
                 hours=(int)args->value->value;
                 minutes=(int)args->value->next->value;
+                // this doesn't properly decompose the lists yet
                 x=(int)args->value->next->next->value;
                 y=(int)args->value->next->next->next->value;
                 oX=(int)args->value->next->next->next->next->value;
                 oY=(int)args->value->next->next->next->next->next->value;
-                //majorType.S[majorType.L]=0;
-                //memcpy(tmpStng, majorType.S, majorType.L); tmpStng[majorType.L]=0;
                 std::cout<<"Major type: "<<majorType << "\n";
                 std::cout<<"Minor type: "<<minorType << "\n";
                 std::cout<<"hours: "<<hours<< "\n";
@@ -133,7 +133,6 @@ int autoEval(infon* CI, agent* a){
                 std::cout<<"y: "<< y << "\n";
                 std::cout<<"oX: "<< oX << "\n";
                 std::cout<<"oY: "<< oY << "\n";
-                //std::cout<<"Major type: "<<tmpStng << "\n";
         }
 		// get list {mainType, subType, item, sizeLoc}
 		// search theme for mainType/subType

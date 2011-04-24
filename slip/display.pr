@@ -1,7 +1,7 @@
 <%
 {
     //draw:{'time', 'digital', { {11,45,0}, {200,200,0,0} } }
-    draw:{'time', 'digital', { "Hello" } }
+    draw:{'time', 'digital', { {"Hello"} } }
 }
 %>
 

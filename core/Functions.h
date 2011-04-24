@@ -32,7 +32,7 @@
 #define cpFlags(from, to) {to->flags=(to->flags&0xff000000)+(from->flags&0x00ffffff);}
 #define copyTo(from, to) {if(from!=to){to->size=from->size; to->value=from->value; cpFlags(from,to);}}
 
-extern infon* Theme;
+infon* Theme;
 
 int getStrArg(infon* i, stng* str, agent* a){
     i->spec1->top=i;
@@ -96,47 +96,66 @@ int autoEval(infon* CI, agent* a){
     } else if (strcmp(funcName.S, "draw")==0){
         char* majorType;
         char* minorType;
-        int hours,minutes;
-        int x,y, oX,oY;
         infon* args=CI->spec1;
+        infon* foundMajorType=0;
+        infon* foundMinorType=0;
         if ((args->flags&tType) != tList) {
             std::cout<<"Error: Argument to draw not a list\n";
             return 0;
-        } else {
-            args=args->value;
-            if ((args->flags&tType) != tString) {
-                std::cout<<"Error: majorType in draw not a string\n";
-                return 0;
-            } else {
-                majorType=(char*)args->value;
-                args=args->next;
-            }
-            if ((args->flags&tType) != tString) {
-                std::cout<<"Error: minorType in draw not a string\n";
-            } else {
-                minorType=(char*)args->value;
-                args=args->next;
-            }
-                // still playing with the test case
-                hours=(int)args->value->value;
-                minutes=(int)args->value->next->value;
-                // this doesn't properly decompose the lists yet
-                x=(int)args->value->next->next->value;
-                y=(int)args->value->next->next->next->value;
-                oX=(int)args->value->next->next->next->next->value;
-                oY=(int)args->value->next->next->next->next->next->value;
-                std::cout<<"Major type: "<<majorType << "\n";
-                std::cout<<"Minor type: "<<minorType << "\n";
-                std::cout<<"hours: "<<hours<< "\n";
-                std::cout<<"minutes: "<<minutes<< "\n";
-                std::cout<<"x: "<< x << "\n";
-                std::cout<<"y: "<< y << "\n";
-                std::cout<<"oX: "<< oX << "\n";
-                std::cout<<"oY: "<< oY << "\n";
         }
-		// get list {mainType, subType, item, sizeLoc}
-		// search theme for mainType/subType
-		// call the function, return the results.
+        args=args->value;
+        if ((args->flags&tType) != tString) {
+            std::cout<<"Error: majorType in draw not a string\n";
+            return 0;
+        } else {
+            majorType=(char*)args->value;
+            args=args->next;
+        }
+        if ((args->flags&tType) != tString) {
+            std::cout<<"Error: minorType in draw not a string\n";
+            return 0;
+        } else {
+            minorType=(char*)args->value;
+            args=args->next;
+        }
+        infon* i=0;
+        for (int EOT=a->StartTerm(Theme, &i); !EOT; EOT=a->getNextTerm(&i)) {
+            if ((i->value->flags&tType) != tString) continue;
+            char* candidate = (char*)i->value->value;
+            std::cout<<"Found candidate major type: " << candidate << "\n";
+            if (strcmp((char*)i->value->value, majorType) == 0) {
+                std::cout<<"Matched major type: " << candidate << "\n";
+                foundMajorType = i;
+                break;
+            }
+        }
+        if (foundMajorType == 0) {
+            std::cout<<"Error: majorType not found in Theme\n";
+            return 0;
+        }
+        i=0;
+        for (int EOT=a->StartTerm(foundMajorType, &i); !EOT; EOT=a->getNextTerm(&i)) {
+            if ((i->value->flags&tType) != tString) continue;
+            char* candidate = (char*)i->value->value;
+            std::cout<<"Found candidate minor type: " << candidate << "\n";
+            if (strcmp((char*)i->value->value, minorType) == 0) {
+                std::cout<<"Matched minor type: " << candidate << "\n";
+                foundMinorType=i;
+                break;
+            }
+        }
+        if (foundMinorType == 0) {
+            std::cout<<"Error: no associated minorType found in Theme\n";
+            return 0;
+        }
+
+        infon *funcToCall=0;
+        funcToCall=new infon();
+        a->deepCopy(foundMinorType->value->next, funcToCall);
+        infNode *IDp;
+        insertID(&funcToCall->wrkList,args,0);
+        a->normalize(funcToCall);
+        copyTo(funcToCall, CI);
 		
     } else if (strcmp(funcName.S, "loadInfon")==0){
 		stng str1;

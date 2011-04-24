@@ -93,6 +93,7 @@ infon* ItmPtr=0;
 agent theAgent;
 int EOT_d2,j,sign;
 char textBuff[1024];
+extern infon* Theme;
 
 int gInt(){
     getInt(ItmPtr,j,sign);  // std::cout << j << ", ";
@@ -289,7 +290,7 @@ extern infon *World; World=q.parse();
     std::cout << "Loading theme\n";
     std::fstream InfonInT("theme.pr");
     QParser T(InfonInT);
-    infon *Theme; Theme=T.parse();
+    Theme=T.parse();
     if (Theme) std::cout<<"["<<printInfon(Theme)<<"]\n";
     else {std::cout<<"Error:"<<T.buf<<"\n"; exit(1);}
     theAgent.normalize(Theme);

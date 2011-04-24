@@ -2,20 +2,9 @@
 {
   {'time',
     {'digital',
-      {'GFX COMANDS HERE'}
-    }
-    {'analog',
-      {
-       {_, _, _} // hours, minutes, seconds
-         { {1,2,3} drawComplex
-        {
-        {blue circle 200,210,80}
-        {purple RelLine 200,210,  cos:*1+(*1-6 \\\\\\[_,_,_] *1+90)  sin:*1+(*1-6  \\\\\\[_,_,_] *1+90 ) }  // second hand
-        {red RelLine 200,210,  cos:*1+(*1-6 \\\\\\[_,_] *1+90)  sin:*1+(*1-6 \\\\\\[_,_] *1+90)}   // minute hand
-        {green RelLine 200,210,  cos:*1+(*1-30 \\\\\\[_] *1+90)  sin:*1+(*1-30 \\\\\\[_] *1+90 ) }  // hour hand
-        }
-         }
-      }
+      { ? {
+        {green text 200,200,  \\\[$] }
+      } }
     }
   }
 }

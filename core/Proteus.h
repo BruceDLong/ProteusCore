@@ -85,9 +85,9 @@ struct agent {
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
     infon* normalize(infon* i, infon* firstID=0, bool doShortNorm=false);
     infon *world, context;
+        void deepCopy(infon* from, infon* to, infon* args=0);
     private:
         void InitList(infon* item);
-        void deepCopy(infon* from, infon* to, infon* args=0);
         infNode* copyIdentList(infNode* from);
         infon* copyList(infon* from);
         void processVirtual(infon* v);

@@ -32,6 +32,7 @@
 #define cpFlags(from, to) {to->flags=(to->flags&0xff000000)+(from->flags&0x00ffffff);}
 #define copyTo(from, to) {if(from!=to){to->size=from->size; to->value=from->value; cpFlags(from,to);}}
 
+#define copyInfonString2charBuf(inf, buf) {memcpy(buf, (char*)inf->value, (UInt)inf->size); buf[(UInt)inf->size]=0;}
 infon* Theme;
 
 int getStrArg(infon* i, stng* str, agent* a){
@@ -94,8 +95,8 @@ int autoEval(infon* CI, agent* a){
         if (!getIntArg(CI, &int1, a)) return 0;
         if (int1==0)  setIntVal(CI, now.tm_sec);
     } else if (strcmp(funcName.S, "draw")==0){
-        char* majorType;
-        char* minorType;
+        char majorType[100];
+        char minorType[100];
         infon* args=CI->spec1;
         infon* foundMajorType=0;
         infon* foundMinorType=0;
@@ -108,23 +109,22 @@ int autoEval(infon* CI, agent* a){
             std::cout<<"Error: majorType in draw not a string\n";
             return 0;
         } else {
-            majorType=(char*)args->value;
+            copyInfonString2charBuf(args, majorType);
             args=args->next;
         }
         if ((args->flags&tType) != tString) {
             std::cout<<"Error: minorType in draw not a string\n";
             return 0;
         } else {
-            minorType=(char*)args->value;
+            copyInfonString2charBuf(args, minorType);
             args=args->next;
         }
         infon* i=0;
+		char tagBuf[100];
         for (int EOT=a->StartTerm(Theme, &i); !EOT; EOT=a->getNextTerm(&i)) {
             if ((i->value->flags&tType) != tString) continue;
-            char* candidate = (char*)i->value->value;
-            std::cout<<"Found candidate major type: " << candidate << "\n";
-            if (strcmp((char*)i->value->value, majorType) == 0) {
-                std::cout<<"Matched major type: " << candidate << "\n";
+			copyInfonString2charBuf(i->value, tagBuf);
+            if (strcmp(tagBuf, majorType) == 0) {
                 foundMajorType = i;
                 break;
             }
@@ -136,10 +136,8 @@ int autoEval(infon* CI, agent* a){
         i=0;
         for (int EOT=a->StartTerm(foundMajorType, &i); !EOT; EOT=a->getNextTerm(&i)) {
             if ((i->value->flags&tType) != tString) continue;
-            char* candidate = (char*)i->value->value;
-            std::cout<<"Found candidate minor type: " << candidate << "\n";
-            if (strcmp((char*)i->value->value, minorType) == 0) {
-                std::cout<<"Matched minor type: " << candidate << "\n";
+			copyInfonString2charBuf(i->value, tagBuf);
+            if (strcmp(tagBuf, minorType) == 0) {
                 foundMinorType=i;
                 break;
             }

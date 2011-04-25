@@ -98,22 +98,23 @@ int autoEval(infon* CI, agent* a){
         char majorType[100];
         char minorType[100];
         infon* args=CI->spec1;
+//std::cout << "#############" << printInfon(args) << "\n";
         infon* foundMajorType=0;
         infon* foundMinorType=0;
         if ((args->flags&tType) != tList) {
-            std::cout<<"Error: Argument to draw not a list\n";
+            std::cout<<"Error: Argument to draw is not a list\n";
             return 0;
         }
         args=args->value;
         if ((args->flags&tType) != tString) {
-            std::cout<<"Error: majorType in draw not a string\n";
+            std::cout<<"Error: majorType in draw is not a string\n";
             return 0;
         } else {
             copyInfonString2charBuf(args, majorType);
             args=args->next;
         }
         if ((args->flags&tType) != tString) {
-            std::cout<<"Error: minorType in draw not a string\n";
+            std::cout<<"Error: minorType in draw is not a string\n";
             return 0;
         } else {
             copyInfonString2charBuf(args, minorType);
@@ -150,10 +151,9 @@ int autoEval(infon* CI, agent* a){
         infon *funcToCall=0;
         funcToCall=new infon();
         a->deepCopy(foundMinorType->value->next, funcToCall);
-        infNode *IDp;
-        insertID(&funcToCall->wrkList,args,0);
-        a->normalize(funcToCall);
-        copyTo(funcToCall, CI);
+		CI->spec2=funcToCall; CI->spec1=args;
+//	std::cout << "#############" << printInfon(CI) << "\n";
+        a->normalize(CI);
 		
     } else if (strcmp(funcName.S, "loadInfon")==0){
 		stng str1;

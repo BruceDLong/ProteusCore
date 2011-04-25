@@ -153,6 +153,7 @@ static inline SDL_Surface *load_image(const char *filename)
 }
 
 int getColorComponents(infon* color, int* red, int* green, int* blue, int* alpha){
+std::cout << "The Color is:" << printInfon(color) << "\n";
     color=color->value; *red=(int)color->value;
     color=color->next; *green=(int)color->value;
     color=color->next; *blue=(int)color->value;
@@ -230,19 +231,19 @@ static inline void draw_circle(infon* color, int x, int y, int radius)
 void DrawProteusDescription(infon* ProteusDesc){
 if (ProteusDesc==0) std::cout << "Err1\n";
 if (ProteusDesc->size==0) std::cout << "Err2\n";
-
+std::cout<<"DISPLAY:["<<printInfon(ProteusDesc)<<"]\n"; 
     int count=0;
     infon* OldItmPtr;
 int size, size2; float a,b,c,d; int Ia,Ib,Ic,Id,Ie,If,Ih,II; char  *Sa, *Sb;
 int EOT_d1=0; infon* i=0;
 EOT_d1=theAgent.StartTerm(ProteusDesc, &i);
 while(!EOT_d1){
-//  std::cout << count<<":[" << printInfon(i).c_str() << "]\n";
+  std::cout << count<<":[" << printInfon(i).c_str() << "]\n";
         EOT_d2=theAgent.StartTerm(i, &ItmPtr);
         //std::cout<<"ival["<<ItmPtr<<"]\n";
         infon* args=gList();
         int cmd=gINT;
-//std::cout<<"\n[CMD:"<< cmd << "]";
+std::cout<<"\n[CMD:"<< cmd << "]";
         switch(cmd){
             case 0:  		OldItmPtr=ItmPtr; DrawProteusDescription(OldItmPtr); ItmPtr=OldItmPtr;
             case 1: I4 		draw_rect(args, Ia, Ib, Ic, Id);  break;
@@ -251,22 +252,6 @@ while(!EOT_d1){
             case 4: I4 		draw_RelLine(args, Ia, Ib, Ic, Id);  break;
             case 5: I4 		draw_line(args, Ia, Ib, Ic, Id);  break;
             case 10: I2 S1	show_message(Ia, Ib, Sa);  break;
-      /*      case 0:    Z3          glColor3f(a,b,c);        break;
-            case 1:    Z4         glColor4f(a,b,c,d);    break;
-            case 2:             glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texSlots[gINT]);           break;
-            case 3:    Z3         glTranslatef(a,b,c);     break;
-            case 4:    Z4         glRotatef(a,b,c,d);  break;
-            case 5:     I3        glNormal3i(Ia,Ib,Ic);       break;
-            case 6:     size=getArrayi(vertexes); DrawTriStrip(size, vertexes); break;
-            case 7:     size=getArrayi(vertexes); DrawTriFan  (size, vertexes); break;
-            case 8:	size=getArrayi(vertexes);  size2=getArrayz(texCoords);  DrawTriStripTex(size, size2); break;
-            case 9:	size=getArrayi(vertexes);  size2=getArrayz(texCoords); DrawTriFanTex  (size, size2); break;
-
-            case 10:       glLoadIdentity(); break;
-            case 11:       glPushMatrix();   break;
-            case 12:       glPopMatrix();   break;
-            */
-//            case 90:	TextureViaCairoPango(); break;
         }
     if (++count==90) break;
     EOT_d1=theAgent.getNextTerm(&i);
@@ -293,7 +278,7 @@ extern infon *World; World=q.parse();
     Theme=T.parse();
     if (Theme) std::cout<<"["<<printInfon(Theme)<<"]\n";
     else {std::cout<<"Error:"<<T.buf<<"\n"; exit(1);}
-    theAgent.normalize(Theme);
+   // theAgent.normalize(Theme);
 
 // Load DispList
     std::cout << "Loading display\n";

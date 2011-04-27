@@ -1,13 +1,12 @@
 <%
-    { draw:{
+ {{
 		{'time', 'digital', {"Hello There"} } 
 		{'time', 'analog', {"co-Nietzsche-wa"} }
-	} |...}
+	}
+ {draw:\\[?]. | ...}}:?
 
-
-
-//draw:{'time', 'digital', { {11,45,0}, {200,200,0,0} } }
 
 %>
 
 
+l

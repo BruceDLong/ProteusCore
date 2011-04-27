@@ -30,10 +30,11 @@ typedef std::map<dblPtr,UInt>::iterator altIter;
 inline int agent::StartTerm(infon* varIn, infon** varOut) {
   infon* tmp;
   if (varIn==0) return 1;
-  if (varIn->flags&fConcat){
+  int varInFlags=varIn->flags;
+  if (varInFlags&fConcat){
     if ((*varOut=varIn->value)==0) return 2;
     do {
-      switch(varIn->flags&tType){
+      switch(varInFlags&tType){
         case tUnknown: *varOut=0; return -1;
         case tUInt: case tString: return 0;
         case tList: if(StartTerm(*varOut, &tmp)==0) {
@@ -44,6 +45,8 @@ inline int agent::StartTerm(infon* varIn, infon** varOut) {
       if (getNextTerm(varOut)) return 4;
     } while(1);
   }
+  if((varInFlags&mRepMode)==toWorldCtxt && varIn->spec1==(infon*)miscFindAssociate)
+		{ ((assocInfon*)(varIn->spec2))->nextRef=0;  *varOut=varIn; return 0;}
   if ((varIn->flags&tType)!=tList) {return 3;}
   else {*varOut=varIn->value; if (*varOut==0) return 4;}
   return 0;
@@ -221,16 +224,19 @@ char isPosLorEorGtoSize(UInt pos, infon* item){
 
 void agent::processVirtual(infon* v){
     infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT=0; UInt mode; UInt vSize=(UInt)v->size;
-    char posArea=isPosLorEorGtoSize(vSize, parent);
+    char posArea=(v->flags&(fUnknown<<goSize))?'?':isPosLorEorGtoSize(vSize, parent);
     if(posArea=='G'){return;} // TODO: go backward, renaming/affirming tentatives. Mark last
     UInt tmpFlags=v->flags&0xff000000;
     if (spec){
         if((mode=(spec->flags&mRepMode))==asFunc){
             deepCopy(spec,v,args);
-	    EOT=getNextTerm(&args);
+			
+			if((args->flags&mRepMode)==toWorldCtxt && args->spec1==(infon*)miscFindAssociate){
+				EOT=0;
+			} else EOT=getNextTerm(&args);
         } else if(mode<(UInt)asFunc){
-		deepCopy(spec,v);
-		if(posArea=='?' && v->spec1) posArea= 'N'; // N='Not greater'
+			deepCopy(spec,v);
+			if(posArea=='?' && v->spec1) posArea= 'N'; // N='Not greater'
         } else deepCopy(spec, v);
     }
     v->flags|=tmpFlags; v->flags&=~isVirtual;
@@ -269,7 +275,7 @@ int agent::getFollower(infon** lval, infon* i){
         if(i) goto gnsTop;
         else {*lval=0; return levels;}
     }
-    *lval=i->next;
+    *lval=i; getNextTerm(lval); // *lval=i->next;
     if((*lval)->flags&isVirtual) processVirtual(*lval);
     return levels;
 }
@@ -507,7 +513,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
 					    tmp=assoc->nextRef; getNextTerm (&tmp);
 						if(tmp->flags&isLast){ // set that this is the last one.
 							for(infon* findLast=CI; findLast; findLast=findLast->top)
-								if(findLast->next->flags&(isTentative+isVirtual)){
+								if(findLast->next && findLast->next->flags&(isTentative+isVirtual)){
 									closeListAtItem(findLast);
 									break;
 								}

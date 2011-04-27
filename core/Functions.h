@@ -98,7 +98,9 @@ int autoEval(infon* CI, agent* a){
         char majorType[100];
         char minorType[100];
         infon* args=CI->spec1;
-//std::cout << "#############" << printInfon(args) << "\n";
+		args->top=CI;
+		a->normalize(args);
+std::cout << "#############" << printInfon(args) << "\n";
         infon* foundMajorType=0;
         infon* foundMinorType=0;
         if ((args->flags&tType) != tList) {
@@ -169,7 +171,10 @@ int autoEval(infon* CI, agent* a){
 		
         copyTo(I,CI);
 		
-    }else return 0;
+    } else if (strcmp(funcName.S, "addOne")==0){
+        if (!getIntArg(CI, &int1, a)) return 0;
+        setIntVal(CI, int1+1);
+    } else return 0;
 
     return 1;
 }

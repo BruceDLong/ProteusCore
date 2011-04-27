@@ -80,7 +80,7 @@ std::string readln(std::string prompt){
 
 static void reportFault(int Signal){cout<<"\nSegmentation Fault.\n"; fflush(stdout); abort();}
 extern infon *World;
-infon* topInfon;
+infon *topInfon, *Entry;
 
 int main(int argc, char **argv){
         rl_init(); // with IFDEF readline?
@@ -97,7 +97,7 @@ int main(int argc, char **argv){
 		entry="<%" + entry + "%>";
 		istrstream fin(entry.c_str());
 		QParser q(fin);
-		infon* Entry=q.parse(); // cout <<"Parsed.\n";
+		Entry=q.parse(); // cout <<"Parsed.\n";
 		a.normalize(Entry); // cout << "Normalizd\n";
 	//	a.append(Entry, World);
 		

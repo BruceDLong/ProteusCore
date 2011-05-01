@@ -1,4 +1,24 @@
 <% {
+///////////////  tree theme
+  {'list',
+    {'simple',
+      { ? { red drawComplex 
+        {{blue text 20,100,  \\\\[$]. } |...}
+       }
+      }
+	}
+	{'lined',
+      { ? {
+        {green text 200,200,  \\\[$] }
+      } }
+    }
+
+	{'blocked',
+      { ? {
+        {red text 200,200,  \\\[$] }
+      } }
+    }
+  }
 
 ///////////////  tree theme
   {'tree',

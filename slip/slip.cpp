@@ -291,10 +291,10 @@ extern infon *World; World=q.parse();
     if(displayList) std::cout<<"["<<printInfon(displayList).c_str()<<"]\n";
     else {std::cout<<"Error:"<<D.buf<<"\n"; exit(1);}
 
+	ProteusDesc=displayList;
     theAgent.normalize(displayList);
     DEB("Normed.");
     std::cout<< printInfon(displayList) << "\n";
-    ProteusDesc=displayList;
 }
 
 //////////////////// End of Slip Specific Code, Begin OpenGL Code

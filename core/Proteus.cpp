@@ -282,6 +282,7 @@ int agent::getFollower(infon** lval, infon* i){
 
 void agent::addIDs(infon* Lvals, infon* Rvals, int asAlt){
     const int maxAlternates=100;
+	if(Lvals==Rvals) return;
     infon* RvlLst[maxAlternates]; infon* crntAlt=Rvals; infon *pred, *Rval, *prev=0; infNode* IDp; UInt size;
     int altCnt=1; RvlLst[0]=crntAlt;
     while(crntAlt && (crntAlt->flags&isTentative)){
@@ -491,12 +492,17 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     insertID(&tmp->wrkList, CI->spec1,0);
                 }else { //Evaluating Function...
                     if(autoEval(CI, this)) break;
-                    CI->spec1->top=CI;
+					// When the current slip is executed with this it gets into an infinite look generating multiples of 50 forever.
+					// We could have it check to see if the first and last items in the list are known. If so, assign arge to the
+					// first item then normalize the last. The last one will have references to the first and so will lazily normalize it.
+					// But what if the first and last items are NOT known? Then we have to do it this current way which still has the problem. 
+					// Sure we could say "if using locals make sure the first and last items are known" but I'm sure that will be problematic later.
+					// So we COULD mark certain items "lazy only" but that's more syntax and a hassle for programmers. How can we infer when to be lazy?
+					// 
                     normalize(CI->spec2,CI->spec1); // norm(func-body-list (CI->spec2))
                     LastTerm(CI->spec2, &tmp);
                     if(tmp->flags&fUnknown && tmp->wrkList==0 && CI->next && CI->next->flags&isVirtual){
-                        // To John N.:
-                        // Here is where I think the bug should be fixed. I BELEIVE the above condition will detect  the situation
+                        // Here is where I think an endless loop bug should be fixed. I BELEIVE the above condition will detect  the situation
                         // Here in the body we need to handle it.
                         }
                     insertID(&CI->wrkList, tmp,0);

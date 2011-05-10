@@ -1,6 +1,6 @@
 <%
  {{
-		// {'list', 'simple', {'Shop' 'change cat litter' 'sing blues'} }
+		{'list', 'lined', {'Shop' 'change cat litter' 'sing blues'} }
 		{'time', 'digital', {"Hello There"} } 
 		{'time', 'analog', {"co-Nietzsche-wa"} }
 	}

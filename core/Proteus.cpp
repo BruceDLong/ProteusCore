@@ -194,13 +194,22 @@ void agent::deepCopy(infon* from, infon* to, infon* args){
 
 void recover(infon* i){ delete i;}
 
-void closeListAtItem(infon* lastItem){ // removes (no-longer tentative) items to the right of lastItem in a list.
-	infon *itemAfterLast, *nextItem;
+void closeListAtItem(infon* lastItem){ // remove (no-longer valid) items to the right of lastItem in a list.
+	// TODO: Will this work when a list becomes empty?
+	infon *itemAfterLast, *nextItem; UInt count=0;
 	for(itemAfterLast=lastItem->next; !(itemAfterLast->flags&isTop); itemAfterLast=nextItem){
 		nextItem=itemAfterLast->next;
 		recover(itemAfterLast);
 	}
 	lastItem->next=itemAfterLast; itemAfterLast->prev=lastItem; lastItem->flags|=(isBottom+isLast);
+	// remove any tentative flags then set parent's size
+	do{
+		itemAfterLast->flags &=~ isTentative;
+		itemAfterLast=itemAfterLast->next;
+		count++;
+	} while (!(itemAfterLast->flags&isTop));
+	itemAfterLast->top->size=(infon*)count;
+	itemAfterLast->flags &=~(fUnknown<<goSize);
 }
 
 const int simpleUnknownUint=((fUnknown+tUInt)<<goSize) + fUnknown+tUInt+asNone;
@@ -225,12 +234,11 @@ char isPosLorEorGtoSize(UInt pos, infon* item){
 void agent::processVirtual(infon* v){
     infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT=0; UInt mode; UInt vSize=(UInt)v->size;
     char posArea=(v->flags&(fUnknown<<goSize))?'?':isPosLorEorGtoSize(vSize, parent);
-    if(posArea=='G'){return;} // TODO: go backward, renaming/affirming tentatives. Mark last
+    if(posArea=='G'){std::cout << "EXTRA ITEM ALERT!\n"; closeListAtItem(v); return;}
     UInt tmpFlags=v->flags&0xff000000;
     if (spec){
         if((mode=(spec->flags&mRepMode))==asFunc){
             deepCopy(spec,v,args);
-			
 			if((args->flags&mRepMode)==toWorldCtxt && args->spec1==(infon*)miscFindAssociate){
 				EOT=0;
 			} else EOT=getNextTerm(&args);
@@ -240,13 +248,13 @@ void agent::processVirtual(infon* v){
         } else deepCopy(spec, v);
     }
     v->flags|=tmpFlags; v->flags&=~isVirtual;
-    if(EOT){ if(posArea=='?'){posArea='E'; /* TODO:Set Parent's Size to v->size */ }
+    if(EOT){ if(posArea=='?'){posArea='E'; closeListAtItem(v);}
         else if(posArea!='E') throw "List was too short";}
     if (posArea=='E') {v->flags|=isBottom+isLast; return;}
     infon* tmp= new infon;  tmp->size=(infon*)(vSize+1); tmp->spec2=spec;
     tmp->flags|=fUnknown+isBottom+isVirtual+asNone+(tUInt<<goSize);
     tmp->top=tmp->next=v->next; v->next=tmp; tmp->prev=v; tmp->next->prev=tmp; tmp->spec1=args;
-    v->flags&=~isBottom;
+    v->flags&=~(isBottom+isTentative);
     if (posArea=='?'){ v->flags|=isTentative;}
 }
 
@@ -338,17 +346,16 @@ int agent::compute(infon* i){
 }
 
 void resolve(infon* i, infon* theOne){
-    infon* parent, *tmp, *prev=0; UInt count;
+    infon *prev=0;
     while(i && theOne){
         if(theOne->flags&isTentative){
-            parent=getTop(theOne);
-            // TODO: delete any residue following item, i.e., the old item->next;
-            theOne->next=(infon*)parent->value; theOne->next->prev=theOne; theOne->flags|=(isBottom+isLast);
-            for (count=1, tmp=theOne; !(tmp->flags&isTop); tmp=tmp->prev) {tmp->flags^=isTentative; ++count;}
-            parent->size=(infon*)count; parent->flags^=(fUnknown<<goSize);
-            return; // TODO: probably this should continue going left
+			closeListAtItem(theOne);
+			return;
         } else {
-            i->size=theOne->size; i->value=theOne->value; i->flags^=hasAlts;
+			std::cout <<"$$$$"<<printInfon (i)<<i->size<<"\n";
+			std::cout <<"####"<<printInfon (theOne)<<theOne->size<<"\n";
+            i->size=theOne->size; i->value=theOne->value; i->flags&=~hasAlts;
+			if((theOne->flags&tType)==tList) {infon* itm=i->value; for (UInt p=(UInt)i->size; p; --p) {itm->flags&=~isTentative; itm=itm->next;}}
             prev=i; i=i->pred; theOne=theOne->pred;
         }
     } if (theOne){theOne->next=prev->value; theOne->flags|=isLast+isBottom;}
@@ -464,7 +471,8 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
         }
         if(!CIfol && ((tmp2=getVeryTop(ci))!=0) && (tmp2->prev==((infon*)1)))
 			tmp2->prev=(IDfol==0)?(infon*)2:IDfol; // Set the next seed for index-lists
-    }while (wrkNode!=ci->wrkList); else result=DoNext;
+    }while (wrkNode!=ci->wrkList); else{ result=((ci->flags&fUnknown) && ci->next && (ci->next->flags&isTentative))?BypassDeadEnd:DoNext; if(result==BypassDeadEnd) 
+			std::cout<<"#############>>"<<printInfon(ci)<<"\n";}
     if(altCount==1){
             for (f=1, tmp=getTop(ci); tmp!=0; tmp=getTop(tmp)) // check ancestors for alts
                if (tmp->flags&hasAlts) {f=0; break;}
@@ -504,6 +512,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     if(tmp->flags&fUnknown && tmp->wrkList==0 && CI->next && CI->next->flags&isVirtual){
                         // Here is where I think an endless loop bug should be fixed. I BELEIVE the above condition will detect  the situation
                         // Here in the body we need to handle it.
+						std::cout << "###>"<<printInfon (CI)<<"\n";
                         }
                     insertID(&CI->wrkList, tmp,0);
                     cpFlags(tmp,CI); CI->flags|=fUnknown+(fUnknown<<goSize);

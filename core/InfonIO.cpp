@@ -34,7 +34,8 @@ std::string printPure (infon* i, UInt f, UInt wSize, infon* CI){
         s+=(f&fConcat)?"(":"{";
         for(infon* p=i;p;) {
             if(p==i && f&fLoop && i->spec2){printInfon(i->spec2,CI); s+=" | ";}
-            s+=printInfon(p, CI); s+=' ';
+			if(p->flags&isTentative) {s+="T";}
+            {s+=printInfon(p, CI); s+=' ';}
             if (p->flags&isBottom) p=0; else p=p->next;
         }
         s+=(f&fConcat)?")":"}";
@@ -75,7 +76,7 @@ std::string printInfon(infon* i, infon* CI){
     }
     if (!(f&isNormed) && i->wrkList) {
         infNode* k=i->wrkList;
-        do {k=k->next; s+="="; s+="IDx "; /*printInfon(k->item,CI);*/} while(k!=i->wrkList);
+        do {k=k->next; s+="="; s+="<ID> "; /*printInfon(k->item,CI);*/} while(k!=i->wrkList);
     }
     if (i==CI) s+="</font>";
     return s;

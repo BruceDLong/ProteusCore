@@ -20,6 +20,8 @@
 #include "Functions.h"
 #include "remiss.h"
 
+const int ListBuffCutoff=20;
+
 infon* World;
 std::map<stng,infon*> tag2Ptr;
 std::map<infon*,stng> ptr2Tag;
@@ -83,12 +85,18 @@ inline int agent::getNextTerm(infon** p) {
         } while (1);
       }
       return 2;
-    } else {return 5;} /*Bottom but not end, make subscription*/
+    } else {std::cout <<"BOTTOM\n"; return 5;} /*Bottom but not end, make subscription*/
   }else {
     (*p)=(*p)->next;
     if ((*p)==0) {return 3; }
   }
   return 0;
+}
+
+int agent::getNextNormal(infon** p){
+	int result=getNextTerm (p);
+	if (result==0 && !((*p)->flags&isNormed)) normalize(*p);
+	return result;
 }
 
 // TODO: This function is out-of-date but not used yet anyhow.
@@ -148,7 +156,7 @@ infon* agent::copyList(infon* from){
 #define fetchFirstItem(lval, item) {for(lval=item;(lval->flags&tType)==tList;lval=lval->value){};}
 #define cpFlags(from, to) {to->flags=(to->flags&0xff000000)+(from->flags&0x00ffffff);}
 #define copyTo(from, to) {if(from!=to){to->size=from->size; to->value=from->value; cpFlags(from,to);}}
-#define pushCIsFollower {int lvl=cn.level-nxtLvl; if(lvl>0) ItmQ.push(Qitem(CIfol,0,0,lvl));}
+#define pushCIsFollower {int lvl=cn.level-nxtLvl; if(lvl>0) ItmQ.push(Qitem(CIfol,0,0,lvl,cn.bufCnt));}
 #define AddSizeAlternate(Lval, Rval, Pred, Size, Last) {   infon *copy, *copy2, *LvalFol;    \
         copy=new infon(Lval->flags,(infon*)(Size),Lval->value,0,Lval->spec1,Lval->spec2,Lval->next); \
         copy->prev=Lval->prev; copy->top=Lval->top;copy->pred=Pred; \
@@ -241,7 +249,7 @@ void agent::processVirtual(infon* v){
             deepCopy(spec,v,args);
 			if((args->flags&mRepMode)==toWorldCtxt && args->spec1==(infon*)miscFindAssociate){
 				EOT=0;
-			} else EOT=getNextTerm(&args);
+			} else EOT=getNextNormal(&args);
         } else if(mode<(UInt)asFunc){
 			deepCopy(spec,v);
 			if(posArea=='?' && v->spec1) posArea= 'N'; // N='Not greater'
@@ -254,7 +262,7 @@ void agent::processVirtual(infon* v){
     infon* tmp= new infon;  tmp->size=(infon*)(vSize+1); tmp->spec2=spec;
     tmp->flags|=fUnknown+isBottom+isVirtual+asNone+(tUInt<<goSize);
     tmp->top=tmp->next=v->next; v->next=tmp; tmp->prev=v; tmp->next->prev=tmp; tmp->spec1=args;
-    v->flags&=~(isBottom+isTentative);
+    v->flags&=~isBottom;
     if (posArea=='?'){ v->flags|=isTentative;}
 }
 
@@ -352,8 +360,6 @@ void resolve(infon* i, infon* theOne){
 			closeListAtItem(theOne);
 			return;
         } else {
-			std::cout <<"$$$$"<<printInfon (i)<<i->size<<"\n";
-			std::cout <<"####"<<printInfon (theOne)<<theOne->size<<"\n";
             i->size=theOne->size; i->value=theOne->value; i->flags&=~hasAlts;
 			if((theOne->flags&tType)==tList) {infon* itm=i->value; for (UInt p=(UInt)i->size; p; --p) {itm->flags&=~isTentative; itm=itm->next;}}
             prev=i; i=i->pred; theOne=theOne->pred;
@@ -363,7 +369,7 @@ void resolve(infon* i, infon* theOne){
 
 #define SetBypassDeadEnd() {result=BypassDeadEnd; infon* CA=getTop(ci); if (CA) AddSizeAlternate(CA, item, 0, ((UInt)ci->next->size)-1, ci); }
 
-enum WorkItemResults {DoNothing, BypassDeadEnd, DoNext};
+enum WorkItemResults {DoNothing, BypassDeadEnd, DoNext, DoNextIf};
 int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
     infNode *wrkNode=ci->wrkList, *IDp; infon *item, *IDfol, *tmp, *tmp2, *theOne=0;
     UInt altCount=0, cSize, tempRes, isIndef=0, result=DoNothing, f;
@@ -471,14 +477,13 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
         }
         if(!CIfol && ((tmp2=getVeryTop(ci))!=0) && (tmp2->prev==((infon*)1)))
 			tmp2->prev=(IDfol==0)?(infon*)2:IDfol; // Set the next seed for index-lists
-    }while (wrkNode!=ci->wrkList); else{ result=((ci->flags&fUnknown) && ci->next && (ci->next->flags&isTentative))?BypassDeadEnd:DoNext; if(result==BypassDeadEnd) 
-			std::cout<<"#############>>"<<printInfon(ci)<<"\n";}
+    }while (wrkNode!=ci->wrkList); else result=(ci->next && (ci->flags&isTentative))?DoNextIf:DoNext;
     if(altCount==1){
             for (f=1, tmp=getTop(ci); tmp!=0; tmp=getTop(tmp)) // check ancestors for alts
                if (tmp->flags&hasAlts) {f=0; break;}
             if(f) resolve(ci, theOne);
     }
-    ci->flags|=isNormed; ci->flags&=~sizeIndef;
+    ci->flags|=isNormed; ci->flags&=~(sizeIndef+isTentative);
     return result;
 }
 
@@ -500,20 +505,8 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     insertID(&tmp->wrkList, CI->spec1,0);
                 }else { //Evaluating Function...
                     if(autoEval(CI, this)) break;
-					// When the current slip is executed with this it gets into an infinite look generating multiples of 50 forever.
-					// We could have it check to see if the first and last items in the list are known. If so, assign arge to the
-					// first item then normalize the last. The last one will have references to the first and so will lazily normalize it.
-					// But what if the first and last items are NOT known? Then we have to do it this current way which still has the problem. 
-					// Sure we could say "if using locals make sure the first and last items are known" but I'm sure that will be problematic later.
-					// So we COULD mark certain items "lazy only" but that's more syntax and a hassle for programmers. How can we infer when to be lazy?
-					// 
-                    normalize(CI->spec2,CI->spec1); // norm(func-body-list (CI->spec2))
+                    normalize(CI->spec2,CI->spec1); // norm(func-body-list(CI->spec2))
                     LastTerm(CI->spec2, &tmp);
-                    if(tmp->flags&fUnknown && tmp->wrkList==0 && CI->next && CI->next->flags&isVirtual){
-                        // Here is where I think an endless loop bug should be fixed. I BELEIVE the above condition will detect  the situation
-                        // Here in the body we need to handle it.
-						std::cout << "###>"<<printInfon (CI)<<"\n";
-                        }
                     insertID(&CI->wrkList, tmp,0);
                     cpFlags(tmp,CI); CI->flags|=fUnknown+(fUnknown<<goSize);
                 }
@@ -522,10 +515,21 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                else {
 	       		assocInfon* assoc=0; tmp=0;
 	       		{ //  TODO: This block really needs to be part of a  re-structuring involving CI->flags
+					   // This also needs to be cleaned up. E.g., we do the for-loop twice.
+					   // Part of this is an optimization to finish streams that have finite length. Remove that?
 	       		if(CIRepMode==toWorldCtxt && CI->spec1==(infon*)miscFindAssociate){
 				   assoc=((assocInfon*)(CI->spec2));
 				    if(assoc->nextRef) {
-					    tmp=assoc->nextRef; getNextTerm (&tmp);
+						if(assoc->VarRef==0){
+							if(!(getTop(assoc->nextRef)->flags&(fUnknown<<goSize)))
+								for(infon* findLast=CI; findLast; findLast=findLast->top)
+									if(findLast->next && findLast->next->flags&(isTentative+isVirtual)){
+										findLast->flags &= ~isTentative;
+										break;
+									}
+						}
+					    tmp=assoc->nextRef; 
+						getNextNormal(&tmp); 
 						if(tmp->flags&isLast){ // set that this is the last one.
 							for(infon* findLast=CI; findLast; findLast=findLast->top)
 								if(findLast->next && findLast->next->flags&(isTentative+isVirtual)){
@@ -533,12 +537,14 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
 									break;
 								}
 						}
+				//		if(!((getTop(assoc->nextRef)->flags)&(fUnknown<<goSize))); cn.bufCnt=0;
 					    assoc->nextRef=tmp;
 				    }else{
 						UInt tmpFlags=CI->flags&0xff000000;
 					    deepCopy(assoc->VarRef, CI);
 						CI->flags|=tmpFlags;
 					    CIRepMode=CI->flags&mRepMode;
+						assoc->VarRef=0;
 				    }
 		        }
 	      		}
@@ -594,7 +600,6 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                             CI->flags|=asNone;
                         }
                         CI->flags|=fUnknown;
-
                 }
             } else if(CIRepMode==asTag){
                 if(CI->wrkList){std::cout<<"Defining:'"<<(char*)((stng*)(CI->spec1))->S<<"'\n";
@@ -617,12 +622,14 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
         nxtLvl=getFollower(&CIfol, CI);
         if((CI->flags&asDesc) && !override) {pushCIsFollower; continue;}
         switch (doWorkList(CI, CIfol)) {
+		case DoNextIf: 
+				std::cout<<"DoNextIf " << printInfon (CI) <<"\n";
+				if(++cn.bufCnt>=ListBuffCutoff){nxtLvl=getFollower(&CIfol,getTop(CI))+1; pushCIsFollower; std::cout<<"BUFCNT:"<<cn.bufCnt<<"\n"; break;}
         case DoNext:
-            if((CI->flags&(fConcat+tType))==(fConcat+tUInt))
-                {compute(CI); if(CIfol && !(CI->flags&isLast)){pushCIsFollower;}} // push CI's follower
-            else if(!((CI->flags&asDesc)&&!override)&&((CI->value&&((CI->flags&tType)==tList))||(CI->flags&fConcat))){
-                // push CI's value
-                ItmQ.push(Qitem(CI->value,cn.firstID,((cn.IDStatus==1)&!(CI->flags&fConcat))?2:cn.IDStatus,cn.level+1));
+            if((CI->flags&(fConcat+tType))==(fConcat+tUInt)){
+                compute(CI); if(CIfol && !(CI->flags&isLast)){pushCIsFollower;}
+			}else if(!((CI->flags&asDesc)&&!override)&&((CI->value&&((CI->flags&tType)==tList))||(CI->flags&fConcat))){
+                ItmQ.push(Qitem(CI->value,cn.firstID,((cn.IDStatus==1)&!(CI->flags&fConcat))?2:cn.IDStatus,cn.level+1)); // push CI->value
             }else if (CIfol){pushCIsFollower;} // push CI's follower
             break;
         case BypassDeadEnd: {nxtLvl=getFollower(&CIfol,getTop(CI))+1; pushCIsFollower;} break;

@@ -67,8 +67,8 @@ struct infon {
     infNode* wrkList;
 };
 
-struct Qitem{infon* item; infon* firstID; UInt IDStatus; UInt level;
-     Qitem(infon* i=0,infon* f=0,UInt s=0,UInt l=0):item(i),firstID(f),IDStatus(s),level(l){};};
+struct Qitem{infon* item; infon* firstID; UInt IDStatus; UInt level; int bufCnt;
+     Qitem(infon* i=0,infon* f=0,UInt s=0,UInt l=0, int BufCnt=0):item(i),firstID(f),IDStatus(s),level(l),bufCnt(BufCnt){};};
 typedef std::queue<Qitem> infQ;
 
 extern infon* World;
@@ -80,6 +80,7 @@ struct agent {
     inline int LastTerm(infon* varIn, infon** varOut);
     inline int getNextTerm(infon** p);
     inline int getPrevTerm(infon** p);
+	inline int getNextNormal(infon** p);
 	void append(infon* i, infon* list);
     int compute(infon* i);
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);

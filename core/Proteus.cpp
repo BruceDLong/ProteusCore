@@ -154,16 +154,16 @@ infon* agent::copyList(infon* from){
 #define getTop(item) (((item->flags&isTop)||item->top==0)? item->top : item->top->top)
 #define fetchLastItem(lval, item) {for(lval=item;(lval->flags&tType)==tList;lval=lval->value->prev);}
 #define fetchFirstItem(lval, item) {for(lval=item;(lval->flags&tType)==tList;lval=lval->value){};}
-#define cpFlags(from, to) {to->flags=(to->flags&0xff000000)+(from->flags&0x00ffffff);}
-#define copyTo(from, to) {if(from!=to){to->size=from->size; to->value=from->value; cpFlags(from,to);}}
+#define cpFlags(from, to) {to->flags=(to->flags&0xff000000)+((from)->flags&0x00ffffff);}
+#define copyTo(from, to) {if(from!=to){to->size=(from)->size; to->value=(from)->value; cpFlags((from),to);}}
 #define pushCIsFollower {int lvl=cn.level-nxtLvl; if(lvl>0) ItmQ.push(Qitem(CIfol,0,0,lvl,cn.bufCnt));}
 #define AddSizeAlternate(Lval, Rval, Pred, Size, Last) {   infon *copy, *copy2, *LvalFol;    \
-        copy=new infon(Lval->flags,(infon*)(Size),Lval->value,0,Lval->spec1,Lval->spec2,Lval->next); \
+        copy=new infon(Lval->flags,LvalFol->flag2,(infon*)(Size),Lval->value,0,Lval->spec1,Lval->spec2,Lval->next); \
         copy->prev=Lval->prev; copy->top=Lval->top;copy->pred=Pred; \
         insertID(&Lval->wrkList,copy,ProcessAlternatives); Lval->wrkList->slot=Last;\
         getFollower(&LvalFol, Lval);                  \
         if (LvalFol){\
-            copy2=new infon(LvalFol->flags,LvalFol->size,LvalFol->value,0,LvalFol->spec1,LvalFol->spec2,LvalFol->next);\
+            copy2=new infon(LvalFol->flags,LvalFol->flag2,LvalFol->size,LvalFol->value,0,LvalFol->spec1,LvalFol->spec2,LvalFol->next);\
             copy2->pred=copy; insertID(&copy2->wrkList,Rval,0); insertID(&LvalFol->wrkList,copy2,ProcessAlternatives);}}
 
 infon* getVeryTop(infon* i){
@@ -181,7 +181,7 @@ void agent::deepCopy(infon* from, infon* to, infon* args){
     else to->value=from->value;
     to->wrkList=copyIdentList(from->wrkList);
     if(fm==toHomePos) to->spec1=from->spec1;
-    else if(fm==asTag) to->spec1=from->spec1;
+    else if(fm==asTag) {to->spec1=from->spec1; to->type=from->type;}
     else if((UInt)(from->spec1)<=20) to->spec1=from->spec1;
     else if(fm<(UInt)asFunc){
 		to->spec1=new infon; copyTo(from->spec1,to->spec1);
@@ -381,7 +381,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
         case ProcessAlternatives:
             if (altCount>=1) break; // don't keep looking after found
             if(wrkNode->idFlags&isRawFlag){
-              tmp=new infon(ci->flags,ci->size,ci->value,0,ci->spec1,ci->spec2,ci->next);
+              tmp=new infon(ci->flags,ci->flag2,ci->size,ci->value,0,ci->spec1,ci->spec2,ci->next);
               tmp->prev=ci->prev; tmp->top=ci->top;
               insertID(&tmp->wrkList, item,0);
               wrkNode->item=item=tmp;
@@ -450,7 +450,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                             else if(ci->next && (ci->next->flags&isTentative))
 								SetBypassDeadEnd();
                         }else if(cSize < (UInt)item->size){
-                            tmp=new infon(item->flags,(infon*)((UInt)item->size-cSize),(infon*)((UInt)item->value+cSize),0,0,item->next);
+                            tmp=new infon(item->flags,item->flag2,(infon*)((UInt)item->size-cSize),(infon*)((UInt)item->value+cSize),0,0,item->next);
                             addIDs(CIfol, tmp, asAlt);
                         }
                     }
@@ -487,19 +487,9 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
     return result;
 }
 
-infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
-    if (i==0) return 0;
-    int nxtLvl, override; infon *CI, *CIfol, *tmp; infNode* IDp;
-    if((i->flags&tType)==tList) InitList(i);
-    infQ ItmQ; ItmQ.push(Qitem(i,firstID,(firstID)?1:0,0));
-//    DEB("\n<h2>Normalizing: " << i << "</h2>\n<table border=\"3\" cellpadding=\"5\" width=\"100%\"><tr><td>\n");
-    while (!ItmQ.empty()){
-        Qitem cn=ItmQ.front(); ItmQ.pop(); CI=cn.item;
-        int CIRepMode=CI->flags&mRepMode; override=0;
-        while (CIRepMode!=asNone){
-            if(CI->flags&toExec) override=1;
-            if(CI->flags&asDesc) {if(override) override=0; else break;}
-            if(CIRepMode==asFunc){
+/*
+            ////////////////////////////  CUT BELOW. Next line was "else if (CIRepMode==asFunc){
+            else if(CIRepMode==asFunc){
                 if(CI->flags&mMode){//Evaluating Inverse function... TODO: this is broken
                     LastTerm(CI, &tmp);
                     insertID(&tmp->wrkList, CI->spec1,0);
@@ -560,7 +550,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     case fromHere:  // Handle ^, \^, \\^, \\\^, etc.
                         tmp=CI;
                         for(UInt i=0; i<(UInt)CI->spec1; ++i) {  // for each backslash
-                                if(tmp==0 /* || ((tmp->flags&mRepMode)==asFunc)*/) {tmp=0;std::cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';}
+                                if(tmp==0 ) {tmp=0;std::cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';}
                             if(CIRepMode!=toHomePos || i>0) tmp=getTop(tmp);
                         }
                         if(CIRepMode==toHomePos) {
@@ -578,11 +568,12 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                           insertID(&CI->spec2->wrkList, tmp,0);
                           CI->spec2->prev=(infon*)1;  // Set sentinal value so this can tell it is an index
                           normalize(CI->spec2);
-                          tmp->flags|=toExec;
+                          tmp->flags|=toExec;  
                           LastTerm(CI->spec2, &tmp);
-  			  if (assoc){assoc->nextRef=tmp->wrkList->item;}
-			 }
-			 }
+                            
+                        if (assoc){assoc->nextRef=tmp->wrkList->item;}
+                        }
+                    }
 			 }
 			 if (tmp->flags&isLast||assoc) {
 				 insertID(&CI->wrkList, tmp,(assoc)?skipFollower:0); 
@@ -601,15 +592,39 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                         }
                         CI->flags|=fUnknown;
                 }
+            /////////////////////////////////// CUT ABOVE.  Next line is "} else if(CIRepMode==asTag){"
+
+ */
+
+infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
+    if (i==0) return 0;
+    int nxtLvl, override; infon *CI, *CIfol, *tmp; infNode* IDp;
+    if((i->flags&tType)==tList) InitList(i);
+    infQ ItmQ; ItmQ.push(Qitem(i,firstID,(firstID)?1:0,0));
+//    DEB("\n<h2>Normalizing: " << i << "</h2>\n<table border=\"3\" cellpadding=\"5\" width=\"100%\"><tr><td>\n");
+    while (!ItmQ.empty()){
+        Qitem cn=ItmQ.front(); ItmQ.pop(); CI=cn.item;
+        int CIRepMode=CI->flags&mRepMode; override=0;
+        while (CIRepMode!=asNone){
+            if(CI->flags&toExec) override=1;
+            if(CI->flags&asDesc) {if(override) override=0; else break;}
+            UInt getFrom=CI->flag2&mGetFrom;
+            if(getFrom==withWorld){copyTo(world, CI); std::cout<<"WORLD!!!"<<"\n";}
+            else if(getFrom==withCtxt){copyTo(&context, CI); std::cout<<"CONTEXT!!!"<<"\n";}
+            else if(getFrom==withArgs){copyTo(world, CI); std::cout<<"ARGS!!!"<<"\n";}
+            else if(getFrom==withVars){copyTo(world, CI); std::cout<<"VARS!!!"<<"\n";}
+            ////////////////////////////  CUT BELOW. Next line was "else if (CIRepMode==asFunc){
+            else if(){
+            /////////////////////////////////// CUT ABOVE.  Next line is "} else if(CIRepMode==asTag){"
             } else if(CIRepMode==asTag){
-                if(CI->wrkList){std::cout<<"Defining:'"<<(char*)((stng*)(CI->spec1))->S<<"'\n";
-                    std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*(stng*)(CI->spec1));
-                    if (tagPtr==tag2Ptr.end()) {tag2Ptr[*(stng*)(CI->spec1)]=CI->wrkList->item; CI->wrkList=0; break;}
+                if(CI->wrkList){std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
+                    std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
+                    if (tagPtr==tag2Ptr.end()) {tag2Ptr[*CI->type]=CI->wrkList->item; CI->wrkList=0; break;}
                     else{throw("A tag is being redefined, which is illegal");}
-                } else { DEB("Recalling: "<<(char*)((stng*)(CI->spec1))->S)
-                    std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*(stng*)(CI->spec1));
+                } else { DEB("Recalling: "<<(char*)CI->type->S)
+                    std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
                     if (tagPtr!=tag2Ptr.end()) {UInt tmpFlags=CI->flags&0xff000000; deepCopy(tagPtr->second,CI); CI->flags|=tmpFlags;}
-                    else{std::cout<<"Bad tag:'"<<(char*)((stng*)(CI->spec1))->S<<"'\n";throw("A tag was used but never defined");}
+                    else{std::cout<<"Bad tag:'"<<(char*)(CI->type->S)<<"'\n";throw("A tag was used but never defined");}
                 }
             }
             CIRepMode=CI->flags&mRepMode;

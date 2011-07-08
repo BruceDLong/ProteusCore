@@ -42,6 +42,7 @@ std::string printPure (infon* i, UInt f, UInt wSize, infon* CI){
     }
     return s;
 }
+
 std::string printInfon(infon* i, infon* CI){
     std::string s; //Indent;
     if(i==0) {s+="null"; return s;}
@@ -51,8 +52,8 @@ std::string printInfon(infon* i, infon* CI){
 //    if(f&toExec) s+="@";
     if(f&asDesc) s+="#";
     if (mode==asTag) {
-       char* ch=((stng*)(i->spec1))->S;
-        for(int x=((stng*)(i->spec1))->L;x;--x){
+       char* ch=i->type->S;
+        for(int x=i->type->L;x;--x){
             s+=(*ch=='\0')?' ':ch++[0];
         }s+=' ';
     } else if(f&isNormed || mode==asNone /* || f&notParent */){
@@ -65,12 +66,16 @@ std::string printInfon(infon* i, infon* CI){
         }
     } else {
         if (!(f&isNormed)) {
+            if(i->flag2&withWorld) s+="%W ";
+            if(i->flag2&withCtxt) s+="%C";
+            if(i->flag2&withArgs) s+="%A ";
+            if(i->flag2&withVars) s+="%V ";
             switch (f&mRepMode){
             case toGiven: s+="%["; s+=printInfon(i->spec1, CI); s+="]"; break;
             case toWorldCtxt: s+="&"; break;
             case toHomePos: for(UInt h=(UInt)(i->spec1); h; h--) s+="\\["; s+=printInfon(i->spec2,CI); s+="]"; break;
             case fromHere: s+="^"; break;
-            case asFunc:  s+="[";s+=printInfon(i->spec2, CI); s+="]:";s+=printInfon(i->spec1, CI); break;
+            case asFunc:  s+="[";s+=printInfon(i->spec2, CI); s+="]<:";s+=printInfon(i->spec1, CI); break;
             }
         }
     }
@@ -130,6 +135,40 @@ char QParser::peek(){
 #define check(ch) {getToken(tok);  if(tok != ch) {std::cout<<"Expected "<<ch<<"\n"; throw "Unexpected character";}}
 #define chk(ch) {if(stream.peek()==ch) streamGet(); else throw "Expected something else";}
 
+const char* altTok(char* tok){
+    // later this should load from a dictionary file for different languages.
+    if (strcmp(tok,"=")) return "is";
+    if (strcmp(tok,":=")) return "'s";
+    if (strcmp(tok,"=:")) return "of";
+    if (strcmp(tok,"%C")) return "the";
+    if (strcmp(tok,"%W")) return "thee";
+    if (strcmp(tok,"%A")) return "%Arg";
+    if (strcmp(tok,"%V")) return "%Var";
+    return 0;
+}
+
+bool QParser::chkStr(const char* tok){
+    for(const char* p=tok; *p; p++) {
+        char ch=streamGet(); 
+        if (ch != *p){
+            for(;p>=tok; p--) {streamPut(ch);} 
+            return false;
+        }
+    }
+    return true;
+}
+
+#include <cstdarg>
+const char* QParser::lookGet(int n, ...){
+    char* tok; va_list ap; va_start(ap,n);
+    for(int i = 0; i < n; ++i){
+        tok=va_arg(ap, char*);
+        if (chkStr(tok) || chkStr(altTok(tok))) break; else tok="";
+    }
+    va_end(ap);
+    return tok;
+}
+
 char errMsg[100];
 UInt QParser::ReadPureInfon(char &tok, infon** i, UInt* flags, infon** s2){
     UInt p=0, size=0, stay=1; char rchr; infon *head=0, *prev; infon* j;
@@ -145,7 +184,7 @@ UInt QParser::ReadPureInfon(char &tok, infon** i, UInt* flags, infon** s2){
                 streamGet();
                 if(stream.peek()=='.'){
                     streamGet(); chk('.');
-                    j=new infon(fUnknown+isVirtual+asNone+(tUInt<<goSize),(infon*)(size+1));stay=0;
+                    j=new infon(fUnknown+isVirtual+asNone+(tUInt<<goSize),0,(infon*)(size+1));stay=0;
                     } else {streamPut(tok);  j=ReadInfon();}
             } else j=ReadInfon();
             if(++size==1){
@@ -179,22 +218,29 @@ UInt QParser::ReadPureInfon(char &tok, infon** i, UInt* flags, infon** s2){
 }
 
 infon* QParser::ReadInfon(int noIDs){
-    char tok, op=0; UInt p=0, size=0; infon*i1=0,*i2=0,*s1=0,*s2=0; UInt flags=0,f1=0,f2=0;
-	int textStart=txtPos; int textEnd=0;
+    char tok, op=0; UInt p=0, size=0; infon*i1=0,*i2=0,*s1=0,*s2=0; UInt flags=0,f1=0,f2=0,WFlags=0;
+	/*int textStart=txtPos;*/ int textEnd=0; stng* tags=0; std::string StrTok;
     getToken(tok); //DEB(tok)
     if(tok=='@'){flags|=toExec; getToken(tok);}
     if(tok=='#'){flags|=asDesc; getToken(tok);}
     if(tok=='.'){flags|=matchType; getToken(tok);} // This is a hint that idents must match type, not just value.
     if(tok=='?'){f1=f2=fUnknown; flags=asNone;}
     else if(iscsym(tok)&&!isdigit(tok)&&(tok!='_')){
-        streamPut(tok); flags|=asTag; stng tag; stng* tags=new stng;
+        streamPut(tok); flags|=asTag; stng tag; tags=new stng;
         if(iscsym(tok)&&!isdigit(tok)){  // change 'if' to 'while' when tag-chains are ready.
             readTag(tag);
             stngApnd((*tags),tag.S,tag.L+1);
             Peek(tok);
         }
-        s1=(infon*)tags;
-    } else if(tok=='\\'||tok=='%'||tok=='&'||tok=='^'){
+    }else if( tok=='%'){
+        StrTok=lookGet (4, "W", "C", "A", "V");
+        flags|=fUnknown;
+        if (StrTok=="W"){std::cout<<"WORLD"<<"\n"; WFlags|=withWorld;}
+        if (StrTok=="C"){WFlags|=withCtxt;}
+        if (StrTok=="A"){WFlags|=withArgs;}
+        if (StrTok=="V"){WFlags|=withVars;}
+        
+    }else if(tok=='\\'||tok=='%'||tok=='&'||tok=='^'){
         flags|=fUnknown;
         if (tok=='%'){flags|=toGiven; s1=ReadInfon();} // % search
         else if (tok=='\\' || tok=='^') {
@@ -205,10 +251,10 @@ infon* QParser::ReadInfon(int noIDs){
 	 Peek(tok);
          if(tok=='.') {
 	 	getToken(tok);
-		s2=(infon*)new assocInfon(new infon(flags, i1,i2,0,s1,s2));
+		s2=(infon*)new assocInfon(new infon(flags, WFlags, i1,i2,0,s1,s2));
 		flags=toWorldCtxt; s1=(infon*)miscFindAssociate; f1=f2=fUnknown;
 	}
-    }else{
+    }else{  // OK, then we're parsing some form of *... +...
         flags|=asNone;
         if(tok=='~') {f1|=fInvert; getToken(tok);}
         if(tok=='+' || tok=='-')op='+'; else if(tok=='*'||tok=='/')op='*';
@@ -243,14 +289,21 @@ infon* QParser::ReadInfon(int noIDs){
         infon* tmp= ReadInfon(1); insertID(&ID, tmp,0);
         Peek(tok);
     }
-    infon* i=new infon((f1<<goSize)+f2+flags, i1,i2,ID,s1,s2);
-    i->wSize=size;
+    infon* i=new infon((f1<<goSize)+f2+flags, WFlags, i1,i2,ID,s1,s2);
+    i->wSize=size; i->type=tags;
+    if(i->flags&fConcat && i->size==(infon*)1){infon* ret=i->value; delete(i); return ret;}
     if ((i->size && ((f1&tType)==tList))||(f1&fConcat)) i->size->top=i;
     if ((i->value&& ((f2&tType)==tList))||(f2&fConcat))i->value->top=i;
-    if(!(noIDs&2)){
-        if (tok=='!'){modeBit=mMode; getToken(tok); if(peek()!=':') throw"Expected ':'";}
-        if (tok==':'){getToken(tok); i=new infon(asFunc+modeBit,0,0,0,ReadInfon(1),i);}
+    if(!(noIDs&2)){  // load function "calls"
+        StrTok=lookGet(4, ":>", "<:", "!>", "<!");
+        if(StrTok==":>" ) {i=new infon(0,withSpecAsFirst+getLast,0,0,0,i,ReadInfon(1));}
+        else if(StrTok=="!>" ) {i=new infon(0,withSpecAsLast+getFirst,0,0,0,i,ReadInfon(1));}
+        else if(StrTok=="<:" ) {i=new infon(0,withSpecAsFirst+getLast,0,0,0,ReadInfon(1),i);}
+        else if(StrTok=="<!" ){i=new infon(0,withSpecAsLast+getFirst,0,0,0,ReadInfon(1),i);}
     }
+     StrTok=lookGet(2, ":=", "=:");
+        if(StrTok==":=" ) {i=new infon(0,withSpecAsList+getLast,0,0,0,i,ReadInfon(1));}
+        else if(StrTok=="=:" ) {i=new infon(0,withSpecAsList+getLast,0,0,0,ReadInfon(1),i);}
 	textEnd=txtPos; //std::cout<<"<<"<<textParsed.substr(textStart, textEnd-textStart)<<">>\n";
     return i;
 }

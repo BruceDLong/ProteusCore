@@ -18,9 +18,10 @@ INSTALLING NOSE:
 
 The file pexpect-2.3.tar.gz is in the project/core folder, but you can also read how to fetch and install it here: http://www.noah.org/wiki/Pexpect#Download_and_Installation
 
-$tar zxvf pexpect-2.3.tar.gz
-$cd pexpect-2.3/
-$sudo python ./setup.py install
+wget http://pexpect.sourceforge.net/pexpect-2.3.tar.gz
+tar zxvf pexpect-2.3.tar.gz
+cd pexpect-2.3/
+sudo python ./setup.py install
 
 
 

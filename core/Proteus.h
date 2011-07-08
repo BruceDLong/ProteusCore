@@ -45,7 +45,13 @@ enum vals {toGiven=0, toWorldCtxt=0x0100, toHomePos=0x0200, fromHere=0x0300, asF
     fMode=0xf8, fConcat=0x08, fLoop=0x10, fInvert=0x20, fIncomplete=0x40, fUnknown=0x80,
     tType=3, tUnknown=0, tUInt=1, tString=2, tList=3,   matchType=0x04,  notLast=(0x04<<goSize),
     isFirst=0x01000000, isLast=0x02000000, isTop=0x04000000, isBottom=0x8000000,
-    noAlts=0, hasAlts=0x10000000, noMoreAlts=0x20000000, isTentative=0x40000000, isVirtual=0x80000000
+    noAlts=0, hasAlts=0x10000000, noMoreAlts=0x20000000, isTentative=0x40000000, isVirtual=0x80000000,
+
+    mToGet=0xf, getNone=0x0,  getFirst=0x1, getLast=0x2, getMiddle=0x3, getSize=0x4, getType=0x5, getWhole=0x6,
+    mGetWith= 0x70, withNone=0x10, withSpecAsList=0x20, withSpecAsFirst=0x30, withSpecAsLast=0x40,
+    mGetFrom=0xf00, withWorld=0x100, withCtxt=0x200, withArgs=0x300, withVars=0x400, withCursor=0x500, 
+    mPrintLeftDir=0x80,
+    findAssoc=0x1000
     };
 
 struct infon;
@@ -56,15 +62,16 @@ struct infNode {infon* item; infon* slot; UInt idFlags; infNode* next; infNode(i
 enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, CountSize=2, SetComplete=3, NodeDoneFlag=8, NoMatch=16,isRawFlag=32, skipFollower=64};
 
 struct infon {
-    infon(UInt f=0,infon* s=0, infon*v=0,infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0):
-        flags(f), size(s), value(v), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {prev=0; top=0;};
-    UInt flags;
+    infon(UInt f=0, UInt f2=0, infon* s=0, infon*v=0,infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0):
+        flags(f), flag2(f2), size(s), value(v), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {prev=0; top=0; type=0;};
+    UInt flags, flag2;
     UInt wSize; // get rid if this. disallow strings and lists in "size"
     infon *size;        // The *-term; perhaps just a number of states
     infon *value;       // Summand List
     infon *next, *prev, *top, *pred;
     infon *spec1, *spec2;   // Used to store indexes, functions args, etc.
     infNode* wrkList;
+	stng* type;
 };
 
 struct Qitem{infon* item; infon* firstID; UInt IDStatus; UInt level; int bufCnt;
@@ -106,6 +113,8 @@ struct QParser{
     infon* ReadInfon(int noIDs=0);
 	char streamGet();
     void scanPast(char* str);
+    bool chkStr(const char* tok);
+    const char* lookGet(int n, ...);
     void RmvWSC ();
     char peek();
     std::istream& stream;

@@ -20,7 +20,7 @@ static char *line_read = (char *)NULL;
 /* Read a string, and return a pointer to it.
    Returns "quit" on EOF. */
 std::string
-rl_gets (char* prompt)
+rl_gets (const char* prompt)
 {
   /* If the buffer has already been allocated,
      return the memory to the free pool. */
@@ -69,7 +69,7 @@ char getCH(){
 }
 
 std::string readln(std::string prompt){
-    // char ch; 
+    // char ch;
     std::string str="";
     // cout << prompt;
     //for(ch=getCH(); ch!='\n';ch=getCH())str+=ch;
@@ -86,6 +86,14 @@ int main(int argc, char **argv){
         rl_init(); // with IFDEF readline?
 	signal(SIGSEGV, reportFault);
 	topInfon=World;  // use topInfon in the ddd debugger to view World
+    // Load World
+    std::cout << "Loading world\n";
+    std::fstream InfonInW("world.pr");
+    QParser q(InfonInW);
+    World=q.parse();
+    if (!World) {std::cout<<"Error:"<<q.buf<<"\n"; exit(1);}
+
+    
 	cout<<"\nThe Proteus CLI. Type some infons or 'quit'\n\n";
 	agent a;
 	while(!cin.eof()){
@@ -100,7 +108,7 @@ int main(int argc, char **argv){
 		Entry=q.parse(); // cout <<"Parsed.\n";
 		a.normalize(Entry); // cout << "Normalizd\n";
 	//	a.append(Entry, World);
-		
+
 		if (Entry) cout<<"\n"<<printInfon(Entry)<<"\n\n";
 		else {cout<<"\nError: "<<q.buf<<"\n\n";}
 	}

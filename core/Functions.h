@@ -29,8 +29,8 @@
 #define pi 3.14159
 #define Zto1(gInt) (float)(((float)gInt)  /* / 1024.0*/)
 
-#define cpFlags(from, to) {to->flags=(to->flags&0xff000000)+(from->flags&0x00ffffff);}
-#define copyTo(from, to) {if(from!=to){to->size=from->size; to->value=from->value; cpFlags(from,to);}}
+#define cpFlags(from, to) {to->flags=(to->flags&0xff000000)+((from)->flags&0x00ffffff);}
+#define copyTo(from, to) {if(from!=to){to->size=(from)->size; to->value=(from)->value; cpFlags((from),to);}}
 
 #define copyInfonString2charBuf(inf, buf) {memcpy(buf, (char*)inf->value, (UInt)inf->size); buf[(UInt)inf->size]=0;}
 infon* Theme;
@@ -76,7 +76,7 @@ void setIntSize(infon* CI, int i){
 int autoEval(infon* CI, agent* a){
     int int1;
     if((CI->spec2->flags&mRepMode)!=asTag) return 0;
-    stng funcName=*(stng*)(CI->spec2->spec1);
+    stng funcName=*CI->spec2->type;
    std::cout << "EVAL:"<<funcName.S<<"\n";
     if (strcmp(funcName.S, "sin")==0){
         if (!getIntArg(CI, &int1, a)) return 0;

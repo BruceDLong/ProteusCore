@@ -106,7 +106,7 @@ int main(int argc, char **argv){
 		istrstream fin(entry.c_str());
 		QParser q(fin);
 		Entry=q.parse(); // cout <<"Parsed.\n";
-		a.normalize(Entry); // cout << "Normalizd\n";
+		a.fillBlanks(Entry); // cout << "Normalizd\n";
 	//	a.append(Entry, World);
 
 		if (Entry) cout<<"\n"<<printInfon(Entry)<<"\n\n";

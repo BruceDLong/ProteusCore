@@ -18,7 +18,6 @@
 #ifndef _Proteus
 #define _Proteus
 
-//#include "..\ProteusCore 10.0\stop4786warning.h"   // Compensates for an annoying MS error.
 #include <map>
 #include <queue>
 #include <iostream>
@@ -47,12 +46,13 @@ enum vals {toGiven=0, toWorldCtxt=0x0100, toHomePos=0x0200, fromHere=0x0300, asF
     isFirst=0x01000000, isLast=0x02000000, isTop=0x04000000, isBottom=0x8000000,
     noAlts=0, hasAlts=0x10000000, noMoreAlts=0x20000000, isTentative=0x40000000, isVirtual=0x80000000,
 
-    mToGet=0xf, getNone=0x0,  getFirst=0x1, getLast=0x2, getMiddle=0x3, getSize=0x4, getType=0x5, getWhole=0x6,
-    mGetWith= 0x70, withNone=0x10, withSpecAsList=0x20, withSpecAsFirst=0x30, withSpecAsLast=0x40,
-    mGetFrom=0xf00, withWorld=0x100, withCtxt=0x200, withArgs=0x300, withVars=0x400, withCursor=0x500, 
-    mPrintLeftDir=0x80,
-    findAssoc=0x1000
+    useTag=0x10000 // improve this. Combine tag, none, search, etc.
     };
+enum Intersections {iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,iUseAsFirst,iUseAsList,iUseAsLast,
+                    iGetFirst,iGetMiddle,iGetLast,iGetSize,iGetType,iStartAssoc,iNextAssoc,iHardFunc,iNone};
+const UInt mFindMode = 0x1f;  // use this to select the intersection/FindMode from wFlag
+
+const int fUnknowns=fUnknown+(fUnknown<<goSize);
 
 struct infon;
 struct assocInfon {infon *VarRef, *nextRef; assocInfon(infon* first=0):VarRef(first),nextRef(0){};};
@@ -63,8 +63,8 @@ enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, CountSize=2, SetComplet
 
 struct infon {
     infon(UInt f=0, UInt f2=0, infon* s=0, infon*v=0,infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0):
-        flags(f), flag2(f2), size(s), value(v), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {prev=0; top=0; type=0;};
-    UInt flags, flag2;
+        pFlag(f), wFlag(f2), size(s), value(v), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {prev=0; top=0; type=0;};
+    UInt pFlag, wFlag;
     UInt wSize; // get rid if this. disallow strings and lists in "size"
     infon *size;        // The *-term; perhaps just a number of states
     infon *value;       // Summand List
@@ -91,7 +91,7 @@ struct agent {
 	void append(infon* i, infon* list);
     int compute(infon* i);
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
-    infon* normalize(infon* i, infon* firstID=0, bool doShortNorm=false);
+    infon* fillBlanks(infon* i, infon* firstID=0, bool doShortNorm=false);
     infon *world, context;
         void deepCopy(infon* from, infon* to, infon* args=0);
     private:
@@ -109,7 +109,7 @@ const int bufmax=1024*32;
 struct QParser{
     QParser(std::istream& _stream):stream(_stream){};
     infon* parse(); // if there is an error it is returned in buf as a char* string.
-    UInt ReadPureInfon(char &tag, infon** i, UInt* flags, infon** s2);
+    UInt ReadPureInfon(char &tag, infon** i, UInt* pFlag, UInt *flags2, infon** s2);
     infon* ReadInfon(int noIDs=0);
 	char streamGet();
     void scanPast(char* str);
@@ -127,13 +127,13 @@ struct QParser{
 //extern std::fstream log;
 #define OUT(msg) /*{std::cout<< msg;}*/
 #define DEB(msg) /*{std::cout<< msg << "\n";}*/
-#define getInt(inf, num, sign) {/*normalize(inf);  */           \
-  UInt f=inf->flags;                           \
+#define getInt(inf, num, sign) {/*fillBlanks(inf);  */           \
+  UInt f=inf->pFlag;                           \
   if((f&tType)==tUInt && !(f&fUnknown)) num=(UInt)inf->value; else num=0;     \
   sign=f&fInvert;}
 
 inline void getStng(infon* i, stng* str) {
-	if((i->flags&tType)==tString && !(i->flags&fUnknown)) {
+	if((i->pFlag&tType)==tString && !(i->pFlag&fUnknown)) {
 		str->S=(char*)i->value; str->L=(UInt)i->size;
 	}
 }

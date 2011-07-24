@@ -34,9 +34,9 @@ std::string printPure (infon* i, UInt f, UInt wSize, infon* CI){
         s+=(f&fConcat)?"(":"{";
         for(infon* p=i;p;) {
             if(p==i && f&fLoop && i->spec2){printInfon(i->spec2,CI); s+=" | ";}
-			if(p->flags&isTentative) {s+="..."; break;}
+			if(p->pFlag&isTentative) {s+="..."; break;}
             else {s+=printInfon(p, CI); s+=' ';}
-            if (p->flags&isBottom) p=0; else p=p->next;
+            if (p->pFlag&isBottom) p=0; else p=p->next;
         }
         s+=(f&fConcat)?")":"}";
     }
@@ -47,7 +47,7 @@ std::string printInfon(infon* i, infon* CI){
     std::string s; //Indent;
     if(i==0) {s+="null"; return s;}
     if(i==CI)s+="<font color=green>";
-    UInt f=i->flags;
+    UInt f=i->pFlag;
     UInt mode=f&mRepMode;
 //    if(f&toExec) s+="@";
     if(f&asDesc) s+="#";
@@ -66,10 +66,10 @@ std::string printInfon(infon* i, infon* CI){
         }
     } else {
         if (!(f&isNormed)) {
-            if(i->flag2&withWorld) s+="%W ";
-            if(i->flag2&withCtxt) s+="%C";
-            if(i->flag2&withArgs) s+="%A ";
-            if(i->flag2&withVars) s+="%V ";
+            if(i->wFlag&iToWorld) s+="%W ";
+            if(i->wFlag&iToCtxt) s+="%C";
+            if(i->wFlag&iToArgs) s+="%A ";
+            if(i->wFlag&iToVars) s+="%V ";
             switch (f&mRepMode){
             case toGiven: s+="%["; s+=printInfon(i->spec1, CI); s+="]"; break;
             case toWorldCtxt: s+="&"; break;
@@ -170,13 +170,13 @@ const char* QParser::lookGet(int n, ...){
 }
 
 char errMsg[100];
-UInt QParser::ReadPureInfon(char &tok, infon** i, UInt* flags, infon** s2){
+UInt QParser::ReadPureInfon(char &tok, infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
     UInt p=0, size=0, stay=1; char rchr; infon *head=0, *prev; infon* j;
-    //if(tok=='$'){*flags|=fLoop+tList+fUnknown; *i=ReadInfon(1); return 0;}
+    //if(tok=='$'){*pFlag|=fLoop+tList+fUnknown; *i=ReadInfon(1); return 0;}
     if(tok=='('||tok=='{'||tok=='['){
-        if(tok=='(') {rchr=')'; *flags|=(fConcat+tUInt);}
-        else if(tok=='['){rchr=']'; *flags|=tList;}
-        else {rchr='}'; *flags|=tList;}
+        if(tok=='(') {rchr=')'; *pFlag|=(fConcat+tUInt);}
+        else if(tok=='['){rchr=']'; *pFlag|=(tList+fUnknowns); *wFlag|=iGetLast;}
+        else {rchr='}'; *pFlag|=tList;}
         RmvWSC(); int foundRet=0; int foundBar=0;
         for(tok=peek(); tok != rchr && stay; tok=peek()){
             if(tok=='<') {foundRet=1; getToken(tok); j=ReadInfon();}
@@ -190,43 +190,43 @@ UInt QParser::ReadPureInfon(char &tok, infon** i, UInt* flags, infon** s2){
             if(++size==1){
                 Peek(tok);
                 if(!foundRet && !foundBar && stay && tok=='|'){
-                    getToken(tok); *s2=j; *flags|=fLoop; size=0; foundBar=1; RmvWSC(); continue;
+                    getToken(tok); *s2=j; *pFlag|=fLoop; size=0; foundBar=1; RmvWSC(); continue;
                 }
-                *i=head=prev=j; head->flags|=isFirst+isTop;if(*flags&fConcat)*flags|=(j->flags&tType);
+                *i=head=prev=j; head->pFlag|=isFirst+isTop;if(*pFlag&fConcat)*pFlag|=(j->pFlag&tType);
             }
-            if (foundRet==1) {check('>'); *i=j; foundRet++; *flags|=intersect;}
+            if (foundRet==1) {check('>'); *i=j; foundRet++; *pFlag|=intersect;}
             j->top=head; j->next=head; prev->next=j; j->prev=prev; head->prev=j;
             prev=j; RmvWSC();
         }
         if(head){
-            head->prev->flags|=isBottom;
-            if (!(head->flags&fIncomplete) && stay) head->prev->flags|=isLast;
+            head->prev->pFlag|=isBottom;
+            if (!(head->pFlag&fIncomplete) && stay) head->prev->pFlag|=isLast;
         }
         check(rchr);
     } else if (isdigit(tok)) {   // read number
         streamPut(tok); getbuf(isdigit(peek()));
-        *flags+=tUInt; *i=(infon*)atoi(buf);
+        *pFlag+=tUInt; *i=(infon*)atoi(buf);
         size=1;
-    } else if (tok=='_'){*flags+=fUnknown+tUInt;
-    } else if (tok=='$'){*flags+=fUnknown+tString;
+    } else if (tok=='_'){*pFlag+=fUnknown+tUInt;
+    } else if (tok=='$'){*pFlag+=fUnknown+tString;
     } else if (tok=='"' || tok=='\''){   // read string
         getbuf(peek()!=tok); streamGet();
-        *flags+=tString; *i=(((*flags)&fUnknown)? 0 : (infon*)new char[p]); memcpy(*i,buf,p);
+        *pFlag+=tString; *i=(((*pFlag)&fUnknown)? 0 : (infon*)new char[p]); memcpy(*i,buf,p);
         size=p;
     } else {strcpy(errMsg, "'X' was not expected"); errMsg[1]=tok; throw errMsg;}
     return size;
 }
 
 infon* QParser::ReadInfon(int noIDs){
-    char tok, op=0; UInt p=0, size=0; infon*i1=0,*i2=0,*s1=0,*s2=0; UInt flags=0,f1=0,f2=0,WFlags=0;
+    char tok, op=0; UInt p=0, size=0; infon*i1=0,*i2=0,*s1=0,*s2=0; UInt pFlag=0,wFlag=0,f1=0,f2=0;
 	/*int textStart=txtPos;*/ int textEnd=0; stng* tags=0; std::string StrTok;
     getToken(tok); //DEB(tok)
-    if(tok=='@'){flags|=toExec; getToken(tok);}
-    if(tok=='#'){flags|=asDesc; getToken(tok);}
-    if(tok=='.'){flags|=matchType; getToken(tok);} // This is a hint that idents must match type, not just value.
-    if(tok=='?'){f1=f2=fUnknown; flags=asNone;}
+    if(tok=='@'){pFlag|=toExec; getToken(tok);}
+    if(tok=='#'){pFlag|=asDesc; getToken(tok);}
+    if(tok=='.'){pFlag|=matchType; getToken(tok);} // This is a hint that idents must match type, not just value.
+    if(tok=='?'){f1=f2=fUnknown; pFlag=asNone;}
     else if(iscsym(tok)&&!isdigit(tok)&&(tok!='_')){
-        streamPut(tok); flags|=asTag; stng tag; tags=new stng;
+        streamPut(tok); wFlag|=iTagUse; stng tag; tags=new stng;
         if(iscsym(tok)&&!isdigit(tok)){  // change 'if' to 'while' when tag-chains are ready.
             readTag(tag);
             stngApnd((*tags),tag.S,tag.L+1);
@@ -234,33 +234,33 @@ infon* QParser::ReadInfon(int noIDs){
         }
     }else if( tok=='%'){
         StrTok=lookGet (4, "W", "C", "A", "V");
-        flags|=fUnknown;
-        if (StrTok=="W"){std::cout<<"WORLD"<<"\n"; WFlags|=withWorld;}
-        if (StrTok=="C"){WFlags|=withCtxt;}
-        if (StrTok=="A"){WFlags|=withArgs;}
-        if (StrTok=="V"){WFlags|=withVars;}
+        pFlag|=fUnknown;
+        if (StrTok=="W"){std::cout<<"WORLD"<<"\n"; wFlag|=iToWorld;}
+        if (StrTok=="C"){wFlag|=iToCtxt;}
+        if (StrTok=="A"){wFlag|=iToArgs;}
+        if (StrTok=="V"){wFlag|=iToVars;}
         
     }else if(tok=='\\'||tok=='%'||tok=='&'||tok=='^'){
-        flags|=fUnknown;
-        if (tok=='%'){flags|=toGiven; s1=ReadInfon();} // % search
+        pFlag|=fUnknown;
+        if (tok=='%'){pFlag|=toGiven; s1=ReadInfon();} // % search
         else if (tok=='\\' || tok=='^') {
             for(s1=0; tok=='\\';  tok=streamGet()) {s1=(infon*)((UInt)s1+1); ChkNEOF;}
-             if (tok=='^') flags|=fromHere; else {flags|=toHomePos; streamPut(tok);}
-        } else if (tok=='&') {flags|=toWorldCtxt; s1=(infon*)miscWorldCtxt;}
+             if (tok=='^') wFlag|=iToPathH; else {wFlag|=iToPath; streamPut(tok);}
+        } else if (tok=='&') {pFlag|=toWorldCtxt; s1=(infon*)miscWorldCtxt;}
         s2=ReadInfon(3);
 	 Peek(tok);
          if(tok=='.') {
 	 	getToken(tok);
-		s2=(infon*)new assocInfon(new infon(flags, WFlags, i1,i2,0,s1,s2));
-		flags=toWorldCtxt; s1=(infon*)miscFindAssociate; f1=f2=fUnknown;
+		s2=(infon*)new assocInfon(new infon(pFlag, wFlag, i1,i2,0,s1,s2));
+		wFlag=iStartAssoc; f1=f2=fUnknown;
 	}
     }else{  // OK, then we're parsing some form of *... +...
-        flags|=asNone;
+        pFlag|=asNone;
         if(tok=='~') {f1|=fInvert; getToken(tok);}
         if(tok=='+' || tok=='-')op='+'; else if(tok=='*'||tok=='/')op='*';
         if(tok=='-'||tok=='/') {f1^=fInvert;}
         if(op) getToken(tok);
-        size=ReadPureInfon(tok, &i1, &f1, &s2);
+        size=ReadPureInfon(tok, &i1, &f1, &wFlag, &s2);
         if(op=='+'){
             i2=i1; i1=(infon*)size; f2=f1; f1=tUInt; // use identity term '1'
             if (size==0 && (f2==(fUnknown+tUInt) || f2==(fUnknown+tString))) f1=fUnknown+tUInt;
@@ -270,40 +270,40 @@ infon* QParser::ReadInfon(int noIDs){
             getToken(tok); if(tok=='~'){f2|=fInvert; getToken(tok);}
             if(tok=='-'||tok=='+'){op='+'; if(tok=='-')f2^=fInvert; getToken(tok);}
             else {streamPut('~'); f2^=fInvert;}
-            if (op=='+'){size=ReadPureInfon(tok,&i2,&f2,&s2);}
+            if (op=='+'){size=ReadPureInfon(tok,&i2,&f2,&wFlag,&s2);}
             else {i2=0; f2=tUInt;}    // use identity summand '0'
         } else { // no operator
             Peek(tok);
             if(tok==','||tok==')'||tok=='}'||tok==']'||((f1&tType)!=tUInt)){
                 i2=i1;f2=f1; f1=tUInt; i1=(infon*)size;
                 if (size==0 && (f2==(fUnknown+tUInt) || f2==(fUnknown+tString))) f1=fUnknown+tUInt;
-                else if(((f2&tType)==tList) && i2 && ((i2->prev)->flags)&isVirtual) {f1|=fUnknown;}
+                else if(((f2&tType)==tList) && i2 && ((i2->prev)->pFlag)&isVirtual) {f1|=fUnknown;}
                 if(tok==',')getToken(tok);
             }else if(tok==';'){i2=0; f2=fUnknown; getToken(tok);}
         }
     }
     Peek(tok);
-    infNode *ID=0, *IDp=0; UInt modeBit=0;
+    infNode *ID=0, *IDp=0;
     if(!(noIDs&1)) while(tok=='=') {
         getToken(tok);
         infon* tmp= ReadInfon(1); insertID(&ID, tmp,0);
         Peek(tok);
     }
-    infon* i=new infon((f1<<goSize)+f2+flags, WFlags, i1,i2,ID,s1,s2);
+    infon* i=new infon((f1<<goSize)+f2+pFlag, wFlag, i1,i2,ID,s1,s2);
     i->wSize=size; i->type=tags;
-    if(i->flags&fConcat && i->size==(infon*)1){infon* ret=i->value; delete(i); return ret;}
+    if(i->pFlag&fConcat && i->size==(infon*)1){infon* ret=i->value; delete(i); return ret;}
     if ((i->size && ((f1&tType)==tList))||(f1&fConcat)) i->size->top=i;
     if ((i->value&& ((f2&tType)==tList))||(f2&fConcat))i->value->top=i;
     if(!(noIDs&2)){  // load function "calls"
         StrTok=lookGet(4, ":>", "<:", "!>", "<!");
-        if(StrTok==":>" ) {i=new infon(0,withSpecAsFirst+getLast,0,0,0,i,ReadInfon(1));}
-        else if(StrTok=="!>" ) {i=new infon(0,withSpecAsLast+getFirst,0,0,0,i,ReadInfon(1));}
-        else if(StrTok=="<:" ) {i=new infon(0,withSpecAsFirst+getLast,0,0,0,ReadInfon(1),i);}
-        else if(StrTok=="<!" ){i=new infon(0,withSpecAsLast+getFirst,0,0,0,ReadInfon(1),i);}
+        if(StrTok==":>" ) {i=new infon(0,iUseAsFirst,0,0,0,i,ReadInfon(1));}
+        else if(StrTok=="!>" ) {i=new infon(0,iUseAsLast+iGetFirst,0,0,0,i,ReadInfon(1));}
+        else if(StrTok=="<:" ) {i=new infon(0,iUseAsFirst,0,0,0,ReadInfon(1),i);}
+        else if(StrTok=="<!" ){i=new infon(0,iUseAsLast+iGetFirst,0,0,0,ReadInfon(1),i);}
     }
      StrTok=lookGet(2, ":=", "=:");
-        if(StrTok==":=" ) {i=new infon(0,withSpecAsList+getLast,0,0,0,i,ReadInfon(1));}
-        else if(StrTok=="=:" ) {i=new infon(0,withSpecAsList+getLast,0,0,0,ReadInfon(1),i);}
+        if(StrTok==":=" ) {i=new infon(0,iUseAsList,0,0,0,i,ReadInfon(1));}
+        else if(StrTok=="=:" ) {i=new infon(0,iUseAsList,0,0,0,ReadInfon(1),i);}
 	textEnd=txtPos; //std::cout<<"<<"<<textParsed.substr(textStart, textEnd-textStart)<<">>\n";
     return i;
 }

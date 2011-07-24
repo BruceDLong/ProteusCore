@@ -47,9 +47,9 @@ do{
     QParser q(fin);
     World=q.parse(); std::cout <<"Parsed.\n";
     if (mode>0){
-        agent a;  std::cout <<"Norming World...\n";
+        agent a;  std::cout <<"Filling World...\n";
         topInfon=World;
-        a.normalize(World);  std::cout << "Normed\n";
+        a.fillBlanks(World);  std::cout << "Filled\n";
     }
     if (World) std::cout<<"<"<<printInfon(World)<<"> \n";
     else {std::cout<<"Error: "<<q.buf<<"\n"; exit(0);}
@@ -62,9 +62,9 @@ DEB(printHTMLHeader(query))
     infon* queryinf=D.parse(); std::cout << "parsed\n";
     if(queryinf) std::cout<<"<<["<<printInfon(queryinf).c_str()<<"]>>\n";
     else {std::cout<<"Error: "<<D.buf<<"\n"; exit(0);}
-    agent a; std::cout<<"Norming query...";
+    agent a; std::cout<<"Filling query...";
     topInfon=queryinf;
-    a.normalize(queryinf); std::cout<<"Normed\n";
+    a.fillBlanks(queryinf); std::cout<<"Filled\n";
     std::cout<<printInfon(queryinf);
 DEB(printHTMLFooter(D.buf))
 }
@@ -84,7 +84,7 @@ int main(int argc, char **argv)
     if (World) std::cout<<"["<<printInfon(World)<<"]\n";
     else {std::cout<<"Error:"<<q.buf<<"\n"; exit(1);}
     agent a;
-    a.normalize(World);
+    a.fillBlanks(World);
 
     // Load DispList
     std::cout << "Loading display.pr\n";
@@ -94,7 +94,7 @@ int main(int argc, char **argv)
     if(displayList) std::cout<<"["<<printInfon(displayList).c_str()<<"]\n";
     else {std::cout<<"Error:"<<D.buf<<"\n"; exit(1);}
 
-    a.normalize(displayList);
+    a.fillBlanks(displayList);
 //    DEB("Normed.");
 //    DEB(printInfon(displayList))
 

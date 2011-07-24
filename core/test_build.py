@@ -18,7 +18,7 @@ def test_engine():
    ('0', 'parse a list', '+{123, 456, "Hello there!", {789, 321}}', '<{*1+123 *1+456 "Hello there!" {*1+789 *1+321 } }>'),
    ('0', 'parse nested empty lists', '+{{},{}}', '<{{} {} }>'),
    ('1', 'test list/string', '+{*3+$ *4+$}=+"CatDogs"', '<{"Cat" "Dogs" }>'),
-   ('1', 'test anon functions', '[456,789,] <: +123', '<*1+789>'),
+   ('1', 'test anon functions', '[_,456,789,] <: +123', '<*1+789>'),
    ('1', 'Try a bigger function', r'[+_ ({555, 444, \\\[_]},)] <: +700000000', r'<{*1+555 *1+444 *1+700000000 }>'),
    ('1', 'Try reverse func syntax', r'+700000000:>[+_ ({555, 444, \\\[_]},)]', r'<{*1+555 *1+444 *1+700000000 }>'),
    ('1', 'test rep$', '*4 +{*3+$|...} = +"catHatDogPig"', '<{"cat" "Hat" "Dog" "Pig" }>'),
@@ -88,8 +88,8 @@ def ChkNorm(t):
        child.send('<%\n');  child.send(t[2]); child.send('\n%>\n'); #print "N2";
        child.expect(r'Parsing\s*\[<%\s*'); child.expect_exact(t[2]); child.expect(r'\s*%>\]\s*');  #print "N3";
        child.expect(r'\s*Parsed.\s*'); #print  "N4";
-       child.expect_exact('Norming World...');  #print "N5";
-       child.expect(r'\s*Normed\s*'); #print "N6";
+       child.expect_exact('Filling World...');  #print "N5";
+       child.expect(r'\s*Filled\s*'); #print "N6";
        print "Looking For:",t[3]; #print "N7"; #print "Found: ", child.after;      print "N9";
        try:
            child.expect_exact(t[3]); # print "N8";
@@ -115,7 +115,7 @@ def ChkWorld(t):
        child.send('<%\n');  child.send(t[4]); child.send('\n%>\n'); print "W2b";
        child.expect(r'Parsing\s*\[<%\s*'); child.expect_exact(t[2]); child.expect(r'\s*%>\]\s*');  print "W3";
        child.expect(r'\s*Parsed.\s*'); print  "W4";
-       child.expect_exact('Norming World...');   child.expect(r'\s*Normed\s*'); print "W5";
+       child.expect_exact('Filling World...');   child.expect(r'\s*Filled\s*'); print "W5";
 
        print "Looking For ",t[3]
        child.expect_exact(t[3]);
@@ -124,7 +124,7 @@ def ChkWorld(t):
 
        child.expect(r'\s*Parsing query\s*\[\s*<%\s*'); child.expect_exact(t[4]); child.expect(r'\s*%>\s*\]\s*');  print "W6";
        child.expect(r'\s*parsed.\s*<<\['); child.expect(r'.*?'); child.expect(r'\s*\]>>\s*'); print  "W7";
-       child.expect_exact('Norming query...');   child.expect(r'\s*Normed\s*'); print "W8";
+       child.expect_exact('Filling query...');   child.expect(r'\s*Filled\s*'); print "W8";
 
        print "Looking for:",t[5]
        child.expect_exact(t[5])

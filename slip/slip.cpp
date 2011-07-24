@@ -269,7 +269,7 @@ int initWorldAndEventQueues(){
 extern infon *World; World=q.parse();
     if (World) std::cout<<"["<<printInfon(World)<<"]\n";
     else {std::cout<<"Error:"<<q.buf<<"\n"; exit(1);}
-    theAgent.normalize(World);
+    theAgent.fillBlanks(World);
 
     //Load Theme
     std::cout << "Loading theme\n";
@@ -278,7 +278,7 @@ extern infon *World; World=q.parse();
     Theme=T.parse();
     if (Theme) std::cout<<"["<<printInfon(Theme)<<"]\n";
     else {std::cout<<"Error:"<<T.buf<<"\n"; exit(1);}
-   // theAgent.normalize(Theme);
+   // theAgent.fillBlanks(Theme);
 
 // Load DispList
     std::cout << "Loading display\n";
@@ -292,8 +292,8 @@ extern infon *World; World=q.parse();
     else {std::cout<<"Error:"<<D.buf<<"\n"; exit(1);}
 
 	ProteusDesc=displayList;
-    theAgent.normalize(displayList);
-    DEB("Normed.");
+    theAgent.fillBlanks(displayList);
+    DEB("Filled.");
     std::cout<< printInfon(displayList) << "\n";
 }
 

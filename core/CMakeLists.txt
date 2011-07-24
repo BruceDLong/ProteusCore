@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 
-add_definitions(-Wno-deprecated -fpermissive -g -Wall)
+add_definitions(-Wno-deprecated -Wno-write-strings -fpermissive -g -Wall)
 
 set(PROTEUS_SRCS Proteus.cpp InfonIO.cpp)
 

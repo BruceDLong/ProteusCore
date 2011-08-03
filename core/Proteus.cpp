@@ -47,7 +47,7 @@ inline int agent::StartTerm(infon* varIn, infon** varOut) {
       if (getNextTerm(varOut)) return 4;
     } while(1);
   }
-  if((varInFlags&mRepMode)==toWorldCtxt && varIn->spec1==(infon*)miscFindAssociate)
+  if((varIn->wFlag&mFindMode)==iStartAssoc)
 		{ ((assocInfon*)(varIn->spec2))->nextRef=0;  *varOut=varIn; return 0;}
   if ((varIn->pFlag&tType)!=tList) {return 3;}
   else {*varOut=varIn->value; if (*varOut==0) return 4;}
@@ -173,15 +173,14 @@ infon* getVeryTop(infon* i){
 }
 
 void agent::deepCopy(infon* from, infon* to, infon* args){
-    UInt fm=from->pFlag&mRepMode;
-    to->pFlag=from->pFlag;
+    UInt fm=from->wFlag&mFindMode;
+    to->pFlag=from->pFlag; to->wFlag=from->wFlag; to->type=from->type;
     if(((from->pFlag>>goSize)&tType)==tList || ((from->pFlag>>goSize)&fConcat)){to->size=copyList(from->size); if(to->size)to->size->top=to;}
     else to->size=from->size;
     if((from->pFlag&tType)==tList || ((from->pFlag)&fConcat)){to->value=copyList(from->value); if(to->value)to->value->top=to;}
     else to->value=from->value;
     to->wrkList=copyIdentList(from->wrkList);
     if(fm==toHomePos) to->spec1=from->spec1;
-    else if(fm==asTag) {to->spec1=from->spec1; to->type=from->type;}
     else if((UInt)(from->spec1)<=20) to->spec1=from->spec1;
     else if(fm<(UInt)asFunc){
 		to->spec1=new infon; copyTo(from->spec1,to->spec1);
@@ -193,11 +192,8 @@ void agent::deepCopy(infon* from, infon* to, infon* args){
 			}
 		}
     } else {to->spec1=new infon; deepCopy((args)?args:from->spec1,to->spec1);}
-    if(from->spec2){
-	    	if(fm==toWorldCtxt && from-> spec1==(infon*)miscFindAssociate){
-			to->spec2=from->spec2;
-    		}else {to->spec2=new infon; deepCopy(from->spec2, to->spec2);}
-	}else to->spec2=0;
+    if(!from->spec2 || fm==iStartAssoc) {to->spec2=from->spec2;}
+    else {to->spec2=new infon; deepCopy(from->spec2, to->spec2);}
 }
 
 void recover(infon* i){ delete i;}
@@ -247,9 +243,7 @@ void agent::processVirtual(infon* v){
     if (spec){
         if((mode=(spec->pFlag&mRepMode))==asFunc){
             deepCopy(spec,v,args);
-			if((args->pFlag&mRepMode)==toWorldCtxt && args->spec1==(infon*)miscFindAssociate){
-				EOT=0;
-			} else EOT=getNextNormal(&args);
+            EOT = ((args->wFlag&mFindMode)==iStartAssoc) ? 0 : getNextNormal(&args);
         } else if(mode<(UInt)asFunc){
 			deepCopy(spec,v);
 			if(posArea=='?' && v->spec1) posArea= 'N'; // N='Not greater'
@@ -260,7 +254,7 @@ void agent::processVirtual(infon* v){
         else if(posArea!='E') throw "List was too short";}
     if (posArea=='E') {v->pFlag|=isBottom+isLast; return;}
     infon* tmp= new infon;  tmp->size=(infon*)(vSize+1); tmp->spec2=spec;
-    tmp->pFlag|=fUnknown+isBottom+isVirtual+asNone+(tUInt<<goSize);
+    tmp->pFlag|=fUnknown+isBottom+isVirtual+(tUInt<<goSize); tmp->wFlag|=iNone;
     tmp->top=tmp->next=v->next; v->next=tmp; tmp->prev=v; tmp->next->prev=tmp; tmp->spec1=args;
     v->pFlag&=~isBottom;
     if (posArea=='?'){ v->pFlag|=isTentative;}
@@ -394,7 +388,9 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             altCount++;  theOne=item;
             break;
         case MergeIdent:
-            if((item->pFlag&mRepMode)!=asNone && (item->pFlag&mRepMode)!=fromHere) fillBlanks(item);
+            wrkNode->idFlags|=SetComplete;
+            UInt fm=item->wFlag&mFindMode;
+            if(fm!=iNone && fm!=iToPathH && fm!=iToPath) fillBlanks(item);
             if((ci->pFlag&tType)==0) {
                 ci->pFlag|=((item->pFlag&tType)+(tUInt<<goSize)+sizeIndef); isIndef=1;
                 ci->size=item->size;if (!(item->pFlag&(fUnknown<<goSize))) ci->pFlag&=~(fUnknown<<goSize);
@@ -606,6 +602,7 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
         Qitem cn=ItmQ.front(); ItmQ.pop(); CI=cn.item; 
         override=0;
         while ((CIFindMode=(CI->wFlag&mFindMode))){
+            tmp=0;
             if(CI->pFlag&toExec) override=1;  // TODO: refactor override
             if(CI->pFlag&asDesc) {if(override) override=0; else break;}
             switch(CI->wFlag&mFindMode){
@@ -615,7 +612,7 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
             case iToVars:   copyTo(world, CI); break; // TODO: make this work.
             case iToPath: //  Handle \, \\, \\\, etc.
             case iToPathH:  // Handle ^, \^, \\^, \\\^, etc.
-                tmp=CI;
+                tmp=CI->top;
                 for(UInt i=0; i<(UInt)CI->spec1; ++i) {  // for each backslash
                     if(tmp==0 ) {tmp=0;std::cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';}
                     if(CIFindMode!=iToPathH || i>0) tmp=getTop(tmp);
@@ -625,6 +622,8 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
                     if (tmp==0) std::cout<<"Zero TOP in "<< printInfon(CI)<<'\n';
                     if(!(tmp->pFlag&isFirst)) {tmp=0; std::cout<<"Top but not First in "<< printInfon(CI)<<'\n';}
                 }
+                if(tmp) {copyTo(tmp, CI); tmp=0;}
+                doShortNorm=true; 
                 break; 
             case iTagDef:  // TODO: Make this choice in the parser
                 if(CI->wrkList){std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
@@ -639,21 +638,25 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
                 break;
             case iUseAsFirst: fillBlanks(CI->spec2,CI->spec1);  tmp=CI->spec2; CI->pFlag|=fUnknowns; break; // norm(func-body-list(CI->spec2))
             case iUseAsList:  
-                    tmp->pFlag|=toExec;
-                    insertID(&CI->spec2->wrkList, tmp,0);
+                    CI->spec1->pFlag|=toExec;
+                    fillBlanks(CI->spec1);
+                    insertID(&CI->spec2->wrkList, CI->spec1,0);
                     CI->spec2->prev=(infon*)1;  // Set sentinal value so this can tell it is an index // TODO: use wFlag instead of prev.
                     fillBlanks(CI->spec2);
                     break;
             case iUseAsLast:  break; // TODO: make this work.
             case iGetFirst:      StartTerm (CI, &tmp); break;
             case iGetMiddle:  break; // TODO: make this work;
-            case iGetLast:      CI->wFlag&=~mFindMode; fillBlanks(CI, firstID); LastTerm(CI, &tmp); break; 
+            case iGetLast:      
+                    CI->wFlag&=~mFindMode; 
+                    fillBlanks(CI, firstID); 
+                    LastTerm(CI, &tmp); break; 
             case iGetSize:      break; // TODO: make this work;
             case iGetType:     break; // TODO: make this work;
             case iStartAssoc:
             case iNextAssoc:
             case iHardFunc:    autoEval(CI, this); break;
-            case iNone: default:;
+            case iNone: default: throw "Invalid Find Mode";
             }
 
             if(tmp) {insertID(&CI->wrkList, tmp,0); CI->pFlag&=~tType; CI->wFlag&=~mFindMode;}

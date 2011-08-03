@@ -19,17 +19,17 @@ def test_engine():
    ('0', 'parse nested empty lists', '+{{},{}}', '<{{} {} }>'),
    ('1', 'test list/string', '+{*3+$ *4+$}=+"CatDogs"', '<{"Cat" "Dogs" }>'),
    ('1', 'test anon functions', '[_,456,789,] <: +123', '<*1+789>'),
-   ('1', 'Try a bigger function', r'[+_ ({555, 444, \\\[_]},)] <: +700000000', r'<{*1+555 *1+444 *1+700000000 }>'),
-   ('1', 'Try reverse func syntax', r'+700000000:>[+_ ({555, 444, \\\[_]},)]', r'<{*1+555 *1+444 *1+700000000 }>'),
+   ('1', 'Try a bigger function', r'[+_ ({555, 444, \\\ := [_]},)] <: +700000000', r'<{*1+555 *1+444 *1+700000000 }>'),
+   ('1', 'Try reverse func syntax', r'+700000000:>[+_ ({555, 444, \\\ := [_]},)]', r'<{*1+555 *1+444 *1+700000000 }>'),
    ('1', 'test rep$', '*4 +{*3+$|...} = +"catHatDogPig"', '<{"cat" "Hat" "Dog" "Pig" }>'),
    ('1', 'Addition', '+(+3+7)', '<*1+10>'),
-   ('1', 'Addition with references', r'{4, 6, (\\[_] \\[_, _])}', '<{*1+4 *1+6 *1+10 }>'),
+   ('1', 'Addition with references', r'{4, 6, (\\ := [_] \\ := [_, _])}', '<{*1+4 *1+6 *1+10 }>'),
    ('1', 'A two argument function', r'[+{_, _} +{\\[+_] \\[+_ +_]  \\[+_]} ]<:+{9,4}', '<{*1+9 *1+4 *1+9 }>'),
    ('2', 'define and use a tag', '+{color=#+{*_+_ *_+_ *_+_} size=#*_+_}', '<{color   size   }>', 'color', '#{_, _, _, }'),
    ('2', 'Two argument function defined with a tag', r'+{func={+{_, _} +{\\[_] \\[_, _]  \\[_]}}  }', '<{func   }>', 'func<: +{9,4}', '{*1+9 *1+4 *1+9 }'),
    ('1', 'test rep$', '{*_ +{"A"|...} "AARON"} =  +\'AAAARON\' // This is a comment', '<{{"A" "A" } "AARON" }>'),
    ('1', 'test indexing', '%{111, 222, 333, 444}*2+[...]', '<*1+222>'),
-   ('1', 'Indexing, unknown index 1', r'%{"AARON", "ARON"}*_+[...]  =  +"ARONdacks" ', '<"ARON">'),
+   ('1', 'Indexing, unknown index 1', r'{"AARON", "ARON"} := *_+[...]  =  +"ARONdacks" ', '<"ARON">'),
    ('1', 'Indexing, unknown index 2', r'%{"AARON", "ARON"}*_+[...]  =  +"AARONdacks" ', '<"AARON">'),
    ('1', 'Indexing, unknown index 3', r'{%{"AARON", "ARON"}*_+[...]  "dac"}  =  +"ARONdacks" ', '<{"ARON" "dac" }>'),
    ('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \\[?]}]<:{"slothe", "Hello", "bob", 65432}|...}', '<{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } }>'),
@@ -71,11 +71,12 @@ def ChkParser(t):
        child.expect(r'Parsed\.\s*');
        print "Looking for ",t[3]
        child.expect_exact(t[3])
-       assert child.after==t[3]
+       #assert child.after==t[3]
        print "Found: ", child.after;
        child.send ("5\ndone\n!\n")
        pass
    finally:
+       print "Found: ", child.after;
        assert child.after==t[3]
 
 def ChkNorm(t):

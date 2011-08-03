@@ -46,7 +46,8 @@ void setString(infon* CI, stng *s){
     UInt tmpFlags=CI->pFlag&0xff000000;
     CI->size=(infon*) s->L;
     CI->value=(infon*)s->S;
-    CI->pFlag=tmpFlags + (tUInt<<goSize)+asNone+tString;
+    CI->pFlag=tmpFlags + (tUInt<<goSize)+tString;
+    CI->wFlag=iNone;
 }
 
 int getIntArg(infon* i, int* Int1, agent* a){
@@ -63,19 +64,21 @@ void setIntVal(infon* CI, int i){
     CI->size=CI->spec1->size;
     CI->value=(infon*) abs(i);
     if (i<0)tmpFlags|=fInvert;
-    CI->pFlag=tmpFlags + (tUInt<<goSize)+asNone+tUInt;
+    CI->pFlag=tmpFlags + (tUInt<<goSize)+tUInt;
+    CI->wFlag=iNone;
 }
 
 void setIntSize(infon* CI, int i){
     UInt tmpFlags=CI->pFlag&0xff000000;
     CI->size=(infon*) abs(i);
     CI->value=0;
-    CI->pFlag=tmpFlags + (tUInt<<goSize)+asNone+tUInt;
+    CI->pFlag=tmpFlags + (tUInt<<goSize)+tUInt;
+    CI->wFlag=iNone;
 }
 
 int autoEval(infon* CI, agent* a){
     int int1;
-    if((CI->spec2->pFlag&mRepMode)!=asTag) return 0;
+    if((CI->spec2->wFlag&mFindMode)!=iTagUse) return 0;
     stng funcName=*CI->spec2->type;
    std::cout << "EVAL:"<<funcName.S<<"\n";
     if (strcmp(funcName.S, "sin")==0){

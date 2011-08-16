@@ -46,9 +46,10 @@ enum vals {toGiven=0, toWorldCtxt=0x0100, toHomePos=0x0200, fromHere=0x0300, asF
     isFirst=0x01000000, isLast=0x02000000, isTop=0x04000000, isBottom=0x8000000,
     noAlts=0, hasAlts=0x10000000, noMoreAlts=0x20000000, isTentative=0x40000000, isVirtual=0x80000000
     };
-enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,iUseAsFirst,iUseAsList,iUseAsLast,
+enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,
                     iGetFirst,iGetMiddle,iGetLast,iGetSize,iGetType,iStartAssoc,iNextAssoc,iHardFunc};
-const UInt mFindMode = 0x1f;  // use this to select the intersection/FindMode from wFlag
+enum seeds {mSeed=0x30, sNone=0x00, sUseAsFirst=0x10, sUseAsList=0x20, sUseAsLast=0x30};
+const UInt mFindMode = 0x0f;  // use this to select the intersection/FindMode from wFlag
 
 const int fUnknowns=fUnknown+(fUnknown<<goSize);
 
@@ -106,18 +107,19 @@ const int bufmax=1024*32;
 struct QParser{
     QParser(std::istream& _stream):stream(_stream){};
     infon* parse(); // if there is an error it is returned in buf as a char* string.
-    UInt ReadPureInfon(char &tag, infon** i, UInt* pFlag, UInt *flags2, infon** s2);
+    UInt ReadPureInfon(infon** i, UInt* pFlag, UInt *flags2, infon** s2);
     infon* ReadInfon(int noIDs=0);
 	char streamGet();
     void scanPast(char* str);
     bool chkStr(const char* tok);
-    const char* lookGet(int n, ...);
+    const char* nxtTok(char* tok);
     void RmvWSC ();
     char peek();
     std::istream& stream;
     std::string s;
     char buf[bufmax];
-    int line, txtPos;  // linenumber, position in text
+    char ch; // First character of last token
+    int line;  // linenumber, position in text
 	std::string textParsed;
     infon* ti; // top infon
 };

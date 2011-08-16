@@ -605,58 +605,63 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
             tmp=0;
             if(CI->pFlag&toExec) override=1;  // TODO: refactor override
             if(CI->pFlag&asDesc) {if(override) override=0; else break;}
+            switch(CI->wFlag&mSeed){
+                case sUseAsFirst: cn.firstID=CI->spec1; cn.IDStatus=1; CI->wFlag&=~mSeed; break; 
+                case sUseAsList: CI->spec1->pFlag|=toExec;  tmp=CI->spec1;
+            }
             switch(CI->wFlag&mFindMode){
-            case iToWorld: copyTo(world, CI); break;
-            case iToCtxt:   copyTo(&context, CI); break; // TODO: make this work.
-            case iToArgs:   copyTo(world, CI); break; // TODO: make this work.
-            case iToVars:   copyTo(world, CI); break; // TODO: make this work.
-            case iToPath: //  Handle \, \\, \\\, etc.
-            case iToPathH:  // Handle ^, \^, \\^, \\\^, etc.
-                tmp=CI->top;
-                for(UInt i=0; i<(UInt)CI->spec1; ++i) {  // for each backslash
-                    if(tmp==0 ) {tmp=0;std::cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';}
-                    if(CIFindMode!=iToPathH || i>0) tmp=getTop(tmp);
-                }
-                if(CIFindMode==iToPathH) {
-                    if(!(tmp->pFlag&isTop)) {tmp=tmp->top; }
-                    if (tmp==0) std::cout<<"Zero TOP in "<< printInfon(CI)<<'\n';
-                    if(!(tmp->pFlag&isFirst)) {tmp=0; std::cout<<"Top but not First in "<< printInfon(CI)<<'\n';}
-                }
-                if(tmp) {copyTo(tmp, CI); tmp=0;}
-                doShortNorm=true; 
-                break; 
-            case iTagDef:  // TODO: Make this choice in the parser
-                if(CI->wrkList){std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
-                    std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
-                    if (tagPtr==tag2Ptr.end()) {tag2Ptr[*CI->type]=CI->wrkList->item; CI->wrkList=0; break;}
-                    else{throw("A tag is being redefined, which isn't allowed");}
-                }else { DEB("Recalling: "<<(char*)CI->type->S)
-                    std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
-                    if (tagPtr!=tag2Ptr.end()) {UInt tmpFlags=CI->pFlag&0xff000000; deepCopy(tagPtr->second,CI); CI->pFlag|=tmpFlags;}
-                    else{std::cout<<"Bad tag:'"<<(char*)(CI->type->S)<<"'\n";throw("A tag was used but never defined");}
-                }
-                break;
-            case iUseAsFirst: fillBlanks(CI->spec2,CI->spec1);  tmp=CI->spec2; CI->pFlag|=fUnknowns; break; // norm(func-body-list(CI->spec2))
-            case iUseAsList:  
-                    CI->spec1->pFlag|=toExec;
-                    fillBlanks(CI->spec1);
-                    insertID(&CI->spec2->wrkList, CI->spec1,0);
-                    CI->spec2->prev=(infon*)1;  // Set sentinal value so this can tell it is an index // TODO: use wFlag instead of prev.
-                    fillBlanks(CI->spec2);
+                case iToWorld: copyTo(world, CI); break;
+                case iToCtxt:   copyTo(&context, CI); break; // TODO: make this work.
+                case iToArgs:   copyTo(world, CI); break; // TODO: make this work.
+                case iToVars:   copyTo(world, CI); break; // TODO: make this work.
+                case iToPath: //  Handle \, \\, \\\, etc.
+                case iToPathH:  // Handle ^, \^, \\^, \\\^, etc.
+                    tmp=CI->top;
+                    for(UInt i=0; i<(UInt)CI->spec1; ++i) {  // for each backslash
+                        if(tmp==0 ) {tmp=0;std::cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';}
+                        if(CIFindMode!=iToPathH || i>0) tmp=getTop(tmp);
+                    }
+                    if(CIFindMode==iToPathH) {
+                        if(!(tmp->pFlag&isTop)) {tmp=tmp->top; }
+                        if (tmp==0) std::cout<<"Zero TOP in "<< printInfon(CI)<<'\n';
+                        if(!(tmp->pFlag&isFirst)) {tmp=0; std::cout<<"Top but not First in "<< printInfon(CI)<<'\n';}
+                    }
+                    if(tmp) {copyTo(tmp, CI); tmp=0;}
+                    doShortNorm=true; 
+                    break; 
+                case iTagDef:  // TODO: Make this choice in the parser
+                    if(CI->wrkList){std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
+                        std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
+                        if (tagPtr==tag2Ptr.end()) {tag2Ptr[*CI->type]=CI->wrkList->item; CI->wrkList=0; break;}
+                        else{throw("A tag is being redefined, which isn't allowed");}
+                    }else { DEB("Recalling: "<<(char*)CI->type->S)
+                        std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
+                        if (tagPtr!=tag2Ptr.end()) {UInt tmpFlags=CI->pFlag&0xff000000; deepCopy(tagPtr->second,CI); CI->pFlag|=tmpFlags;}
+                        else{std::cout<<"Bad tag:'"<<(char*)(CI->type->S)<<"'\n";throw("A tag was used but never defined");}
+                    }
                     break;
-            case iUseAsLast:  break; // TODO: make this work.
-            case iGetFirst:      StartTerm (CI, &tmp); break;
-            case iGetMiddle:  break; // TODO: make this work;
-            case iGetLast:      
-                    CI->wFlag&=~mFindMode; 
-                    fillBlanks(CI, firstID); 
-                    LastTerm(CI, &tmp); break; 
-            case iGetSize:      break; // TODO: make this work;
-            case iGetType:     break; // TODO: make this work;
-            case iStartAssoc:
-            case iNextAssoc:
-            case iHardFunc:    autoEval(CI, this); break;
-            case iNone: default: throw "Invalid Find Mode";
+     /*           case iUseAsFirst: cn.firstID=CI->spec1; cn.IDStatus=1; CI->wFlag&=~mFindMode; break; 
+                case iUseAsList:  
+                        CI->spec1->pFlag|=toExec;
+                     //   fillBlanks(CI->spec1);
+                     //   insertID(&CI->spec2->wrkList, CI->spec1,0);
+                     //   CI->spec2->prev=(infon*)1;  // Set sentinal value so this can tell it is an index // TODO: use wFlag instead of prev.
+                     //   fillBlanks(CI->spec2);
+                        tmp=CI->spec1;
+                        break;
+                case iUseAsLast:  break; // TODO: make this work.
+      */          case iGetFirst:      StartTerm (CI, &tmp); break;
+                case iGetMiddle:  break; // TODO: make this work;
+                case iGetLast:
+                        fillBlanks(CI->spec1); 
+                        LastTerm(CI->spec1, &tmp);  CI->pFlag|=fUnknown; 
+                        break; 
+                case iGetSize:      break; // TODO: make this work;
+                case iGetType:     break; // TODO: make this work;
+                case iStartAssoc:
+                case iNextAssoc:
+                case iHardFunc:    autoEval(CI, this); break;
+                case iNone: default: throw "Invalid Find Mode";
             }
 
             if(tmp) {insertID(&CI->wrkList, tmp,0); CI->pFlag&=~tType; CI->wFlag&=~mFindMode;}

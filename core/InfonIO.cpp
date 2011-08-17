@@ -162,13 +162,18 @@ bool QParser::chkStr(const char* tok){
 }
 
 #include <cstdarg>
-const char* QParser::nxtTok(char* tok){
-    Peek(ch);
-    if(strcmp(tok,"ABC")==0) {int p; if(iscsym(ch)&&!isdigit(ch)&&(ch!='_')) {getbuf(iscsym(peek()));} else return 0;}
-    else if(strcmp(tok,"123")==0) {int p; if(isdigit(ch)) {getbuf(isdigit(peek()));} else return 0;}
-    else if (!(chkStr(tok) || chkStr(altTok(tok)))) return 0;
-    return tok;
+const int QParser::nxtTokN(int n, ...){
+    char* tok; va_list ap; va_start(ap,n); int i,p;
+    for(i=n; i; --i){
+        tok=va_arg(ap, char*); Peek(ch);
+        if(strcmp(tok,"ABC")==0) {if(iscsym(ch)&&!isdigit(ch)&&(ch!='_')) {getbuf(iscsym(peek())); break;}}
+        else if(strcmp(tok,"123")==0) {if(isdigit(ch)) {getbuf(isdigit(peek())); break;}}
+        else if (chkStr(tok) || chkStr(altTok(tok))) break;
+    }
+    va_end(ap);
+    return i;
 }
+#define nxtTok(tok) nxtTokN(1,tok)
 
 char errMsg[100];
 UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
@@ -217,7 +222,7 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
 }
 
 infon* QParser::ReadInfon(int noIDs){
-    char tok, op=0; UInt size=0; infon*iSize=0,*iVal=0,*s1=0,*s2=0; UInt pFlag=0,wFlag=0,fs=0,fv=0;
+    char tok, op=0; UInt size=0; infon*iSize=0,*iVal=0,*s1=0,*s2=0; UInt pFlag=0,wFlag=0,fs=0,fv=0; infNode *IDp=0;
 	/*int textStart=textParsed.size();*/ int textEnd=0; stng* tags=0;
     if(nxtTok("@")){pFlag|=toExec;}
     if(nxtTok("#")){pFlag|=asDesc;}
@@ -246,45 +251,33 @@ infon* QParser::ReadInfon(int noIDs){
         }
     }else{  // OK, then we're parsing some form of *... +...
         wFlag|=iNone;
-        if(nxtTok("+")) op='+';
-        else if(nxtTok("*")) op='*'; 
-        else if(nxtTok("-")) {op='+', fs|=fInvert;}
-        else if(nxtTok("/")) {op='/', fs|=fInvert;}
+        if(nxtTok("+") || nxtTok("-")) op='+'; else if(nxtTok("*") || nxtTok("/")) op='*'; 
+        if( ch=='-' || ch=='/') fs|=fInvert;
         size=ReadPureInfon(&iSize, &fs, &wFlag, &s2);
         if(op=='+'){
             iVal=iSize; iSize=(infon*)size; fv=fs; fs=tUInt; // use identity term '1'
             if (size==0 && (fv==(fUnknown+tUInt) || fv==(fUnknown+tString))) fs=fUnknown+tUInt;
         }else if(op=='*'){
-            if((fs&tType)==tString){throw("Terms cannot be strings");}
-            if((fs&tType)==tList){throw("Terms cannot be lists");}
+            if((fs&tType)==tString || (fs&tType)==tList) throw("Terms cannot be strings or lists");
             if(nxtTok("+")) op='+'; else if(nxtTok("-")) {op='+'; fv|=fInvert;}
             if (op=='+'){size=ReadPureInfon(&iVal,&fv,&wFlag,&s2);}
             else {iVal=0; fv=tUInt;}    // use identity summand '0'
         } else { // no operator
-            Peek(ch);
-            if(ch==')' || ch=='}' || ch==']' || nxtTok(",") || ((fs&tType)!=tUInt)){
+            if(nxtTok(";")){iVal=0; fv=fUnknown;}
+            else {
+                nxtTok(",");
                 iVal=iSize;fv=fs; fs=tUInt; iSize=(infon*)size;
-                if (size==0 && (fv==(fUnknown+tUInt) || fv==(fUnknown+tString))) fs=fUnknown+tUInt;
+                if (size==0 && (fv==(fUnknown+tUInt) || fv==(fUnknown+tString))) fs=fUnknown+tUInt; // TODO: code review these two lines
                 else if(((fv&tType)==tList) && iVal && ((iVal->prev)->pFlag)&isVirtual) {fs|=fUnknown;}
-            }else if(nxtTok(";")){iVal=0; fv=fUnknown;}
+            }
         }
     }
-    Peek(tok);
-    infNode *ID=0, *IDp=0;
-    if(!(noIDs&1)) while(tok=='=' || tok==':') {
-        if (nxtTok("= :") {} // right must be [].  Left = Right-as-list. (Use for find-n-write)
-        else if (nxtTok(": = :") {}  // left and right must be [].  Left-as-list = right-as-list
-        else if (nxtTok(": =") {}  // left must be [].
-        else if (nxtTok("=") {} // list-or-last = list-or-last.
-
-        infon* tmp= ReadInfon(1);
-
-        insertID(&ID, tmp,0);
-        Peek(tok);
+    infon* i=new infon((fs<<goSize)+fv+pFlag, wFlag, iSize,iVal,0,s1,s2); i->wSize=size; i->type=tags;
+    while (!(noIDs&1) && (op=nxtTokN(4, ": = :", ": =", "= :", "="))){
+        infon* tmp= ReadInfon(1); 
+        insertID(&i->wrkList, tmp, op-1); // BUT those with []= should insert into GetLast parent.
     }
-    infon* i=new infon((fs<<goSize)+fv+pFlag, wFlag, iSize,iVal,ID,s1,s2);
-    i->wSize=size; i->type=tags;
-    if(i->pFlag&fConcat && i->size==(infon*)1){infon* ret=i->value; delete(i); return ret;}
+    if(i->pFlag&fConcat && i->size==(infon*)1){infon* ret=i->value; delete(i); return ret;} // BUT we lose i's idents and some flags (desc, ...)
     if ((i->size && ((fs&tType)==tList))||(fs&fConcat)) i->size->top=i;
     if ((i->value&& ((fv&tType)==tList))||(fv&fConcat))i->value->top=i;
     if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~mFindMode;i=new infon(0,iGetLast,0,0,0,i);}
@@ -294,9 +287,7 @@ infon* QParser::ReadInfon(int noIDs){
         else if(nxtTok("<:")) {i->wFlag|=sUseAsFirst; i->spec2=ReadInfon(1); }
         else if(nxtTok("<!")){i=new infon(0,sUseAsLast+iGetFirst,0,0,0,ReadInfon(1),i);}
     }
-    if(nxtTok(":=") ) {infon* j=ReadInfon(1); j->wFlag|=sUseAsList; j->spec2=i; i=j; i->spec2->top=i; std::cout<<"READING :=\n";}
-    else if(nxtTok("=:" )) {i=new infon(0,sUseAsList,0,0,0,ReadInfon(1),i); i->spec1->top=i;}
-	textEnd=textParsed.size(); //std::cout<<"<<"<<textParsed.substr(textStart, textEnd-textStart)<<">>\n";
+	textEnd=textParsed.size();
     return i;
 }
 

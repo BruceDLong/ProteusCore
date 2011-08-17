@@ -272,10 +272,10 @@ infon* QParser::ReadInfon(int noIDs){
     Peek(tok);
     infNode *ID=0, *IDp=0;
     if(!(noIDs&1)) while(tok=='=' || tok==':') {
-        if (nxtTok("= :") {} // right must be [].  Left = Right-as-list. (Use for find-n-write)
-        else if (nxtTok(": = :") {}  // left and right must be [].  Left-as-list = right-as-list
-        else if (nxtTok(": =") {}  // left must be [].
-        else if (nxtTok("=") {} // list-or-last = list-or-last.
+        if (nxtTok("= :")) {} // right must be [].  Left = Right-as-list. (Use for find-n-write)
+        else if (nxtTok(": = :")) {}  // left and right must be [].  Left-as-list = right-as-list
+        else if (nxtTok(": =")) {}  // left must be [].
+        else if (nxtTok("=")) {} // list-or-last = list-or-last.
 
         infon* tmp= ReadInfon(1);
 

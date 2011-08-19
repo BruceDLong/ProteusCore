@@ -273,14 +273,14 @@ infon* QParser::ReadInfon(int noIDs){
         }
     }
     infon* i=new infon((fs<<goSize)+fv+pFlag, wFlag, iSize,iVal,0,s1,s2); i->wSize=size; i->type=tags;
-    while (!(noIDs&1) && (op=nxtTokN(4, ": = :", ": =", "= :", "="))){
-        infon* tmp= ReadInfon(1); 
-        insertID(&i->wrkList, tmp, op-1); // BUT those with []= should insert into GetLast parent.
-    }
     if(i->pFlag&fConcat && i->size==(infon*)1){infon* ret=i->value; delete(i); return ret;} // BUT we lose i's idents and some flags (desc, ...)
     if ((i->size && ((fs&tType)==tList))||(fs&fConcat)) i->size->top=i;
     if ((i->value&& ((fv&tType)==tList))||(fv&fConcat))i->value->top=i;
     if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~mFindMode;i=new infon(0,iGetLast,0,0,0,i);}
+    while (!(noIDs&1) && (op=nxtTokN(4, ": = :", ": =", "= :", "="))){
+        if (--op && (i->wFlag&mFindMode)==iGetLast)  {insertID(&i->spec1->wrkList,  ReadInfon(1), op);}
+        else {insertID(&i->wrkList,  ReadInfon(1), op);}
+    }    
     if(!(noIDs&2)){  // load function "calls"
         if(nxtTok(":>" )) {i=new infon(0,sUseAsFirst,0,0,0,i,ReadInfon(1));}
         else if(nxtTok("!>") ) {i=new infon(0,sUseAsLast+iGetFirst,0,0,0,i,ReadInfon(1));}

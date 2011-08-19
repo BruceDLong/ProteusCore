@@ -137,8 +137,8 @@ inline void getStng(infon* i, stng* str) {
 	}
 }
 
-#define insertID(list, itm, flag) {IDp=(*list); (*list)=new infNode(itm,flag); \
-    if(IDp){(*list)->next=IDp->next; IDp->next=(*list);} else (*list)->next=(*list); }
+#define appendID(list, node) {IDp=(*list); (*list)=node; if(IDp){(*list)->next=IDp->next; IDp->next=(*list);} else (*list)->next=(*list);}
+#define insertID(list, itm, flag) appendID(list, new infNode(itm,flag));
 
 int  getNextTerm(infon** p);  // forward decl
 

@@ -122,6 +122,14 @@ void agent::append(infon* i, infon* list){ // appends an item to the end of a li
 //	signalSubscriptions();
 }
 
+void mergeWrkLists(infNode* from, infon* to){
+ //   for (each item in FROM) {
+ //       if (OP is '=' or '=:') appendID(to->wrkList, item);
+ //       else if (to->wFlag&iGetLast) appendID(to->spec1->wrkList, item);
+ //       else throw "Trying to do ':=' with a tag that isn't like '[...]'";
+//    }
+}
+
 infNode* agent::copyIdentList(infNode* from){
     infNode* top=0; infNode* follower; infNode* p=from; infNode* q;
     if(from==0)return 0;

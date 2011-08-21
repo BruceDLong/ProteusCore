@@ -162,8 +162,8 @@ infon* agent::copyList(infon* from){
 #define getTop(item) (((item->pFlag&isTop)||item->top==0)? item->top : item->top->top)
 #define fetchLastItem(lval, item) {for(lval=item;(lval->pFlag&tType)==tList;lval=lval->value->prev);}
 #define fetchFirstItem(lval, item) {for(lval=item;(lval->pFlag&tType)==tList;lval=lval->value){};}
-#define cpFlags(from, to) {to->pFlag=(to->pFlag&0xff000000)+((from)->pFlag&0x00ffffff); to->wFlag=from->wFlag;}
-#define copyTo(from, to) {if(from!=to){to->size=(from)->size; to->value=(from)->value; cpFlags((from),to);}}
+#define cpFlags(from, to, mask) {to->pFlag=(to->pFlag& ~(mask))+((from)->pFlag&mask); to->wFlag=from->wFlag;}
+#define copyTo(from, to) {if(from!=to){to->size=(from)->size; to->value=(from)->value; cpFlags((from),to,0x00ffffff);}}
 #define pushCIsFollower {int lvl=cn.level-nxtLvl; if(lvl>0) ItmQ.push(Qitem(CIfol,0,0,lvl,cn.bufCnt));}
 #define AddSizeAlternate(Lval, Rval, Pred, Size, Last) {   infon *copy, *copy2, *LvalFol;    \
         copy=new infon(Lval->pFlag,LvalFol->wFlag,(infon*)(Size),Lval->value,0,Lval->spec1,Lval->spec2,Lval->next); \
@@ -408,9 +408,12 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                         {result=BypassDeadEnd; std::cout << "Non-matching types\n";}
             else switch((ci->pFlag&tType)+4*(item->pFlag&tType)){
                 case tUInt+4*tUInt: DEB("(UU)")
-                    if(!(ci->pFlag&fUnknown) && ci->value!=item->value) {SetBypassDeadEnd(); std::cout<<"CONTRADICTION!\n"; break;}
-                    if(!(ci->pFlag&(fUnknown<<goSize)) && ci->size!=item->size) {SetBypassDeadEnd(); break;}
-                    copyTo(item, ci);
+                    if(!(item->pFlag&fUnknown))
+                        if(ci->pFlag&fUnknown) {ci->value=item->value; cpFlags(item,ci,0xffff);}
+                        else if (ci->value!=item->value){SetBypassDeadEnd(); std::cout<<"Values contradict\n"; break;}
+                    if(!(item->pFlag&(fUnknown<<goSize)))
+                        if(ci->pFlag&(fUnknown<<goSize)) {ci->size=item->size; cpFlags(item,ci,0xff0000);}
+                        else if (ci->size!=item->size){SetBypassDeadEnd(); std::cout<<"Sizes contradict\n"; break;}
                   case tUnknown+4*tUnknown:
                   case tUInt+4*tUnknown:
                   case tString+4*tUnknown:

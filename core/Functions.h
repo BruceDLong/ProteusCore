@@ -29,8 +29,8 @@
 #define pi 3.14159
 #define Zto1(gInt) (float)(((float)gInt)  /* / 1024.0*/)
 
-#define cpFlags(from, to) {to->pFlag=(to->pFlag&0xff000000)+((from)->pFlag&0x00ffffff); to->wFlag=from->wFlag;}
-#define copyTo(from, to) {if(from!=to){to->size=(from)->size; to->value=(from)->value; cpFlags((from),to);}}
+#define cpFlags(from, to, mask) {to->pFlag=(to->pFlag& ~(mask))+((from)->pFlag&mask); to->wFlag=from->wFlag;}
+#define copyTo(from, to) {if(from!=to){to->size=(from)->size; to->value=(from)->value; cpFlags((from),to,0x00ffffff);}}
 
 #define copyInfonString2charBuf(inf, buf) {memcpy(buf, (char*)inf->value, (UInt)inf->size); buf[(UInt)inf->size]=0;}
 infon* Theme;

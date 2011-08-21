@@ -223,7 +223,7 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
 
 infon* QParser::ReadInfon(int noIDs){
     char tok, op=0; UInt size=0; infon*iSize=0,*iVal=0,*s1=0,*s2=0; UInt pFlag=0,wFlag=0,fs=0,fv=0; infNode *IDp=0;
-	/*int textStart=textParsed.size();*/ int textEnd=0; stng* tags=0;
+	stng* tags=0; int textEnd=0; /*int textStart=textParsed.size();*/
     if(nxtTok("@")){pFlag|=toExec;}
     if(nxtTok("#")){pFlag|=asDesc;}
     if(nxtTok(".")){pFlag|=matchType;} // This is a hint that idents must match type, not just value.
@@ -243,7 +243,7 @@ infon* QParser::ReadInfon(int noIDs){
         pFlag|=fUnknown; // BROKEN TOK USAGE
         if (tok=='\\' || tok=='^') {
             for(s1=0; tok=='\\';  tok=streamGet()) {s1=(infon*)((UInt)s1+1); ChkNEOF;}
-             if (tok=='^') wFlag|=iToPathH; else {wFlag|=iToPath; streamPut(1);}
+            if (tok=='^') wFlag|=iToPathH; else {wFlag|=iToPath; streamPut(1);}
         }
         if(nxtTok(".")) {
             s2=(infon*)new assocInfon(new infon(pFlag, wFlag, iSize,iVal,0,s1,s2));
@@ -278,8 +278,8 @@ infon* QParser::ReadInfon(int noIDs){
     if ((i->value&& ((fv&tType)==tList))||(fv&fConcat))i->value->top=i;
     if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~mFindMode;i=new infon(0,iGetLast,0,0,0,i);}
     while (!(noIDs&1) && (op=nxtTokN(4, ": = :", ": =", "= :", "="))){
-        if (--op && (i->wFlag&mFindMode)==iGetLast)  {insertID(&i->spec1->wrkList,  ReadInfon(1), op);}
-        else {insertID(&i->wrkList,  ReadInfon(1), op);}
+        if (--op && (i->wFlag&mFindMode)==iGetLast)  {insertID(&i->spec1->wrkList,  ReadInfon(1), 0);}
+        else {insertID(&i->wrkList,  ReadInfon(1), 0);}
     }    
     if(!(noIDs&2)){  // load function "calls"
         if(nxtTok(":>" )) {i=new infon(0,sUseAsFirst,0,0,0,i,ReadInfon(1));}

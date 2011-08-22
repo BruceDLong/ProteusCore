@@ -92,7 +92,7 @@ int gInt(){
 }
 
 char* gStr() {
-	if((ItmPtr->flags&tType)==tString && !(ItmPtr->flags&fUnknown)) {
+	if((ItmPtr->pFlag&tType)==tString && !(ItmPtr->pFlag&fUnknown)) {
 		memcpy(textBuff, ItmPtr->value, (uint)ItmPtr->size);
 		textBuff[(uint)(ItmPtr->size)]=0;
 	}

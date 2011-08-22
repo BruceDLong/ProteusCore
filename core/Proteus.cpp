@@ -1,19 +1,9 @@
 ///////////////////////////////////////////////////
-// Proteus.cpp 10.0  Copyright (c) 1997-2008 Bruce Long
-/*    This file is part of the "Proteus Engine"
-
-    The Proteus Engine is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    The Proteus Engine is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with The Proteus Engine.  If not, see <http://www.gnu.org/licenses/>.
+// Proteus.cpp 10.0  Copyright (c) 1997-2011 Bruce Long
+/*  This file is part of the "Proteus Engine"
+    The Proteus Engine is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+    The Proteus Engine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License along with the Proteus Engine.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <fstream>
 #include "Proteus.h"
@@ -166,7 +156,7 @@ infon* agent::copyList(infon* from){
 #define copyTo(from, to) {if(from!=to){to->size=(from)->size; to->value=(from)->value; cpFlags((from),to,0x00ffffff);}}
 #define pushCIsFollower {int lvl=cn.level-nxtLvl; if(lvl>0) ItmQ.push(Qitem(CIfol,0,0,lvl,cn.bufCnt));}
 #define AddSizeAlternate(Lval, Rval, Pred, Size, Last) {   infon *copy, *copy2, *LvalFol;    \
-        copy=new infon(Lval->pFlag,LvalFol->wFlag,(infon*)(Size),Lval->value,0,Lval->spec1,Lval->spec2,Lval->next); \
+        copy=new infon(Lval->pFlag,Lval->wFlag,(infon*)(Size),Lval->value,0,Lval->spec1,Lval->spec2,Lval->next); \
         copy->prev=Lval->prev; copy->top=Lval->top;copy->pred=Pred; \
         insertID(&Lval->wrkList,copy,ProcessAlternatives); Lval->wrkList->slot=Last;\
         getFollower(&LvalFol, Lval);                  \
@@ -398,7 +388,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
         case MergeIdent:
             wrkNode->idFlags|=SetComplete;
             UInt fm=item->wFlag&mFindMode;
-            if(fm!=iNone && fm!=iToPathH && fm!=iToPath) fillBlanks(item);
+            if(fm!=iNone) fillBlanks(item);
             if((ci->pFlag&tType)==0) {
                 ci->pFlag|=((item->pFlag&tType)+(tUInt<<goSize)+sizeIndef); isIndef=1;
                 ci->size=item->size;if (!(item->pFlag&(fUnknown<<goSize))) ci->pFlag&=~(fUnknown<<goSize);
@@ -617,7 +607,7 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
             if(CI->pFlag&toExec) override=1;  // TODO: refactor override
             if(CI->pFlag&asDesc) {if(override) override=0; else break;}
             switch(CI->wFlag&mSeed){
-                case sUseAsFirst: cn.firstID=CI->spec1; cn.IDStatus=1; CI->wFlag&=~mSeed; break; 
+                case sUseAsFirst: cn.firstID=CI->spec2; cn.IDStatus=1; CI->wFlag&=~mSeed; break; 
                 case sUseAsList: CI->spec1->pFlag|=toExec;  tmp=CI->spec1;
             }
             switch(CI->wFlag&mFindMode){
@@ -641,6 +631,7 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
                     doShortNorm=true; 
                     break; 
                 case iTagDef:  // TODO: Make this choice in the parser
+                case iTagUse:
                     if(CI->wrkList){std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
                         std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
                         if (tagPtr==tag2Ptr.end()) {tag2Ptr[*CI->type]=CI->wrkList->item; CI->wrkList=0; break;}
@@ -664,7 +655,7 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
       */          case iGetFirst:      StartTerm (CI, &tmp); break;
                 case iGetMiddle:  break; // TODO: make this work;
                 case iGetLast:
-                        fillBlanks(CI->spec1); 
+                        fillBlanks(CI->spec1, cn.firstID); 
                         LastTerm(CI->spec1, &tmp);  CI->pFlag|=fUnknown; 
                         break; 
                 case iGetSize:      break; // TODO: make this work;

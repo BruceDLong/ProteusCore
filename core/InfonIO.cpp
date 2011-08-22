@@ -1,19 +1,9 @@
 /////////////////////////////////////////////////////
 // Proteus Parser 6.0  Copyright (c) 1997-2011 Bruce Long
-/*    This file is part of the "Proteus Engine"
-
-    The Proteus Engine is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    The Proteus Engine is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with the Proteus Engine.  If not, see <http://www.gnu.org/licenses/>.
+/*  This file is part of the "Proteus Engine"
+    The Proteus Engine is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+    The Proteus Engine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License along with the Proteus Engine.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "Proteus.h"
 #include <iostream>
@@ -51,7 +41,7 @@ std::string printInfon(infon* i, infon* CI){
     UInt mode=i->wFlag&mFindMode;
 //    if(f&toExec) s+="@";
     if(f&asDesc) s+="#";
-    if (mode==iTagUse) {
+    if (mode==iTagUse) { s+="TAGG\n";
        char* ch=i->type->S;
         for(int x=i->type->L;x;--x){
             s+=(*ch=='\0')?' ':ch++[0];
@@ -165,9 +155,9 @@ bool QParser::chkStr(const char* tok){
 const int QParser::nxtTokN(int n, ...){
     char* tok; va_list ap; va_start(ap,n); int i,p;
     for(i=n; i; --i){
-        tok=va_arg(ap, char*); Peek(ch);
-        if(strcmp(tok,"ABC")==0) {if(iscsym(ch)&&!isdigit(ch)&&(ch!='_')) {getbuf(iscsym(peek())); break;}}
-        else if(strcmp(tok,"123")==0) {if(isdigit(ch)) {getbuf(isdigit(peek())); break;}}
+        tok=va_arg(ap, char*); Peek(nTok);
+        if(strcmp(tok,"ABC")==0) {if(iscsym(nTok)&&!isdigit(nTok)&&(nTok!='_')) {getbuf(iscsym(peek())); break;}}
+        else if(strcmp(tok,"123")==0) {if(isdigit(nTok)) {getbuf(isdigit(peek())); break;}}
         else if (chkStr(tok) || chkStr(altTok(tok))) break;
     }
     va_end(ap);
@@ -177,13 +167,13 @@ const int QParser::nxtTokN(int n, ...){
 
 char errMsg[100];
 UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
-    UInt p=0, size=0, stay=1; char rchr; infon *head=0, *prev; infon* j;
+    UInt p=0, size=0, stay=1; char rchr, tok; infon *head=0, *prev; infon* j;
     if(nxtTok("(") || nxtTok("{") || nxtTok("[")){
-        if(ch=='(') {rchr=')'; *pFlag|=(fConcat+tUInt);}
-        else if(ch=='['){rchr=']'; *pFlag|=(tList+fUnknowns); *wFlag=iGetLast;}
+        if(nTok=='(') {rchr=')'; *pFlag|=(fConcat+tUInt);}
+        else if(nTok=='['){rchr=']'; *pFlag|=(tList+fUnknowns); *wFlag=iGetLast;}
         else {rchr='}'; *pFlag|=tList;}
         RmvWSC(); int foundRet=0; int foundBar=0;
-        for(char tok=peek(); tok != rchr && stay; tok=peek()){
+        for(tok=peek(); tok != rchr && stay; tok=peek()){
             if(tok=='<') {foundRet=1; getToken(tok); j=ReadInfon();}
             else if(tok=='.'){
                 streamGet();
@@ -214,15 +204,15 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
     } else if (nxtTok("_")){*pFlag+=fUnknown+tUInt;
     } else if (nxtTok("$")){*pFlag+=fUnknown+tString;
     } else if (nxtTok("\"") || nxtTok("'")){   // read string
-        getbuf(peek()!=ch); streamGet();
+        getbuf(peek()!=nTok); streamGet();
         *pFlag+=tString; *i=(((*pFlag)&fUnknown)? 0 : (infon*)new char[p]); memcpy(*i,buf,p);
         size=p;
-    } else {strcpy(errMsg, "'X' was not expected"); errMsg[1]=ch; throw errMsg;}
+    } else {strcpy(errMsg, "'X' was not expected"); errMsg[1]=nTok; throw errMsg;}
     return size;
 }
 
 infon* QParser::ReadInfon(int noIDs){
-    char tok, op=0; UInt size=0; infon*iSize=0,*iVal=0,*s1=0,*s2=0; UInt pFlag=0,wFlag=0,fs=0,fv=0; infNode *IDp=0;
+    char op=0; UInt size=0; infon*iSize=0,*iVal=0,*s1=0,*s2=0; UInt pFlag=0,wFlag=0,fs=0,fv=0; infNode *IDp=0;
 	stng* tags=0; int textEnd=0; /*int textStart=textParsed.size();*/
     if(nxtTok("@")){pFlag|=toExec;}
     if(nxtTok("#")){pFlag|=asDesc;}
@@ -232,18 +222,15 @@ infon* QParser::ReadInfon(int noIDs){
         wFlag|=iTagUse; tags=new stng;
         // if(iscsym(tok)&&!isdigit(tok)){  // change 'if' to 'do-while' when tag-chains are ready.
             stngApnd((*tags),buf,strlen(buf)+1);
-    }else if( nxtTok("%")){
+    }else if( nxtTok("%")){ // TODO: Don't allow these outside of := or :
         pFlag|=fUnknown;
         if (nxtTok("W")){std::cout<<"WORLD"<<"\n"; wFlag|=iToWorld;}
-        if (nxtTok("C")){wFlag|=iToCtxt;}
-        if (nxtTok("A")){wFlag|=iToArgs;}
-        if (nxtTok("V")){wFlag|=iToVars;}
-        
-    }else if(nxtTok("\\") || nxtTok("^")){
-        pFlag|=fUnknown; // BROKEN TOK USAGE
-        if (tok=='\\' || tok=='^') {
-            for(s1=0; tok=='\\';  tok=streamGet()) {s1=(infon*)((UInt)s1+1); ChkNEOF;}
-            if (tok=='^') wFlag|=iToPathH; else {wFlag|=iToPath; streamPut(1);}
+        else if (nxtTok("C")){wFlag|=iToCtxt;}
+        else if (nxtTok("A")){wFlag|=iToArgs;}
+        else if (nxtTok("V")){wFlag|=iToVars;}
+        else if (nTok=='\\' || nTok=='^'){
+            for(s1=0; (nTok=streamGet())=='\\';) {s1=(infon*)((UInt)s1+1); ChkNEOF;}
+            if (nTok=='^') wFlag|=iToPathH; else {wFlag|=iToPath; streamPut(1);}
         }
         if(nxtTok(".")) {
             s2=(infon*)new assocInfon(new infon(pFlag, wFlag, iSize,iVal,0,s1,s2));
@@ -252,7 +239,7 @@ infon* QParser::ReadInfon(int noIDs){
     }else{  // OK, then we're parsing some form of *... +...
         wFlag|=iNone;
         if(nxtTok("+") || nxtTok("-")) op='+'; else if(nxtTok("*") || nxtTok("/")) op='*'; 
-        if( ch=='-' || ch=='/') fs|=fInvert;
+        if( nTok=='-' || nTok=='/') fs|=fInvert;
         size=ReadPureInfon(&iSize, &fs, &wFlag, &s2);
         if(op=='+'){
             iVal=iSize; iSize=(infon*)size; fv=fs; fs=tUInt; // use identity term '1'
@@ -278,11 +265,11 @@ infon* QParser::ReadInfon(int noIDs){
     if ((i->value&& ((fv&tType)==tList))||(fv&fConcat))i->value->top=i;
     if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~mFindMode;i=new infon(0,iGetLast,0,0,0,i);}
     while (!(noIDs&1) && (op=nxtTokN(4, ": = :", ": =", "= :", "="))){
-        if (--op && (i->wFlag&mFindMode)==iGetLast)  {insertID(&i->spec1->wrkList,  ReadInfon(1), 0);}
+        if (--op && (i->wFlag&mFindMode)==iGetLast)  {infon* target=ReadInfon(1); target->top = i; insertID(&i->spec1->wrkList,  target, 0);}
         else {insertID(&i->wrkList,  ReadInfon(1), 0);}
     }    
     if(!(noIDs&2)){  // load function "calls"
-        if(nxtTok(":>" )) {i=new infon(0,sUseAsFirst,0,0,0,i,ReadInfon(1));}
+        if(nxtTok(":>" )) {infon* j=ReadInfon(1); j->wFlag|=sUseAsFirst; j->spec2=i; i=j;}
         else if(nxtTok("!>") ) {i=new infon(0,sUseAsLast+iGetFirst,0,0,0,i,ReadInfon(1));}
         else if(nxtTok("<:")) {i->wFlag|=sUseAsFirst; i->spec2=ReadInfon(1); }
         else if(nxtTok("<!")){i=new infon(0,sUseAsLast+iGetFirst,0,0,0,ReadInfon(1),i);}

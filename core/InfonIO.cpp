@@ -36,7 +36,7 @@ std::string printPure (infon* i, UInt f, UInt wSize, infon* CI){
 std::string printInfon(infon* i, infon* CI){
     std::string s; //Indent;
     if(i==0) {s+="null"; return s;}
-    if(i==CI)s+="<font color=green>";
+    if(i==CI) s+="<font color=green>";
     UInt f=i->pFlag;
     UInt mode=i->wFlag&mFindMode;
 //    if(f&toExec) s+="@";
@@ -56,19 +56,18 @@ std::string printInfon(infon* i, infon* CI){
         }
     } else {
         if (!(f&isNormed)) {
-            if(i->wFlag&iToWorld) s+="%W ";
-            if(i->wFlag&iToCtxt) s+="%C";
-            if(i->wFlag&iToArgs) s+="%A ";
-            if(i->wFlag&iToVars) s+="%V ";
-            switch (f&mRepMode){
-            case toGiven: s+="%["; s+=printInfon(i->spec1, CI); s+="]"; break;
-            case toWorldCtxt: s+="&"; break;
-            case toHomePos: for(UInt h=(UInt)(i->spec1); h; h--) s+="\\["; s+=printInfon(i->spec2,CI); s+="]"; break;
-            case fromHere: s+="^"; break;
-            case asFunc:  s+="[";s+=printInfon(i->spec2, CI); s+="]<:";s+=printInfon(i->spec1, CI); break;
+            if(mode==iToWorld) s+="%W ";
+            else if(mode==iToCtxt) s+="%C";
+            else if(mode==iToArgs) s+="%A ";
+            else if(mode==iToVars) s+="%V ";
+            else if(mode==iToPath || mode==iToPathH){
+                s+="%";
+                for(UInt h=(UInt)(i->spec1); h; h--) s+="\\";
+                if(mode==iToPathH) s+="^";
             }
         }
     }
+
     if (!(f&isNormed) && i->wrkList) {
         infNode* k=i->wrkList;
         do {k=k->next; s+="="; s+="<ID> "; /*printInfon(k->item,CI);*/} while(k!=i->wrkList);
@@ -152,18 +151,24 @@ bool QParser::chkStr(const char* tok){
 }
 
 #include <cstdarg>
-const int QParser::nxtTokN(int n, ...){
+const char* QParser::nxtTokN(int n, ...){
     char* tok; va_list ap; va_start(ap,n); int i,p;
     for(i=n; i; --i){
         tok=va_arg(ap, char*); Peek(nTok);
-        if(strcmp(tok,"ABC")==0) {if(iscsym(nTok)&&!isdigit(nTok)&&(nTok!='_')) {getbuf(iscsym(peek())); break;}}
-        else if(strcmp(tok,"123")==0) {if(isdigit(nTok)) {getbuf(isdigit(peek())); break;}}
-        else if (chkStr(tok) || chkStr(altTok(tok))) break;
+        if(strcmp(tok,"ABC")==0) {if(iscsym(nTok)&&!isdigit(nTok)&&(nTok!='_')) {getbuf(iscsym(peek())); break;} else tok=0;}
+        else if(strcmp(tok,"123")==0) {if(isdigit(nTok)) {getbuf(isdigit(peek())); break;} else tok=0;}
+        else if (chkStr(tok) || chkStr(altTok(tok))) break; else tok=0;
     }
     va_end(ap);
-    return i;
+    return tok;
 }
 #define nxtTok(tok) nxtTokN(1,tok)
+
+infon* grok(infon* item, UInt tagCode, int* code){
+    if((item->wFlag&mFindMode)==iTagUse) {(*code)|=tagCode; return item;}
+    else if((item->wFlag&mFindMode)==iGetLast) {return item->spec1;}
+    else return 0;
+}
 
 char errMsg[100];
 UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
@@ -213,7 +218,7 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
 
 infon* QParser::ReadInfon(int noIDs){
     char op=0; UInt size=0; infon*iSize=0,*iVal=0,*s1=0,*s2=0; UInt pFlag=0,wFlag=0,fs=0,fv=0; infNode *IDp=0;
-	stng* tags=0; int textEnd=0; /*int textStart=textParsed.size();*/
+	stng* tags=0; const char* cTok; int textEnd=0; /*int textStart=textParsed.size();*/
     if(nxtTok("@")){pFlag|=toExec;}
     if(nxtTok("#")){pFlag|=asDesc;}
     if(nxtTok(".")){pFlag|=matchType;} // This is a hint that idents must match type, not just value.
@@ -263,16 +268,25 @@ infon* QParser::ReadInfon(int noIDs){
     if(i->pFlag&fConcat && i->size==(infon*)1){infon* ret=i->value; delete(i); return ret;} // BUT we lose i's idents and some flags (desc, ...)
     if ((i->size && ((fs&tType)==tList))||(fs&fConcat)) i->size->top=i;
     if ((i->value&& ((fv&tType)==tList))||(fv&fConcat))i->value->top=i;
-    if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~mFindMode;i=new infon(0,iGetLast,0,0,0,i);}
-    while (!(noIDs&1) && (op=nxtTokN(4, ": = :", ": =", "= :", "="))){
-        if (--op && (i->wFlag&mFindMode)==iGetLast)  {infon* target=ReadInfon(1); target->top = i; insertID(&i->spec1->wrkList,  target, 0);}
-        else {insertID(&i->wrkList,  ReadInfon(1), 0);}
-    }    
+    if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~mFindMode;i=new infon(0,iGetLast,0,0,0,i); i->spec1->top=i;}
+    while (!(noIDs&1) && (cTok=nxtTokN(5, ": = :", ": =", "= :", ":", "="))){
+        std::string tok=cTok; infon *R, *toSet=0, *toRef=0; int code=0;
+        if(tok==":"){toRef=i; i=ReadInfon(0); toSet=grok(i,0x200,&code);}
+        else { 
+            if(tok==": =" || tok==": = :"){toSet=grok(i,0x200,&code); R=ReadInfon(0);}
+            else {toSet=i; R=ReadInfon(1);}
+            if(tok=="= :" || tok==": = :"){toRef=grok(R,0x100,&code);}
+            else toRef=R;
+        }
+        if(toSet==0) throw ":= operator requires [....] on the left side";
+        if(toRef==0) throw "=: operator requires [....] on the right side";
+        insertID(&toSet->wrkList, toRef, code);
+    }
     if(!(noIDs&2)){  // load function "calls"
         if(nxtTok(":>" )) {infon* j=ReadInfon(1); j->wFlag|=sUseAsFirst; j->spec2=i; i=j;}
-        else if(nxtTok("!>") ) {i=new infon(0,sUseAsLast+iGetFirst,0,0,0,i,ReadInfon(1));}
         else if(nxtTok("<:")) {i->wFlag|=sUseAsFirst; i->spec2=ReadInfon(1); }
-        else if(nxtTok("<!")){i=new infon(0,sUseAsLast+iGetFirst,0,0,0,ReadInfon(1),i);}
+        else if(nxtTok("!>")) {}
+        else if(nxtTok("<!")){}
     }
 	textEnd=textParsed.size();
     return i;

@@ -102,7 +102,7 @@ struct QParser{
 	char streamGet();
     void scanPast(char* str);
     bool chkStr(const char* tok);
-    const int nxtTokN(int n, ...);
+    const char* nxtTokN(int n, ...);
     void RmvWSC ();
     char peek();
     std::istream& stream;

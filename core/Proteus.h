@@ -39,7 +39,7 @@ enum vals {toGiven=0, toWorldCtxt=0x0100, toHomePos=0x0200, fromHere=0x0300, asF
 enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,
                     iGetFirst,iGetMiddle,iGetLast,iGetSize,iGetType,iStartAssoc,iNextAssoc,iHardFunc};
 enum seeds {mSeed=0x30, sNone=0x00, sUseAsFirst=0x10, sUseAsList=0x20, sUseAsLast=0x30};
-const UInt mFindMode = 0x0f;  // use this to select the intersection/FindMode from wFlag
+enum wMasks {mFindMode = 0x0f, mIsTopRefNode = 0x1000};
 
 const int fUnknowns=fUnknown+(fUnknown<<goSize);
 

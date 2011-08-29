@@ -388,7 +388,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
         case MergeIdent:
             wrkNode->idFlags|=SetComplete;
             UInt fm=item->wFlag&mFindMode;
-            if(fm!=iNone) {item->top=ci->top; fillBlanks(item);}
+            if(fm!=iNone) {if(item->top==0) {item->top=ci->top;} fillBlanks(item);}
             if((ci->pFlag&tType)==0) {
                 ci->pFlag|=((item->pFlag&tType)+(tUInt<<goSize)+sizeIndef); isIndef=1;
                 ci->size=item->size;if (!(item->pFlag&(fUnknown<<goSize))) ci->pFlag&=~(fUnknown<<goSize);
@@ -610,7 +610,7 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
                 case sUseAsFirst: cn.firstID=CI->spec2; cn.IDStatus=1; CI->wFlag&=~mSeed; break; 
                 case sUseAsList: CI->spec1->pFlag|=toExec;  tmp=CI->spec1;
             }
-            switch(CI->wFlag&mFindMode){ // TODO: change to CIFindMode
+            switch(CIFindMode){
                 case iToWorld: copyTo(world, CI); break;
                 case iToCtxt:   copyTo(&context, CI); break; // TODO: make this work.
                 case iToArgs:   copyTo(world, CI); break; // TODO: make this work.
@@ -630,18 +630,17 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
                     if(tmp) {copyTo(tmp, CI); tmp=0;}
                     doShortNorm=true; 
                     break; 
-                case iTagDef:  // TODO: Make this choice in the parser
-                case iTagUse:
-                    if(CI->wrkList){std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
-                        std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
-                        if (tagPtr==tag2Ptr.end()) {tag2Ptr[*CI->type]=CI->wrkList->item; CI->wrkList=0; break;}
-                        else{throw("A tag is being redefined, which isn't allowed");}
-                    }else { DEB("Recalling: "<<(char*)CI->type->S)
-                        std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
-                        if (tagPtr!=tag2Ptr.end()) {UInt tmpFlags=CI->pFlag&0xff000000; deepCopy(tagPtr->second,CI); CI->pFlag|=tmpFlags;}
-                        else{std::cout<<"Bad tag:'"<<(char*)(CI->type->S)<<"'\n";throw("A tag was used but never defined");}
-                    }
-                    break;
+                case iTagDef: {std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
+                    std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
+                    if (tagPtr==tag2Ptr.end()) {tag2Ptr[*CI->type]=CI->wrkList->item; CI->wrkList=0;}
+                    else{throw("A tag is being redefined, which isn't allowed");}
+                    CI->wrkList=0; CI->wFlag=0;
+                    break;}
+                case iTagUse: {DEB("Recalling: "<<(char*)CI->type->S)
+                    std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
+                    if (tagPtr!=tag2Ptr.end()) {UInt tmpFlags=CI->pFlag&0xff000000; deepCopy(tagPtr->second,CI); CI->pFlag|=tmpFlags;}
+                    else{std::cout<<"Bad tag:'"<<(char*)(CI->type->S)<<"'\n";throw("A tag was used but never defined");}
+                    break;}
      /*           case iUseAsFirst: cn.firstID=CI->spec1; cn.IDStatus=1; CI->wFlag&=~mFindMode; break; 
                 case iUseAsList:  
                         CI->spec1->pFlag|=toExec;
@@ -655,7 +654,6 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
       */          case iGetFirst:      StartTerm (CI, &tmp); break;
                 case iGetMiddle:  break; // TODO: make this work;
                 case iGetLast:
-                        CI->spec1->top=(CI-is-top-flag)?CI:CI->top; 
                         fillBlanks(CI->spec1, cn.firstID); 
                         LastTerm(CI->spec1, &tmp);  CI->pFlag|=fUnknown; 
                         break; 

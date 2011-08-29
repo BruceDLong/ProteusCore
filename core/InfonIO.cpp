@@ -229,10 +229,11 @@ infon* QParser::ReadInfon(int noIDs){
             stngApnd((*tags),buf,strlen(buf)+1);
     }else if( nxtTok("%")){ // TODO: Don't allow these outside of := or :
         pFlag|=fUnknown;
-        if (nxtTok("W")){std::cout<<"WORLD"<<"\n"; wFlag|=iToWorld;}
+        if (nxtTok("W")){std::cout<<"WORLD"<<"\n"; wFlag|=iToWorld; }
         else if (nxtTok("C")){wFlag|=iToCtxt;}
         else if (nxtTok("A")){wFlag|=iToArgs;}
         else if (nxtTok("V")){wFlag|=iToVars;}
+        else if(nxtTok("ABC")){wFlag|=iTagDef; tags=new stng; stngApnd((*tags),buf,strlen(buf)+1);}
         else if (nTok=='\\' || nTok=='^'){
             for(s1=0; (nTok=streamGet())=='\\';) {s1=(infon*)((UInt)s1+1); ChkNEOF;}
             if (nTok=='^') wFlag|=iToPathH; else {wFlag|=iToPath; streamPut(1);}
@@ -268,13 +269,26 @@ infon* QParser::ReadInfon(int noIDs){
     if(i->pFlag&fConcat && i->size==(infon*)1){infon* ret=i->value; delete(i); return ret;} // BUT we lose i's idents and some flags (desc, ...)
     if ((i->size && ((fs&tType)==tList))||(fs&fConcat)) i->size->top=i;
     if ((i->value&& ((fv&tType)==tList))||(fv&fConcat))i->value->top=i;
-    if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~mFindMode;i=new infon(0,iGetLast,0,0,0,i); i->spec1->top=i;}
+    if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~mFindMode;i=new infon(0,iGetLast,0,0,0,i);}
     while (!(noIDs&1) && (cTok=nxtTokN(5, ": = :", ": =", "= :", ":", "="))){
         std::string tok=cTok; infon *R, *toSet=0, *toRef=0; int code=0;
-        if(tok==":"){toRef=i; i=ReadInfon(0); toSet=grok(i,0x200,&code);}
+        if(tok==":"){
+            if(peek()=='>') {streamPut(1); break;}
+            toRef=i; i=ReadInfon(0); toSet=grok(i,0x200,&code); 
+            if((toRef->wFlag&mFindMode)!=iTagUse) toRef->top=i;}
         else { 
-            if(tok==": =" || tok==": = :"){toSet=grok(i,0x200,&code); R=ReadInfon(0);}
-            else {toSet=i; R=ReadInfon(1);}
+            if(tok==": =" || tok==": = :"){
+                toSet=grok(i,0x200,&code); R=ReadInfon(4);
+                if((i->wFlag&mFindMode)==iGetLast) {
+                    i->spec1->top=R;
+                    if((noIDs&4)==0){
+                        infon *p, *q;
+                        for(p=i; (p->wFlag&mFindMode)==iGetLast; p=q){
+                            q=p->spec1->top; q->top=i; p->spec1->top=0;
+                        }
+                    }
+                }
+            } else {toSet=i; R=ReadInfon(1);}
             if(tok=="= :" || tok==": = :"){toRef=grok(R,0x100,&code);}
             else toRef=R;
         }

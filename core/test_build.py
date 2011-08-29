@@ -20,17 +20,18 @@ def test_engine():
    ('1', 'test list/string', '+{*3+$ *4+$}=+"CatDogs"', '<{"Cat" "Dogs" }>'),
    ('1', 'test anon functions', '[_,456,789,] <: +123', '<*1+789>'),
    ('1', 'Try a bigger function', r'[+_ ({555, 444, [_] := %\\},)] <: +7000', r'<{*1+555 *1+444 *1+7000 }>'),
-   ('1', 'Try reverse func syntax', r'7000:>[_ ({555, 444, [_] := %\\})]', r'<{*1+555 *1+444 *1+7000 }>'),  #FAIL
+   ('1', 'Try reverse func syntax', r'7000:>[_ ({555, 444, [_] := %\\})]', r'<{*1+555 *1+444 *1+7000 }>'),
    ('1', 'test rep$', '*4 +{*3+$|...} = +"catHatDogPig"', '<{"cat" "Hat" "Dog" "Pig" }>'),
    ('1', 'test nested references', '{1 2 {"hi" "there"} 4 [$ $] := [_ _ {...}] := %\\ 6}', '<{*1+1 *1+2 {"hi" "there" } *1+4 "there" *1+6 }>'),
    ('1', 'Addition', '+(+3+7)', '<*1+10>'),
-   ('1', 'Addition with references', r'{4, 6, ([%\\[_] %\\:[_, _] )}', '<{*1+4 *1+6 *1+10 }>'), #FAIL
-   ('1', 'A two argument function', r'[+{_, _} +{[+_]:=%\\ [+_ +_]:=%\\  [+_]:=%\\} ]<:+{9,4}', '<{*1+9 *1+4 *1+9 }>'),  #FAIL
-   ('2', 'define and use a tag', '{color=#{*_+_ *_+_ *_+_} size=#*_+_}', '<{color   size   }>', 'color', '#{_, _, _, }'),  #FAIL
-#   ('2', 'Two argument function defined with a tag', r'+{func={+{_, _} +{\\[_] \\[_, _]  \\[_]}}  }', '<{func   }>', 'func<: +{9,4}', '{*1+9 *1+4 *1+9 }'),
+   ('1', 'Addition with references', r'{4, 6, ([_] := %\\ [_, _] := %\\ )}', '<{*1+4 *1+6 *1+10 }>'),
+   ('1', 'Addition with reverse references', r'{4, 6, (%\\:[_] %\\:[_, _] )}', '<{*1+4 *1+6 *1+10 }>'), 
+   ('1', 'A two argument function', r'[+{_, _} +{[+_]:=%\\ [+_ +_]:=%\\  [+_]:=%\\} ]<:+{9,4}', '<{*1+9 *1+4 *1+9 }>'),
+   ('2', 'define and use a tag', '{%color=#{*_+_ *_+_ *_+_} %size=#*_+_}', '<{; ; }>', 'color', '#{_, _, _, }'),  #FAIL
+   ('2', 'Two argument function defined with a tag', r'+{%func={+{_, _} +{%\\:[_] %\\:[_, _]  %\\:[_]}}  }', '<{; }>', 'func<: +{9,4}', '{*1+9 *1+4 *1+9 }'), #FAIL
    ('1', 'test rep$', '{*_ +{"A"|...} "AARON"} =  \'AAAARON\' // This is a comment', '<{{"A" "A" } "AARON" }>'),
    ('1', 'test indexing', '*2+[...] := {111, 222, 333, 444}', '<*1+222>'),  #FAIL
-#   ('1', 'Indexing, unknown index 1', r'{"AARON", "ARON"} := *_+[...]  =  +"ARONdacks" ', '<"ARON">'),
+   ('1', 'Indexing, unknown index 1', r'{"AARON", "ARON"} := *_+[...]  =  +"ARONdacks" ', '<"ARON">'),  #FAIL
 #   ('1', 'Indexing, unknown index 2', r'%{"AARON", "ARON"}*_+[...]  =  +"AARONdacks" ', '<"AARON">'),
 #   ('1', 'Indexing, unknown index 3', r'{%{"AARON", "ARON"}*_+[...]  "dac"}  =  +"ARONdacks" ', '<{"ARON" "dac" }>'),
 #   ('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \\[?]}]<:{"slothe", "Hello", "bob", 65432}|...}', '<{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } }>'),

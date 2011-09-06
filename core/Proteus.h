@@ -30,7 +30,7 @@ inline bool operator> (const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) ret
 inline bool operator==(const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) return (a.key2==b.key2); else return false;}
 
 enum masks {mRepMode=0x0700, mMode=0x0800, isNormed=0x1000, asDesc=0x2000, toExec=0x4000, sizeIndef=0x8000, mListPos=0xff000000, goSize=16};
-enum vals {toGiven=0, toWorldCtxt=0x0100, toHomePos=0x0200, fromHere=0x0300, asFunc=0x0400, intersect=0x0500, asTag=0x0600, asNone=0x0700,
+enum vals {toGiven=0, toWorldCtxt=0x0100, toHomePos=0x0200, fromHere=0x0300, asFunc=0x0400, intersect=0x0500, asTag=0x0600, asNone=0x0700, // TODO B4: remove these
     fMode=0xf8, fConcat=0x08, fLoop=0x10, fInvert=0x20, fIncomplete=0x40, fUnknown=0x80,
     tType=3, tUnknown=0, tUInt=1, tString=2, tList=3,   matchType=0x04,  notLast=(0x04<<goSize),
     isFirst=0x01000000, isLast=0x02000000, isTop=0x04000000, isBottom=0x8000000,
@@ -65,6 +65,7 @@ struct infon {
 struct Qitem{infon* item; infon* firstID; UInt IDStatus; UInt level; int bufCnt;
      Qitem(infon* i=0,infon* f=0,UInt s=0,UInt l=0, int BufCnt=0):item(i),firstID(f),IDStatus(s),level(l),bufCnt(BufCnt){};};
 typedef std::queue<Qitem> infQ;
+typedef std::map<infon*, infon*> PtrMap;
 
 extern infon* World;
 extern std::map<stng,infon*> tag2Ptr;
@@ -81,10 +82,11 @@ struct agent {
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
     infon* fillBlanks(infon* i, infon* firstID=0, bool doShortNorm=false);
     infon *world, context;
-        void deepCopy(infon* from, infon* to, infon* args=0);
+        void deepCopy(infon* from, infon* to, infon* args=0, PtrMap* ptrs=0);
     private:
         void InitList(infon* item);
-        infNode* copyIdentList(infNode* from);
+       // infNode* copyIdentList(infNode* from);
+        void mergeIdentLists(infNode* from, infon* to);
         infon* copyList(infon* from);
         void processVirtual(infon* v);
         int getFollower(infon** lval, infon* i);

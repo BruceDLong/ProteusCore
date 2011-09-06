@@ -41,7 +41,7 @@ std::string printInfon(infon* i, infon* CI){
     UInt mode=i->wFlag&mFindMode;
 //    if(f&toExec) s+="@";
     if(f&asDesc) s+="#";
-    if (mode==iTagUse) { s+="TAGG\n";
+    if (mode==iTagUse) {
        char* ch=i->type->S;
         for(int x=i->type->L;x;--x){
             s+=(*ch=='\0')?' ':ch++[0];
@@ -240,7 +240,7 @@ infon* QParser::ReadInfon(int noIDs){
         }
         if(nxtTok(".")) {
             s2=(infon*)new assocInfon(new infon(pFlag, wFlag, iSize,iVal,0,s1,s2));
-            wFlag=iStartAssoc; fs=fv=fUnknown;
+            wFlag=iStartAssoc; fs=fv=fUnknown; // TODO B4: Should pFlag, qFlag, iSize, iVal, s1 and s2 be reset?
         }
     }else{  // OK, then we're parsing some form of *... +...
         wFlag|=iNone;
@@ -281,7 +281,7 @@ infon* QParser::ReadInfon(int noIDs){
                 toSet=grok(i,0x200,&code); R=ReadInfon(4);
                 if((i->wFlag&mFindMode)==iGetLast) {
                     i->spec1->top=R;
-                    if((noIDs&4)==0){
+                    if((noIDs&4)==0){ //  set 'top' for any \\^, etc.
                         infon *p, *q;
                         for(p=i; (p->wFlag&mFindMode)==iGetLast; p=q){
                             q=p->spec1->top; q->top=i; p->spec1->top=0;

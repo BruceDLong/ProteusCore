@@ -85,17 +85,18 @@ infon *topInfon, *Entry;
 int main(int argc, char **argv){
         rl_init(); // with IFDEF readline?
 	signal(SIGSEGV, reportFault);
-	topInfon=World;  // use topInfon in the ddd debugger to view World
+	
     // Load World
     std::cout << "Loading world\n";
     std::fstream InfonInW("world.pr");
     QParser q(InfonInW);
     World=q.parse();
     if (!World) {std::cout<<"Error:"<<q.buf<<"\n"; exit(1);}
+    topInfon=World;  // use topInfon in the ddd debugger to view World
 
-    
-	cout<<"\nThe Proteus CLI. Type some infons or 'quit'\n\n";
 	agent a;
+    a.fillBlanks (World);
+    cout<<"\nThe Proteus CLI. Type some infons or 'quit'\n\n";
 	while(!cin.eof()){
 		std::string entry= readln("Proteus: ");
 		if (entry=="quit") break;

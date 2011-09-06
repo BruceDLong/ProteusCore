@@ -180,12 +180,8 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
         RmvWSC(); int foundRet=0; int foundBar=0;
         for(tok=peek(); tok != rchr && stay; tok=peek()){
             if(tok=='<') {foundRet=1; getToken(tok); j=ReadInfon();}
-            else if(tok=='.'){
-                streamGet();
-                if(stream.peek()=='.'){
-                    streamGet(); chk('.');
-                    j=new infon(fUnknown+isVirtual+(tUInt<<goSize),iNone,(infon*)(size+1));stay=0;
-                    } else {streamPut(1);  j=ReadInfon();}
+            else if(nxtTok("...")){
+                j=new infon(fUnknown+isVirtual+(tUInt<<goSize),iNone,(infon*)(size+1));stay=0;
             } else j=ReadInfon();
             if(++size==1){
                 if(!foundRet && !foundBar && stay && nxtTok("|")){

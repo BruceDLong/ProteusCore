@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 
 add_definitions(-Wno-deprecated -Wno-write-strings -fpermissive -g -Wall)
 
-set(PROTEUS_SRCS Proteus.cpp InfonIO.cpp)
+set(PROTEUS_SRCS Proteus.cpp InfonIO.cpp Functions.cpp)
 
 #add_library(Proteus SHARED ${PROTEUS_SRCS})
 

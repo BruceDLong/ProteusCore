@@ -90,6 +90,10 @@ struct agent {
         void addIDs(infon* Lvals, infon* Rvals, int asAlt=0);
 };
 
+// From Functions.cpp
+int autoEval(infon* CI, agent* a);
+
+// From InfonIO.cpp
 std::string printInfon(infon* i, infon* CI=0);
 std::string printPure (infon* i, UInt f, UInt wSize, infon* CI=0);
 const int bufmax=1024*32;

@@ -7,7 +7,6 @@
 */
 #include <fstream>
 #include "Proteus.h"
-#include "Functions.h"
 #include "remiss.h"
 
 const int ListBuffCutoff=20;

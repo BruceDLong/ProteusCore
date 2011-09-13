@@ -23,6 +23,7 @@ struct stng {char* S; int L; stng(char* s=0, int l=0):S(s),L(l){};};
 inline bool operator< (const stng& a, const stng& b)   {if(a.L==b.L) return (memcmp(a.S,b.S,a.L)< 0); else return a.L<b.L;}
 inline bool operator> (const stng& a, const stng& b)   {if(a.L==b.L) return (memcmp(a.S,b.S,a.L)> 0); else return a.L>b.L;}
 inline bool operator==(const stng& a, const stng& b)   {if(a.L==b.L) return (memcmp(a.S,b.S,a.L)==0); else return false;}
+inline bool operator==(const stng& a, const char* b)   {std::cout <<"IN==\n"; return (strcmp(a.S, b)==0);}
 
 struct dblPtr {char* key1; void* key2; dblPtr(char* k1=0, void* k2=0):key1(k1), key2(k2){};};
 inline bool operator< (const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) return (a.key2<b.key2); else return (a.key1<b.key1);}
@@ -37,11 +38,9 @@ enum vals {toGiven=0, toWorldCtxt=0x0100, toHomePos=0x0200, fromHere=0x0300, asF
     noAlts=0, hasAlts=0x10000000, noMoreAlts=0x20000000, isTentative=0x40000000, isVirtual=0x80000000
     };
 enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,
-                    iGetFirst,iGetMiddle,iGetLast,iGetSize,iGetType,iStartAssoc,iNextAssoc,iHardFunc};
+                    iGetFirst,iGetMiddle,iGetLast,iGetSize,iStartAssoc,iNextAssoc,iHardFunc,iGetType};
 enum seeds {mSeed=0x30, sNone=0x00, sUseAsFirst=0x10, sUseAsList=0x20, sUseAsLast=0x30};
-enum wMasks {mFindMode = 0x0f, mIsTopRefNode = 0x1000};
-
-const int fUnknowns=fUnknown+(fUnknown<<goSize);
+enum wMasks {mFindMode = 0x0f, mIsTopRefNode = 0x1000, mIsHeadOfGetLast=0x2000};
 
 struct infon;
 struct assocInfon {infon *VarRef, *nextRef; assocInfon(infon* first=0):VarRef(first),nextRef(0){};};
@@ -85,8 +84,6 @@ struct agent {
         void deepCopy(infon* from, infon* to, infon* args=0, PtrMap* ptrs=0);
     private:
         void InitList(infon* item);
-       // infNode* copyIdentList(infNode* from);
-        void mergeIdentLists(infNode* from, infon* to);
         infon* copyList(infon* from);
         void processVirtual(infon* v);
         int getFollower(infon** lval, infon* i);

@@ -164,6 +164,13 @@ const char* QParser::nxtTokN(int n, ...){
 }
 #define nxtTok(tok) nxtTokN(1,tok)
 
+void  chk4HardFunc(infon* i){
+    if((i->wFlag&mFindMode)==iTagUse)
+        if(strcmp(i->type->S,"addOne")==0)// ||i->type=="loadInfon" || i->type=="draw" || i->type=="time" || i->type=="cos" || i->type=="sin")
+            {i->wFlag&=~iTagUse; 
+                i->wFlag|=iHardFunc;}
+}
+
 infon* grok(infon* item, UInt tagCode, int* code){
     if((item->wFlag&mFindMode)==iTagUse) {(*code)|=tagCode; return item;}
     else if((item->wFlag&mFindMode)==iGetLast) {return item->spec1;}
@@ -175,7 +182,7 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
     UInt p=0, size=0, stay=1; char rchr, tok; infon *head=0, *prev; infon* j;
     if(nxtTok("(") || nxtTok("{") || nxtTok("[")){
         if(nTok=='(') {rchr=')'; *pFlag|=(fConcat+tUInt);}
-        else if(nTok=='['){rchr=']'; *pFlag|=(tList+fUnknowns); *wFlag=iGetLast;}
+        else if(nTok=='['){rchr=']'; *pFlag|=(tList+fUnknown); *wFlag=iGetLast;}
         else {rchr='}'; *pFlag|=tList;}
         RmvWSC(); int foundRet=0; int foundBar=0;
         for(tok=peek(); tok != rchr && stay; tok=peek()){
@@ -265,7 +272,7 @@ infon* QParser::ReadInfon(int noIDs){
     if(i->pFlag&fConcat && i->size==(infon*)1){infon* ret=i->value; delete(i); return ret;} // BUT we lose i's idents and some flags (desc, ...)
     if ((i->size && ((fs&tType)==tList))||(fs&fConcat)) i->size->top=i;
     if ((i->value&& ((fv&tType)==tList))||(fv&fConcat))i->value->top=i;
-    if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~mFindMode;i=new infon(0,iGetLast,0,0,0,i);}
+    if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~mFindMode; i->wFlag|=mIsHeadOfGetLast; i=new infon(0,iGetLast,0,0,0,i); i->spec1->prev=i;}
     while (!(noIDs&1) && (cTok=nxtTokN(5, ": = :", ": =", "= :", ":", "="))){
         std::string tok=cTok; infon *R, *toSet=0, *toRef=0; int code=0;
         if(tok==":"){
@@ -293,8 +300,8 @@ infon* QParser::ReadInfon(int noIDs){
         insertID(&toSet->wrkList, toRef, code);
     }
     if(!(noIDs&2)){  // load function "calls"
-        if(nxtTok(":>" )) {infon* j=ReadInfon(1); j->wFlag|=sUseAsFirst; j->spec2=i; i=j;}
-        else if(nxtTok("<:")) {i->wFlag|=sUseAsFirst; i->spec2=ReadInfon(1); }
+        if(nxtTok(":>" )) {infon* j=ReadInfon(1); j->wFlag|=sUseAsFirst; j->spec2=i; i=j; chk4HardFunc(i);}
+        else if(nxtTok("<:")) {i->wFlag|=sUseAsFirst; i->spec2=ReadInfon(1);  chk4HardFunc(i);}
         else if(nxtTok("!>")) {}
         else if(nxtTok("<!")){}
     }

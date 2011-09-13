@@ -30,13 +30,13 @@ def test_engine():
    ('2', 'define and use a tag', '{%color=#{*_+_ *_+_ *_+_} %size=#*_+_}', '<{; ; }>', 'color', '#{_, _, _, }'), 
    ('2', 'Two argument function defined with a tag', r'+{%func={+{_, _} +{%\\:[_] %\\:[_, _]  %\\:[_]}}  }', '<{; }>', 'func<: +{9,4}', '{*1+9 *1+4 *1+9 }'), 
    ('1', 'test rep$', '{*_ +{"A"|...} "AARON"} =  \'AAAARON\' // This is a comment', '<{{"A" "A" } "AARON" }>'),
-   ('1', 'test indexing', '*2+[...] := {111, 222, 333, 444}', '<*1+222>'),  #FAIL
-   ('1', 'Indexing, unknown index 1', r'{"AARON", "ARON"} := *_+[...]  =  +"ARONdacks" ', '<"ARON">'),  #FAIL
+   ('1', 'test indexing', '*2+[...] := {111, 222, 333, 444}', '<*1+222>'),
+   ('1', 'Indexing, unknown index 1', r'*_+[...] := {"AARON", "ARON"} =  +"ARONdacks" ', '<"ARON">'),  #FAIL
 #   ('1', 'Indexing, unknown index 2', r'%{"AARON", "ARON"}*_+[...]  =  +"AARONdacks" ', '<"AARON">'),
-#   ('1', 'Indexing, unknown index 3', r'{%{"AARON", "ARON"}*_+[...]  "dac"}  =  +"ARONdacks" ', '<{"ARON" "dac" }>'),
+##   ('1', 'Indexing, unknown index 3', r'{%{"AARON", "ARON"}*_+[...]  "dac"}  =  +"ARONdacks" ', '<{"ARON" "dac" }>'),
 #   ('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \\[?]}]<:{"slothe", "Hello", "bob", 65432}|...}', '<{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } }>'),
 # The above test but with a list in the comprehension yeild.     ALSO, run through this whole thing to make sure it isn't doing things too many times.
-#   ('1', 'test 1 of repeated indexing (i.e., filtering)', "{%{111, '222', '333', 444, {'hi'}, {'a', 'b', 'c'}}*2+[...]|...}", '<{"222" *1+444 {"a" "b" "c" } }>'),
+   ('1', 'test 1 of repeated indexing (i.e., filtering)', "{{111, '222', '333', 444, {'hi'}, {'a', 'b', 'c'}}:*2+[...]|...}", '<{"222" *1+444 {"a" "b" "c" } }>'),
 
     ('1', "fromHere indexing string 1", "{111, '222' %^:[_, _, $] 444, '555', 666, {'hi'}}", '<{*1+111 "222" "555" *1+444 "555" *1+666 {"hi" } }>'),
 #    ('1', "fromHere indexing string 2", "{111, 222, %^:*3+[...] 444, 555, 666, {'hi'}}", '<{*1+111 *1+222 *1+555 *1+444 *1+555 *1+666 {"hi" } }> '),

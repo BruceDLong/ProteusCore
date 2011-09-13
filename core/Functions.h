@@ -26,9 +26,9 @@
 infon* Theme;
 
 int getStrArg(infon* i, stng* str, agent* a){
-    i->spec1->top=i;
-    a->fillBlanks(i->spec1);
-    getStng(i->spec1, str);
+    i->spec2->top=i;
+    a->fillBlanks(i->spec2);
+    getStng(i->spec2, str);
     return 1;
 }
 
@@ -42,16 +42,16 @@ void setString(infon* CI, stng *s){
 
 int getIntArg(infon* i, int* Int1, agent* a){
     int sign;
-    i->spec1->top=i;
-    a->fillBlanks(i->spec1);
-    getInt(i->spec1, *Int1, sign);
+    i->spec2->top=i;
+    a->fillBlanks(i->spec2);
+    getInt(i->spec2, *Int1, sign);
     if(sign) *Int1 = -*Int1;
     return 1;
 }
 
 void setIntVal(infon* CI, int i){
     UInt tmpFlags=CI->pFlag&0xff000000;
-    CI->size=CI->spec1->size;
+    CI->size=CI->spec2->size;
     CI->value=(infon*) abs(i);
     if (i<0)tmpFlags|=fInvert;
     CI->pFlag=tmpFlags + (tUInt<<goSize)+tUInt;
@@ -68,8 +68,7 @@ void setIntSize(infon* CI, int i){
 
 int autoEval(infon* CI, agent* a){
     int int1;
-    if((CI->spec2->wFlag&mFindMode)!=iTagUse) return 0;
-    stng funcName=*CI->spec2->type;
+    stng funcName=*CI->type;
    std::cout << "EVAL:"<<funcName.S<<"\n";
     if (strcmp(funcName.S, "sin")==0){
         if (!getIntArg(CI, &int1, a)) return 0;
@@ -90,7 +89,7 @@ int autoEval(infon* CI, agent* a){
     } else if (strcmp(funcName.S, "draw")==0){
         char majorType[100];
         char minorType[100];
-        infon* args=CI->spec1;
+        infon* args=CI->spec2;
 		args->top=CI;
 		a->fillBlanks(args);
 std::cout << "#############" << printInfon(args) << "\n";
@@ -146,8 +145,8 @@ std::cout << "#############" << printInfon(args) << "\n";
         infon *funcToCall=0;
         funcToCall=new infon();
         a->deepCopy(foundMinorType->value->next, funcToCall);
-		CI->spec2=funcToCall; CI->spec1=args;
-//	std::cout << "#############" << printInfon(CI) << "\n";
+	//	CI->spec2=funcToCall; CI->spec1=args; //Not "Spec2" anymore. but CI.
+	std::cout << "######HARD FUNC" << printInfon(funcToCall) << "\n"; exit(1);
         a->fillBlanks(CI);
 		
     } else if (strcmp(funcName.S, "loadInfon")==0){

@@ -19,6 +19,22 @@ std::map<infon*,stng> ptr2Tag;
 std::map<dblPtr,UInt> alts;
 typedef std::map<dblPtr,UInt>::iterator altIter;
 
+#define recAlts(lval, rval) {if((rval->pFlag&tType)==tString) alts[dblPtr((char*)rval->value,lval)]++;}
+#define getTop(item) (((item->pFlag&isTop)||item->top==0)? item->top : item->top->top)
+#define fetchLastItem(lval, item) {for(lval=item;(lval->pFlag&tType)==tList;lval=lval->value->prev);}
+#define fetchFirstItem(lval, item) {for(lval=item;(lval->pFlag&tType)==tList;lval=lval->value){};}
+#define cpFlags(from, to, mask) {to->pFlag=(to->pFlag& ~(mask))+((from)->pFlag&mask); to->wFlag=from->wFlag;}
+#define copyTo(from, to) {if(from!=to){to->size=(from)->size; to->value=(from)->value; cpFlags((from),to,0x00ffffff);}}
+#define pushCIsFollower {int lvl=cn.level-nxtLvl; if(lvl>0) ItmQ.push(Qitem(CIfol,0,0,lvl,cn.bufCnt));}
+#define AddSizeAlternate(Lval, Rval, Pred, Size, Last) {  std::cout<< Size <<"\n";  infon *copy, *copy2, *LvalFol;    \
+        copy=new infon(Lval->pFlag,Lval->wFlag,(infon*)(Size),Lval->value,0,Lval->spec1,Lval->spec2,Lval->next); \
+        copy->prev=Lval->prev; copy->top=Lval->top;copy->pred=Pred; \
+        insertID(&Lval->wrkList,copy,ProcessAlternatives); Lval->wrkList->slot=Last;\
+        getFollower(&LvalFol, Lval);                  \
+        if (LvalFol){\
+            copy2=new infon(LvalFol->pFlag,LvalFol->wFlag,LvalFol->size,LvalFol->value,0,LvalFol->spec1,LvalFol->spec2,LvalFol->next);\
+            copy2->pred=copy; insertID(&copy2->wrkList,Rval,0); insertID(&LvalFol->wrkList,copy2,ProcessAlternatives);}}
+
 inline int agent::StartTerm(infon* varIn, infon** varOut) {
   infon* tmp;
   if (varIn==0) return 1;
@@ -56,7 +72,7 @@ inline int agent::getNextTerm(infon** p) {
   infon *parent, *Gparent=0, *GGparent=0;
   if((*p)->pFlag&isBottom) {
     if ((*p)->pFlag&isLast){
-      parent=((*p)->pFlag&isFirst)?(*p)->top:(*p)->top->top;
+      parent=((*p)->pFlag&isFirst)?(*p)->top:(*p)->top->top;  // TODO B4: This should be getTop, but test it.
       if(parent==0){(*p)=(*p)->next; return 1;}
       if(parent->top) Gparent=(parent->pFlag&isFirst)?parent->top:parent->top->top;
       if(Gparent && (Gparent->pFlag&fConcat)) {
@@ -79,6 +95,19 @@ inline int agent::getNextTerm(infon** p) {
   }else {
     (*p)=(*p)->next;
     if ((*p)==0) {return 3; }
+    if ((*p)->pFlag&isLast){     // if isLast && Parent is spec1-of-get-last, get parent, apply any idents
+        parent=getTop((*p));
+        if(parent->wFlag&mIsHeadOfGetLast) {
+            parent=parent->prev; // This is a different use for 'prev'. It should be OK.
+            infNode *j=parent->wrkList, *k, *IDp;  // Merge Identity Lists
+            if(j) do {
+                k=new infNode; k->item=new infon; k->idFlags=j->idFlags;
+                deepCopy (j->item, k->item);
+                appendID(&(*p)->wrkList, k);
+                j=j->next;
+            } while (j!=parent->wrkList);
+        }
+    }
   }
   return 0;
 }
@@ -127,22 +156,6 @@ infon* agent::copyList(infon* from){
     return top;
 }
 
-#define recAlts(lval, rval) {if((rval->pFlag&tType)==tString) alts[dblPtr((char*)rval->value,lval)]++;}
-#define getTop(item) (((item->pFlag&isTop)||item->top==0)? item->top : item->top->top)
-#define fetchLastItem(lval, item) {for(lval=item;(lval->pFlag&tType)==tList;lval=lval->value->prev);}
-#define fetchFirstItem(lval, item) {for(lval=item;(lval->pFlag&tType)==tList;lval=lval->value){};}
-#define cpFlags(from, to, mask) {to->pFlag=(to->pFlag& ~(mask))+((from)->pFlag&mask); to->wFlag=from->wFlag;}
-#define copyTo(from, to) {if(from!=to){to->size=(from)->size; to->value=(from)->value; cpFlags((from),to,0x00ffffff);}}
-#define pushCIsFollower {int lvl=cn.level-nxtLvl; if(lvl>0) ItmQ.push(Qitem(CIfol,0,0,lvl,cn.bufCnt));}
-#define AddSizeAlternate(Lval, Rval, Pred, Size, Last) {   infon *copy, *copy2, *LvalFol;    \
-        copy=new infon(Lval->pFlag,Lval->wFlag,(infon*)(Size),Lval->value,0,Lval->spec1,Lval->spec2,Lval->next); \
-        copy->prev=Lval->prev; copy->top=Lval->top;copy->pred=Pred; \
-        insertID(&Lval->wrkList,copy,ProcessAlternatives); Lval->wrkList->slot=Last;\
-        getFollower(&LvalFol, Lval);                  \
-        if (LvalFol){\
-            copy2=new infon(LvalFol->pFlag,LvalFol->wFlag,LvalFol->size,LvalFol->value,0,LvalFol->spec1,LvalFol->spec2,LvalFol->next);\
-            copy2->pred=copy; insertID(&copy2->wrkList,Rval,0); insertID(&LvalFol->wrkList,copy2,ProcessAlternatives);}}
-
 infon* getVeryTop(infon* i){
 	infon* j=i;
 	while(i!=0) {j=i; i=getTop(i);}
@@ -174,7 +187,7 @@ void agent::deepCopy(infon* from, infon* to, infon* args, PtrMap* ptrs){
     
     if((from->pFlag&tType)==tList || ((from->pFlag)&fConcat)){to->value=copyList(from->value); if(to->value)to->value->top=to;}
     else to->value=from->value;
-    
+    if(from->wFlag&mIsHeadOfGetLast) to->prev=(*ptrs)[from->prev]; // Hmmm. I haven't proven this use of prev is OK. It's OK if all tests pass.
     if(fm==iToPath || fm==iToPathH || fm==iToArgs || fm==iToVars) {to->spec1=from->spec1; to->top=(*ptrs)[from->top];}
     else if((fm==iGetFirst|| fm==iGetLast || fm==iGetMiddle)&& from->spec1) {
         PtrMap *ptrMap = (ptrs)?ptrs:new PtrMap;
@@ -312,7 +325,7 @@ void agent::addIDs(infon* Lvals, infon* Rvals, int asAlt){
     }
     size=((UInt)Lvals->next->size)-2; crntAlt=Lvals; pred=Lvals->pred;
     while(crntAlt){  // Lvals
-        for(int i=0; i<altCnt; ++i){   // Rvals
+        for(int i=0; i<altCnt; ++i){  std::cout<< crntAlt <<':'; // Rvals
             if (!asAlt && altCnt==1 && crntAlt==Lvals){
                 insertID(&Lvals->wrkList,Rvals,0); recAlts(Lvals,Rvals);
             } else {
@@ -371,7 +384,7 @@ void resolve(infon* i, infon* theOne){
     } if (theOne){theOne->next=prev->value; theOne->pFlag|=isLast+isBottom;}
 }
 
-#define SetBypassDeadEnd() {result=BypassDeadEnd; infon* CA=getTop(ci); if (CA) AddSizeAlternate(CA, item, 0, ((UInt)ci->next->size)-1, ci); }
+#define SetBypassDeadEnd() {result=BypassDeadEnd; infon* CA=getTop(ci); if (CA) {std::cout<< CA <<'>'; AddSizeAlternate(CA, item, 0, ((UInt)ci->next->size)-1, ci); }}
 
 enum WorkItemResults {DoNothing, BypassDeadEnd, DoNext, DoNextIf};
 int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
@@ -400,7 +413,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
         case MergeIdent:
             wrkNode->idFlags|=SetComplete;
             UInt fm=item->wFlag&mFindMode;
-            if(fm!=iNone) {if(item->top==0) {item->top=ci->top;} fillBlanks(item);}
+            if(fm!=iNone || (item->wrkList && !(item->pFlag&isNormed))) {if(item->top==0) {item->top=ci->top;} fillBlanks(item);}
             if((ci->pFlag&tType)==0) {
                 ci->pFlag|=((item->pFlag&tType)+(tUInt<<goSize)+sizeIndef); isIndef=1;
                 ci->size=item->size;if (!(item->pFlag&(fUnknown<<goSize))) ci->pFlag&=~(fUnknown<<goSize);
@@ -686,7 +699,7 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
                          // Find and close the master list
                     // nextRef=tmp
                     // Append the result to CI->workLst. Not it will be merged in doWrkList().
-                case iHardFunc:    autoEval(CI, this); break;  // TODO B4: make this work;
+                case iHardFunc: autoEval(CI, this); break;  
                 case iNone: default: throw "Invalid Find Mode";
             }
 

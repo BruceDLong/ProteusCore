@@ -440,7 +440,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
 					}
                     break;
                 case tUInt+4*tString: DEB("(US)") result=DoNext; break;
-                case tUInt+4*tList:DEB("(UL)") InitList(item); addIDs(ci,item->value,asAlt); result=DoNext;break;
+                case tUInt+4*tList:DEB("(UL)") InitList(item); addIDs(ci,item->value,asAlt); result=DoNext;break; // This should probably be insertID not addIDs. Check it out.
                 case tString+4*tUInt:DEB("(SU)") result=DoNext;break;
                 case tString+4*tString: DEB("(SS)")
                     if (!isIndef && ci->pFlag&sizeIndef){
@@ -667,21 +667,22 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
                     if (tagPtr!=tag2Ptr.end()) {UInt tmpFlags=CI->pFlag&0xff000000; deepCopy(tagPtr->second,CI); CI->pFlag|=tmpFlags; deTagWrkList(CI);} // TODO B4: move this flag stuff into deepCopy.
                     else{std::cout<<"Bad tag:'"<<(char*)(CI->type->S)<<"'\n";throw("A tag was used but never defined");}
                     break;}
-     /*           case iUseAsFirst: cn.firstID=CI->spec1; cn.IDStatus=1; CI->wFlag&=~mFindMode; break; 
-                case iUseAsList:  
-                        CI->spec1->pFlag|=toExec;
-                     //   fillBlanks(CI->spec1);
-                     //   insertID(&CI->spec2->wrkList, CI->spec1,0);
-                     //   CI->spec2->prev=(infon*)1;  // Set sentinal value so this can tell it is an index // TODO B4: use wFlag instead of prev.
-                     //   fillBlanks(CI->spec2);
-                        tmp=CI->spec1;
-                        break;
-                case iUseAsLast:  break; // TODO B4: make this work.        */
                 case iGetFirst:      StartTerm (CI, &tmp); break;
                 case iGetMiddle:  break; // TODO B4: make this work;
                 case iGetLast:
                         fillBlanks(CI->spec1, cn.firstID); 
-                        LastTerm(CI->spec1, &tmp);  CI->pFlag|=fUnknown; 
+                        if(CI->spec1->pFlag&hasAlts) {  // migrate alternates from spec1 to CI... Later, build this into LastTerm.
+                            infNode *wrkNode=CI->spec1->wrkList; infon* item=0;
+                            if(wrkNode)do{
+                                wrkNode=wrkNode->next; item=wrkNode->item;
+                                if(((wrkNode->idFlags&(ProcessAlternatives+NoMatch))==ProcessAlternatives)&& (item->wFlag&0x2000)){
+                                    if(wrkNode->item->size==0){} // TODO: handle the null alternative
+                                    else {insertID(&CI->wrkList,wrkNode->slot,ProcessAlternatives+isRawFlag);}
+                                }
+                            }while (wrkNode!=CI->spec1->wrkList);
+                        }
+                        else LastTerm(CI->spec1, &tmp);
+                        CI->pFlag|=fUnknown; 
                         break; 
                 case iGetSize:      break; // TODO: make this work;
                 case iGetType:     break; // TODO: make this work;

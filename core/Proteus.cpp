@@ -412,7 +412,10 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
         case MergeIdent:
             wrkNode->idFlags|=SetComplete;
             UInt fm=item->wFlag&mFindMode;
-            if(fm!=iNone || (item->wrkList && !(item->pFlag&isNormed))) {if(item->top==0) {item->top=ci->top;} fillBlanks(item);}
+            if(!(item->pFlag&isNormed) && (fm!=iNone || (item->wrkList && !(item->pFlag&isNormed)))) {
+                if(item->top==0) {item->top=ci->top;} fillBlanks(item); 
+                if (item->wFlag&mAsProxie) {item=item->value;fm=item->wFlag&mFindMode;}
+            }
             if((ci->pFlag&tType)==0) {
                 ci->pFlag|=((item->pFlag&tType)+(tUInt<<goSize)+sizeIndef); isIndef=1;
                 ci->size=item->size;if (!(item->pFlag&(fUnknown<<goSize))) ci->pFlag&=~(fUnknown<<goSize);
@@ -450,7 +453,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                         if(CIfol){
                             IDfol=item->next;
                             if(IDfol) addIDs(CIfol, IDfol, asAlt); else {SetBypassDeadEnd(); break;}
-				}
+                        }
                     result=DoNext;
                     break;
                     } else isIndef=0;
@@ -580,8 +583,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                             if(!(tmp->pFlag&isFirst)) {tmp=0; std::cout<<"Top but not First in "<< printInfon(CI)<<'\n';}
                         }
                     }
-                    if(tmp) { // Now add that to the 'item-list's wrkList...              graph display *ci dependent on ci now or when in agent::doWorkList
-
+                    if(tmp) { // Now add that to the 'item-list's wrkList...           
                         if ((CI->spec2->pFlag)&(fInvert<<goSize)){ // TODO: This block is a hack to make simple backward references work. Fix for full back-parsing.
                             for(UInt i=(UInt)CI->spec2->size; i>0; --i){tmp=tmp->prev;}
                             {insertID(&CI->wrkList, tmp,0); if(CI->pFlag&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI);}
@@ -641,19 +643,18 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
                 case iToCtxt:   copyTo(&context, CI); break; // TODO B4: make this work.
                 case iToArgs:   copyTo(world, CI); break; // TODO B4: make this work.
                 case iToVars:   copyTo(world, CI); break; // TODO B4: make this work.
-                case iToPath: //  Handle \, \\, \\\, etc.
-                case iToPathH:  // Handle ^, \^, \\^, \\\^, etc.
+                case iToPath: //  Handle ^, \^, \\^, \\\^, etc.
+                case iToPathH:  //  Handle \, \\, \\\, etc. Path with 'Home'
                     tmp=CI->top;
-                    for(UInt i=0; i<(UInt)CI->spec1; ++i) {  // for each backslash
-                        if(tmp==0 ) {tmp=0;std::cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';}
-                        if(CIFindMode!=iToPathH || i>0) tmp=getTop(tmp);
+                    for(UInt i=1; i<(UInt)CI->spec1; ++i) {  // for  backslashes-1 go to parent
+                        tmp=getTop(tmp); if (tmp==0 ) {std::cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';}
                     }
-                    if(CIFindMode==iToPathH) {
+                    if(CIFindMode==iToPathH) {  // If no '^', move to first item in list.
                         if(!(tmp->pFlag&isTop)) {tmp=tmp->top; }
                         if (tmp==0) std::cout<<"Zero TOP in "<< printInfon(CI)<<'\n';
                         if(!(tmp->pFlag&isFirst)) {tmp=0; std::cout<<"Top but not First in "<< printInfon(CI)<<'\n';}
                     }
-                    if(tmp) {copyTo(tmp, CI); tmp=0;}
+                   if(tmp) {CI->wFlag|=mAsProxie; CI->value=tmp; tmp->pFlag|=isNormed; CI->wFlag&=~mFindMode; tmp=0;}//  {copyTo(tmp, CI); CI->next=tmp->next; CI->prev=tmp->prev; CI->pFlag=tmp->pFlag;  CI->wFlag=tmp->wFlag; tmp=0;}
                     doShortNorm=true; 
                     break; 
                 case iTagDef: {std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
@@ -670,6 +671,12 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
                 case iGetFirst:      StartTerm (CI, &tmp); break;
                 case iGetMiddle:  break; // TODO B4: make this work;
                 case iGetLast:
+                    if ((CI->spec1->pFlag)&(fInvert<<goSize)){ // TODO: This block is a hack to make simple backward references work. Fix for full back-parsing.
+                        tmp=CI;
+                        for(UInt i=(UInt)CI->spec1->size; i>0; --i){tmp=tmp->prev;}
+                        {insertID(&CI->wrkList, tmp,0); if(CI->pFlag&fUnknown) {CI->size=tmp->size;} cpFlags(tmp, CI,0x00ffffff);}
+                        CI->pFlag|=fUnknown;
+                    } else{
                         fillBlanks(CI->spec1, cn.firstID); 
                         if(CI->spec1->pFlag&hasAlts) {  // migrate alternates from spec1 to CI... Later, build this into LastTerm.
                             infNode *wrkNode=CI->spec1->wrkList; infon* item=0;
@@ -682,10 +689,11 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
                             }while (wrkNode!=CI->spec1->wrkList);
                         }
                         else LastTerm(CI->spec1, &tmp);
+                    }
                         CI->pFlag|=fUnknown; 
                         break; 
                 case iGetSize:      break; // TODO: make this work;
-                case iGetType:     break; // TODO: make this work;
+                case iGetType:     break; // TODO: make this work; 
                 case iStartAssoc:
                     // DeepCopy the assoc index spec to CI.
                     // change flag to iNextAssoc. or set VarRef=0;

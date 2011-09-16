@@ -63,7 +63,7 @@ std::string printInfon(infon* i, infon* CI){
             else if(mode==iToPath || mode==iToPathH){
                 s+="%";
                 for(UInt h=(UInt)(i->spec1); h; h--) s+="\\";
-                if(mode==iToPathH) s+="^";
+                if(mode==iToPath) s+="^";
             }
         }
     }
@@ -239,7 +239,7 @@ infon* QParser::ReadInfon(int noIDs){
         else if(nxtTok("ABC")){wFlag|=iTagDef; tags=new stng; stngApnd((*tags),buf,strlen(buf)+1);}
         else if (nTok=='\\' || nTok=='^'){
             for(s1=0; (nTok=streamGet())=='\\';) {s1=(infon*)((UInt)s1+1); ChkNEOF;}
-            if (nTok=='^') wFlag|=iToPathH; else {wFlag|=iToPath; streamPut(1);}
+            if (nTok=='^') wFlag|=iToPath; else {wFlag|=iToPathH; streamPut(1);}
         }
         if(nxtTok(".")) {
             s2=(infon*)new assocInfon(new infon(pFlag, wFlag, iSize,iVal,0,s1,s2));

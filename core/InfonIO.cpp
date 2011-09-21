@@ -205,6 +205,11 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
             if (!(head->pFlag&fIncomplete) && stay) head->prev->pFlag|=isLast;
         }
         check(rchr);
+        if(nxtTok("~"))  (*wFlag)|=mAssoc;
+    /*    {
+            s2=(infon*)new assocInfon(new infon(pFlag, wFlag, iSize,iVal,0,s1,s2));
+            wFlag=iGetAssoc; fs=fv=fUnknown; // TODO B4: Should pFlag, qFlag, iSize, iVal, s1 and s2 be reset?
+        }*/
     } else if (nxtTok("123")) {   // read number
         *pFlag+=tUInt; 
         *i=(infon*)atoi(buf);
@@ -241,10 +246,6 @@ infon* QParser::ReadInfon(int noIDs){
             for(s1=0; (nTok=streamGet())=='\\';) {s1=(infon*)((UInt)s1+1); ChkNEOF;}
             if (nTok=='^') wFlag|=iToPath; else {wFlag|=iToPathH; streamPut(1);}
         }
-        if(nxtTok(".")) {
-            s2=(infon*)new assocInfon(new infon(pFlag, wFlag, iSize,iVal,0,s1,s2));
-            wFlag=iStartAssoc; fs=fv=fUnknown; // TODO B4: Should pFlag, qFlag, iSize, iVal, s1 and s2 be reset?
-        }
     }else{  // OK, then we're parsing some form of *... +...
         wFlag|=iNone;
         if(nxtTok("+") || nxtTok("-")) op='+'; else if(nxtTok("*") || nxtTok("/")) op='*'; 
@@ -272,7 +273,7 @@ infon* QParser::ReadInfon(int noIDs){
     if(i->pFlag&fConcat && i->size==(infon*)1){infon* ret=i->value; delete(i); return ret;} // BUT we lose i's idents and some flags (desc, ...)
     if ((i->size && ((fs&tType)==tList))||(fs&fConcat)) i->size->top=i;
     if ((i->value&& ((fv&tType)==tList))||(fv&fConcat))i->value->top=i;
-    if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~mFindMode; i->wFlag|=mIsHeadOfGetLast; i=new infon(0,iGetLast,0,0,0,i); i->spec1->prev=i;}
+    if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~(mFindMode+mAssoc); i->wFlag|=mIsHeadOfGetLast; i=new infon(0,wFlag,0,0,0,i); i->spec1->prev=i;}
     while (!(noIDs&1) && (cTok=nxtTokN(5, ": = :", ": =", "= :", ":", "="))){
         std::string tok=cTok; infon *R, *toSet=0, *toRef=0; int code=0;
         if(tok==":"){

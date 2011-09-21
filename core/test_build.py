@@ -34,9 +34,9 @@ def test_engine():
    ('1', 'Indexing, unknown index 1', r'[...]="ARONdacks" := {"AARON" "ARON"} ', '<"ARON">'), 
    ('1', 'Indexing, unknown index 2', r'[...]="AARONdacks" := {"AARON" "ARON"} ', '<"AARON">'),
 #   ('1', 'Indexing, unknown index 3', r'{%{"AARON", "ARON"}*_+[...]  "dac"}  =  +"ARONdacks" ', '<{"ARON" "dac" }>'), # This is the 'Extra characters bug'
-#   ('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \\[?]}]<:{"slothe", "Hello", "bob", 65432}|...}', '<{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } }>'),
+ #  ('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \\[?]}]<:{"slothe", "Hello", "bob", 65432}|...}', '<{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } }>'),  #FAIL
 # The above test but with a list in the comprehension yeild.     ALSO, run through this whole thing to make sure it isn't doing things too many times.
-  # ('1', 'test 1 of repeated indexing (i.e., filtering)', "{{111, '222', '333', 444, {'hi'}, {'a', 'b', 'c'}}:*2+[...]|...}", '<{"222" *1+444 {"a" "b" "c" } }>'),
+#('1', 'test 1 of repeated indexing (i.e., filtering)', "{{111, '222', '333', 444, {'hi'}, {'a', 'b', 'c'}}:*2+[...]|...}", '<{"222" *1+444 {"a" "b" "c" } }>'), #FAIL
 
     ('1', "fromHere indexing string 1", "{111, '222' %^:[_, _, $] 444, '555', 666, {'hi'}}", '<{*1+111 "222" "555" *1+444 "555" *1+666 {"hi" } }>'),
     ('1', "fromHere indexing string 2", "{111, 222, %^:*3+[...] 444, 555, 666, {'hi'}}", '<{*1+111 *1+222 *1+555 *1+444 *1+555 *1+666 {"hi" } }> '),
@@ -44,9 +44,9 @@ def test_engine():
 
 #    ('1', "Adding prep for 'reduce'", r'{[ ? {%\\:[?] (%\\:[?] *1+22)}]<: {*1+5 *2+7 *3+9 *4+13}|...}', '<{ | {*1+5 *1+27 } {*2+7 *2+29 } {*3+9 *3+31 } {*4+13 *4+35 } }>'),
 
-#    ('1', "Test lists with simple associations", r'{ {5, 7, 3, 8} {%\\:[_]. | ...}}', r'<{{*1+5 *1+7 *1+3 *1+8 } { | *1+5 *1+7 *1+3 *1+8 } }> '),
-#    ('1', "Test internal associations", r'{ [5, 7, 3, 8] ({0} {+(\\\\[_]. \\\^[_].) | ...})}', r'<{{*1+5 *1+7 *1+3 *1+8 } ({*1+0 } {*1+5 *1+12 *1+15 *1+23 } ) }>'),
-#    ('1', "Test sequential func argument passing", r'{ [5, 7, 3, 8] {addOne<:\\[_]. | ...}}', '<{{*1+5 *1+7 *1+3 *1+8 } { | *1+6 *1+8 *1+4 *1+9 } }>')
+    ('1', "Test lists with simple associations", r'{ {5, 7, 3, 8} {%\\:[_]~ | ...}}', r'<{{*1+5 *1+7 *1+3 *1+8 } { | *1+5 *1+7 *1+3 *1+8 } }> '),
+#    ('1', "Test internal associations", r'{ [5, 7, 3, 8] ({0} {+(\\\\[_]~ \\\^[_]~) | ...})}', r'<{{*1+5 *1+7 *1+3 *1+8 } ({*1+0 } {*1+5 *1+12 *1+15 *1+23 } ) }>'),
+#    ('1', "Test sequential func argument passing", r'{ [5, 7, 3, 8] {addOne<:\\[_]~ | ...}}', '<{{*1+5 *1+7 *1+3 *1+8 } { | *1+6 *1+8 *1+4 *1+9 } }>')
    ]
 
    for t in testsLst:

@@ -79,7 +79,7 @@ struct agent {
 	void append(infon* i, infon* list);
     int compute(infon* i);
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
-    infon* fillBlanks(infon* i, infon* firstID=0, bool doShortNorm=false);
+    infon* normalize(infon* i, infon* firstID=0, bool doShortNorm=false);
     infon *world, context;
         void deepCopy(infon* from, infon* to, infon* args=0, PtrMap* ptrs=0);
     private:
@@ -119,7 +119,7 @@ struct QParser{
 //extern std::fstream log;
 #define OUT(msg) /*{std::cout<< msg;}*/
 #define DEB(msg) /*{std::cout<< msg << "\n";}*/
-#define getInt(inf, num, sign) {/*fillBlanks(inf);  */           \
+#define getInt(inf, num, sign) {/*normalize(inf);  */           \
   UInt f=inf->pFlag;                           \
   if((f&tType)==tUInt && !(f&fUnknown)) num=(UInt)inf->value; else num=0;     \
   sign=f&fInvert;}

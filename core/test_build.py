@@ -91,8 +91,8 @@ def ChkNorm(t):
        child.send('<%\n');  child.send(t[2]); child.send('\n%>\n'); #print "N2";
        child.expect(r'Parsing\s*\[<%\s*'); child.expect_exact(t[2]); child.expect(r'\s*%>\]\s*');  #print "N3";
        child.expect(r'\s*Parsed.\s*'); #print  "N4";
-       child.expect_exact('Filling World...');  #print "N5";
-       child.expect(r'\s*Filled\s*'); #print "N6";
+       child.expect_exact('Norming World...');  #print "N5";
+       child.expect(r'\s*Normed\s*'); #print "N6";
        print "Looking For:",t[3]; #print "N7"; #print "Found: ", child.after;      print "N9";
        try:
            child.expect_exact(t[3]); # print "N8";
@@ -118,7 +118,7 @@ def ChkWorld(t):
        child.send('<%\n');  child.send(t[4]); child.send('\n%>\n'); print "W2b";
        child.expect(r'Parsing\s*\[<%\s*'); child.expect_exact(t[2]); child.expect(r'\s*%>\]\s*');  print "W3";
        child.expect(r'\s*Parsed.\s*'); print  "W4";
-       child.expect_exact('Filling World...');   child.expect(r'\s*Filled\s*'); print "W5";
+       child.expect_exact('Norming World...');   child.expect(r'\s*Normed\s*'); print "W5";
 
        print "Looking For ",t[3]
        child.expect_exact(t[3]);
@@ -127,7 +127,7 @@ def ChkWorld(t):
 
        child.expect(r'\s*Parsing query\s*\[\s*<%\s*'); child.expect_exact(t[4]); child.expect(r'\s*%>\s*\]\s*');  print "W6";
        child.expect(r'\s*parsed.\s*<<\['); child.expect(r'.*?'); child.expect(r'\s*\]>>\s*'); print  "W7";
-       child.expect_exact('Filling query...');   child.expect(r'\s*Filled\s*'); print "W8";
+       child.expect_exact('Norming query...');   child.expect(r'\s*Normed\s*'); print "W8";
 
        print "Looking for:",t[5]
        child.expect_exact(t[5])

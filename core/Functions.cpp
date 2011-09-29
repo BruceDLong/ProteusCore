@@ -27,7 +27,7 @@ infon* Theme;
 
 int getStrArg(infon* i, stng* str, agent* a){
     i->spec2->top=i;
-    a->fillBlanks(i->spec2);
+    a->normalize(i->spec2);
     getStng(i->spec2, str);
     return 1;
 }
@@ -43,7 +43,7 @@ void setString(infon* CI, stng *s){
 int getIntArg(infon* i, int* Int1, agent* a){
     int sign;
     i->spec2->top=i;
-    a->fillBlanks(i->spec2);
+    a->normalize(i->spec2);
     getInt(i->spec2, *Int1, sign);
     if(sign) *Int1 = -*Int1;
     return 1;
@@ -91,7 +91,7 @@ int autoEval(infon* CI, agent* a){
         char minorType[100];
         infon* args=CI->spec2;
 		args->top=CI;
-		a->fillBlanks(args);
+		a->normalize(args);
 std::cout << "#############" << printInfon(args) << "\n";
         infon* foundMajorType=0;
         infon* foundMinorType=0;
@@ -147,7 +147,7 @@ std::cout << "#############" << printInfon(args) << "\n";
         a->deepCopy(foundMinorType->value->next, funcToCall);
 	//	CI->spec2=funcToCall; CI->spec1=args; //Not "Spec2" anymore. but CI.
 	std::cout << "######HARD FUNC" << printInfon(funcToCall) << "\n"; exit(1);
-        a->fillBlanks(CI);
+        a->normalize(CI);
 		
     } else if (strcmp(funcName.S, "loadInfon")==0){
 		stng str1;
@@ -158,7 +158,7 @@ std::cout << "#############" << printInfon(args) << "\n";
 		QParser q(fin);
 		infon* I=q.parse();// std::cout <<"P "; std::cout<<"<"<<printInfon(I)<<"> \n";
 		agent a;
-		a.fillBlanks(I); // std::cout << "N ";
+		a.normalize(I); // std::cout << "N ";
 		if (I==0) {std::cout<<"Error: "<<q.buf<<"\n";}
 		
         copyTo(I,CI);

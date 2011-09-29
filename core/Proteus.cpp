@@ -80,7 +80,7 @@ inline int agent::getNextTerm(infon** p) {
 // TODO: the next line fixes one problem but causes another: nested list-concats.
 // test it with:  (   ({} {"X", "Y"} ({} {9,8} {7,6}) {5} ) {1} {{}} {2, 3, 4} )
           if(GGparent && (GGparent->pFlag&fConcat)) {*p=parent; return 0;}
-//	  fillBlanks(parent);
+//	  normalize(parent);
           switch(parent->pFlag&tType){
             case tUnknown: (*p)=0; return -1;
             case tUInt: case tString: throw("Item in list concat is not a list.");
@@ -112,7 +112,7 @@ inline int agent::getNextTerm(infon** p) {
 
 int agent::getNextNormal(infon** p){
 	int result=getNextTerm (p);
-	if (result==0 && !((*p)->pFlag&isNormed)) fillBlanks(*p);
+	if (result==0 && !((*p)->pFlag&isNormed)) normalize(*p);
 	return result;
 }
 
@@ -247,7 +247,7 @@ char isPosLorEorGtoSize(UInt pos, infon* item){
     if(((item->pFlag>>goSize)&tType)!=tUInt) throw "Size as non integer is probably not useful, so not allowed.";
     if(item->pFlag&(fConcat<<goSize)){
    	infon* size=item->size;
-    	//if ((size->pFlag&mRepMode)!=asNone) fillBlanks(size);
+    	//if ((size->pFlag&mRepMode)!=asNone) normalize(size);
     	if ((size->pFlag&simpleUnknownUint)==simpleUnknownUint)
         	if(size->next!=size && size->next==size->prev && ((size->next->pFlag&simpleUnknownUint)==simpleUnknownUint)){
             		if(pos<(UInt)size->value) return 'L';
@@ -363,7 +363,7 @@ inline infon* getAssocItemsMaster(infon* AssocItem){
 int agent::compute(infon* i){
     infon* p=i->value; int vAcc, sAcc, count=0;
     if(p) do{
-        fillBlanks(p); // TODO: appending inline rather than here would allow streaming.
+        normalize(p); // TODO: appending inline rather than here would allow streaming.
         if((p->pFlag&((tType<<goSize)+tType))==((tUInt<<goSize)+tUInt)){
             if (p->pFlag&(fUnknown<<goSize)) return 0;
             if (p->pFlag&fConcat) compute(p->size);
@@ -431,7 +431,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             wrkNode->idFlags|=SetComplete;
             UInt fm=item->wFlag&mFindMode;
             if(!(item->pFlag&isNormed) && (fm!=iNone || (item->wrkList && !(item->pFlag&isNormed)))) {
-                if(item->top==0) {item->top=ci->top;} fillBlanks(item); 
+                if(item->top==0) {item->top=ci->top;} normalize(item); 
                 if (item->wFlag&mAsProxie) {item=item->value;fm=item->wFlag&mFindMode;}
             }
             if((ci->pFlag&tType)==0) {
@@ -529,8 +529,8 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
     return result;
 }
 
-infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
-    int nxtLvl, override, CIFindMode=0; infon *CI, *CIfol, *nxt; infNode* IDp;
+infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
+    int nxtLvl, override, CIFindMode=0; infon *CI, *CIfol, *newID; infNode* IDp;
     if (i==0) return 0;
     if((i->pFlag&tType)==tList) InitList(i);
     infQ ItmQ; ItmQ.push(Qitem(i,firstID,(firstID)?1:0,0));
@@ -538,12 +538,12 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
         Qitem cn=ItmQ.front(); ItmQ.pop(); CI=cn.item; 
         override=0;
         while ((CIFindMode=(CI->wFlag&mFindMode))){
-            nxt=0;
+            newID=0;
             if(CI->pFlag&toExec) override=1;  // TODO B4: refactor override
             if(CI->pFlag&asDesc) {if(override) override=0; else break;}
             switch(CI->wFlag&mSeed){
                 case sUseAsFirst: cn.firstID=CI->spec2; cn.IDStatus=1; CI->wFlag&=~mSeed; break; 
-                case sUseAsList: CI->spec1->pFlag|=toExec;  nxt=CI->spec1;
+                case sUseAsList: CI->spec1->pFlag|=toExec;  newID=CI->spec1;
             }
             switch(CIFindMode){
                 case iToWorld: copyTo(world, CI); break;
@@ -551,21 +551,21 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
                 case iToArgs:   copyTo(world, CI); break; // TODO B4: make this work.
                 case iToVars:   copyTo(world, CI); break; // TODO B4: make this work.
                 case iAssocNxt:
-                    nxt=CI->spec1;
-                    getNextNormal(&nxt);
+                    newID=CI->spec1;
+                    getNextNormal(&newID);
                     break;
                 case iToPath: //  Handle ^, \^, \\^, \\\^, etc.
                 case iToPathH:  //  Handle \, \\, \\\, etc. Path with 'Home'
-                    nxt=CI->top;
+                    newID=CI->top;
                     for(UInt i=1; i<(UInt)CI->spec1; ++i) {  // for  backslashes-1 go to parent
-                        nxt=getTop(nxt); if (nxt==0 ) {std::cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';}
+                        newID=getTop(newID); if (newID==0 ) {std::cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';}
                     }
                     if(CIFindMode==iToPathH) {  // If no '^', move to first item in list.
-                        if(!(nxt->pFlag&isTop)) {nxt=nxt->top; }
-                        if (nxt==0) std::cout<<"Zero TOP in "<< printInfon(CI)<<'\n';
-                        if(!(nxt->pFlag&isFirst)) {nxt=0; std::cout<<"Top but not First in "<< printInfon(CI)<<'\n';}
+                        if(!(newID->pFlag&isTop)) {newID=newID->top; }
+                        if (newID==0) std::cout<<"Zero TOP in "<< printInfon(CI)<<'\n';
+                        if(!(newID->pFlag&isFirst)) {newID=0; std::cout<<"Top but not First in "<< printInfon(CI)<<'\n';}
                     }
-                   if(nxt) {CI->wFlag|=mAsProxie; CI->value=nxt; nxt->pFlag|=isNormed; CI->wFlag&=~mFindMode; nxt=0;}//  {copyTo(nxt, CI); CI->next=nxt->next; CI->prev=nxt->prev; CI->pFlag=nxt->pFlag;  CI->wFlag=nxt->wFlag; nxt=0;}
+                   if(newID) {CI->wFlag|=mAsProxie; CI->value=newID; newID->pFlag|=isNormed; CI->wFlag&=~mFindMode; newID=0;}//  {copyTo(newID, CI); CI->next=newID->next; CI->prev=newID->prev; CI->pFlag=newID->pFlag;  CI->wFlag=newID->wFlag; newID=0;}
                     doShortNorm=true; 
                     break; 
                 case iTagDef: {std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
@@ -579,16 +579,16 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
                     if (tagPtr!=tag2Ptr.end()) {UInt tmpFlags=CI->pFlag&0xff000000; deepCopy(tagPtr->second,CI); CI->pFlag|=tmpFlags; deTagWrkList(CI);} // TODO B4: move this flag stuff into deepCopy.
                     else{std::cout<<"Bad tag:'"<<(char*)(CI->type->S)<<"'\n";throw("A tag was used but never defined");}
                     break;}
-                case iGetFirst:      StartTerm (CI, &nxt); break;
+                case iGetFirst:      StartTerm (CI, &newID); break;
                 case iGetMiddle:  break; // TODO B4: make this work;
                 case iGetLast:
                     if ((CI->spec1->pFlag)&(fInvert<<goSize)){ // TODO: This block is a hack to make simple backward references work. Fix for full back-parsing.
-                        nxt=CI;
-                        for(UInt i=(UInt)CI->spec1->size; i>0; --i){nxt=nxt->prev;}
-                        {insertID(&CI->wrkList, nxt,0); if(CI->pFlag&fUnknown) {CI->size=nxt->size;} cpFlags(nxt, CI,0x00ffffff);}
+                        newID=CI;
+                        for(UInt i=(UInt)CI->spec1->size; i>0; --i){newID=newID->prev;}
+                        {insertID(&CI->wrkList, newID,0); if(CI->pFlag&fUnknown) {CI->size=newID->size;} cpFlags(newID, CI,0x00ffffff);}
                         CI->pFlag|=fUnknown;
                     } else{
-                        fillBlanks(CI->spec1, cn.firstID); 
+                        normalize(CI->spec1, cn.firstID); 
                         if(CI->spec1->pFlag&hasAlts) {  // migrate alternates from spec1 to CI... Later, build this into LastTerm.
                             infNode *wrkNode=CI->spec1->wrkList; infon* item=0;
                             if(wrkNode)do{
@@ -599,7 +599,7 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
                                 }
                             }while (wrkNode!=CI->spec1->wrkList);
                         }
-                        else LastTerm(CI->spec1, &nxt);
+                        else LastTerm(CI->spec1, &newID);
                     }
                     CI->pFlag|=fUnknown; 
                     break; 
@@ -608,20 +608,20 @@ infon* agent::fillBlanks(infon* i, infon* firstID, bool doShortNorm){
                 case iHardFunc: autoEval(CI, this); break;  
                 case iNone: default: throw "Invalid Find Mode";
             }
-            if(nxt){
-                if(CI->wFlag&mAssoc) {nxt=nxt->wrkList->item; CI->spec2->wFlag=CIFindMode=iAssocNxt;} // Transition assoc modes
+            if(newID){
+                if(CI->wFlag&mAssoc) {newID=newID->wrkList->item; CI->spec2->wFlag=CIFindMode=iAssocNxt;} // Transition assoc modes
                 if(CIFindMode==iAssocNxt){
-                    CI->spec2->spec2=nxt; // Remember this so later we can fetch the next assoc.
+                    CI->spec2->spec2=newID; // Remember this so later we can fetch the next assoc.
                     infon* masterItem = 0;
-                    if(!(getTop(nxt)->pFlag&(fUnknown<<goSize))) {
+                    if(!(getTop(newID)->pFlag&(fUnknown<<goSize))) {
                         masterItem=getAssocItemsMaster(CI);
                         masterItem->pFlag &= ~isTentative;
                     }
-                    if(nxt->pFlag&isLast){
+                    if(newID->pFlag&isLast){
                         closeListAtItem((masterItem)?masterItem : getAssocItemsMaster(CI));
                     }
                 }
-                insertID(&CI->wrkList, nxt,(CIFindMode==iAssocNxt)?skipFollower:0);
+                insertID(&CI->wrkList, newID,(CIFindMode==iAssocNxt)?skipFollower:0);
                 CI->pFlag&=~tType; CI->wFlag&=~mFindMode;
             }
         }

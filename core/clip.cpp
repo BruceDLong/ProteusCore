@@ -95,7 +95,7 @@ int main(int argc, char **argv){
     topInfon=World;  // use topInfon in the ddd debugger to view World
 
 	agent a;
-    a.fillBlanks (World);
+    a.normalize (World);
     cout<<"\nThe Proteus CLI. Type some infons or 'quit'\n\n";
 	while(!cin.eof()){
 		std::string entry= readln("Proteus: ");
@@ -108,7 +108,7 @@ int main(int argc, char **argv){
 		QParser q(fin);
 		Entry=q.parse(); // cout <<"Parsed.\n";
         try{
-            a.fillBlanks(Entry); // cout << "Normalizd\n";
+            a.normalize(Entry); // cout << "Normalizd\n";
         } catch (char const* errMsg){std::cout<<errMsg<<"\n";}
 	//	a.append(Entry, World);
 

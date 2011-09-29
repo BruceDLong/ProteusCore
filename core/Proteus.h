@@ -37,7 +37,7 @@ enum vals {toGiven=0, toWorldCtxt=0x0100, toHomePos=0x0200, fromHere=0x0300, asF
     isFirst=0x01000000, isLast=0x02000000, isTop=0x04000000, isBottom=0x8000000,
     noAlts=0, hasAlts=0x10000000, noMoreAlts=0x20000000, isTentative=0x40000000, isVirtual=0x80000000
     };
-enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,
+enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,iAssocNxt,
                     iGetFirst,iGetMiddle,iGetLast,iGetSize,iHardFunc,iGetType};
 enum seeds {mSeed=0x30, sNone=0x00, sUseAsFirst=0x10, sUseAsList=0x20, sUseAsLast=0x30};
 enum wMasks {mFindMode = 0x0f, mIsTopRefNode = 0x1000, mIsHeadOfGetLast=0x2000, mAsProxie=0x4000, mAssoc=0x8000};

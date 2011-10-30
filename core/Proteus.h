@@ -12,6 +12,7 @@
 #include <queue>
 #include <iostream>
 #include <string.h>
+#include <stddef.h>
 
 typedef ptrdiff_t UInt;
 
@@ -30,27 +31,30 @@ inline bool operator< (const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) ret
 inline bool operator> (const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) return (a.key2>b.key2); else return (a.key1>b.key1);}
 inline bool operator==(const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) return (a.key2==b.key2); else return false;}
 
-enum masks {mRepMode=0x0700, mMode=0x0800, isNormed=0x1000, asDesc=0x2000, toExec=0x4000, sizeIndef=0x8000, mListPos=0xff000000, goSize=16};
+enum masks {mRepMode=0x0700, mMode=0x0800, isNormed=0x1000, asDesc=0x2000, toExec=0x4000, sizeIndef=0x100, mListPos=0xff000000, goSize=16};
 enum vals {toGiven=0, toWorldCtxt=0x0100, toHomePos=0x0200, fromHere=0x0300, asFunc=0x0400, intersect=0x0500, asTag=0x0600, asNone=0x0700, // TODO B4: remove these
     fMode=0xf8, fConcat=0x08, fLoop=0x10, fInvert=0x20, fIncomplete=0x40, fUnknown=0x80,
-    tType=3, tUnknown=0, tUInt=1, tString=2, tList=3,   matchType=0x04,  notLast=(0x04<<goSize),
+    tType=3, tUnknown=0, tUInt=1, tString=2, tList=3,   notLast=(0x04<<goSize),
     isFirst=0x01000000, isLast=0x02000000, isTop=0x04000000, isBottom=0x8000000,
     noAlts=0, hasAlts=0x10000000, noMoreAlts=0x20000000, isTentative=0x40000000, isVirtual=0x80000000
     };
-enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,iAssocNxt,
-                    iGetFirst,iGetMiddle,iGetLast,iGetSize,iHardFunc,iGetType};
+enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,iAssocNxt,iHardFunc,
+                   iGetSize,iGetType,iGetLast,iGetFirst,iGetMiddle};
 enum seeds {mSeed=0x30, sNone=0x00, sUseAsFirst=0x10, sUseAsList=0x20, sUseAsLast=0x30};
 enum wMasks {mFindMode = 0x0f, mIsTopRefNode = 0x1000, mIsHeadOfGetLast=0x2000, mAsProxie=0x4000, mAssoc=0x8000};
+enum colonFlags {c1Left=0x100, c2Left=0x200, c1Right=0x400, c2Right=0x800, };
 
 struct infon;
 struct assocInfon {infon *VarRef, *nextRef; assocInfon(infon* first=0):VarRef(first),nextRef(0){};};
 
 struct infNode {infon* item; infon* slot; UInt idFlags; infNode* next; infNode(infon* itm=0, UInt f=0):item(itm),idFlags(f){};};
-enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, CountSize=2, SetComplete=3, NodeDoneFlag=8, NoMatch=16,isRawFlag=32, skipFollower=64};
+enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, CountSize=2, SetComplete=3, NodeDoneFlag=8, NoMatch=16,isRawFlag=32, 
+    skipFollower=64, mMatchType=128};
 
 struct infon {
     infon(UInt pf=0, UInt wf=0, infon* s=0, infon*v=0,infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0):
         pFlag(pf), wFlag(wf), size(s), value(v), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {prev=0; top=0; type=0;};
+    infon* isntLast(); // 0=this is the last one. >0 = pointer to predecessor of the next one.
     UInt pFlag, wFlag;
     UInt wSize; // get rid if this. disallow strings and lists in "size"
     infon *size;        // The *-term; number of states, chars or items
@@ -107,7 +111,8 @@ struct QParser{
     bool chkStr(const char* tok);
     const char* nxtTokN(int n, ...);
     void RmvWSC ();
-    char peek();
+    char peek(); // Returns next char.
+    char Peek(); // Returns next char after whitespace.
     std::istream& stream;
     std::string s;
     char buf[bufmax];

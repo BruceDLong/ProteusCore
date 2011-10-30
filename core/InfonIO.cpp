@@ -76,12 +76,15 @@ std::string printInfon(infon* i, infon* CI){
     return s;
 }
 
-char QParser::streamGet(){
-	char ch=stream.get();
-	textParsed+=ch;
-	return ch;
-}
 #define streamPut(nChars) {for(int n=nChars; n>0; --n){stream.putback(textParsed[textParsed.size()-1]); textParsed.resize(textParsed.size()-1);}}
+#define ChkNEOF {if(stream.eof() || stream.fail()) throw "Unexpected End of file";}
+#define getbuf(c) {ChkNEOF; for(p=0;(c);buf[p++]=streamGet()){if (p>=bufmax) throw "String Overflow";} buf[p]=0;}
+#define check(ch) {RmvWSC(); ChkNEOF; tok=streamGet(); if(tok != ch) {std::cout<<"Expected "<<ch<<"\n"; throw "Unexpected character";}}
+#define isEq(L,R) (L && R && strcmp(L,R)==0)
+
+char QParser::streamGet(){char ch=stream.get(); textParsed+=ch; return ch;}
+char QParser::peek(){if (stream.fail()) throw "Unexpected end of file";  return stream.peek();}
+char QParser::Peek(){RmvWSC(); return peek();}
 
 void QParser::scanPast(char* str){
     char p; char* ch=str;
@@ -110,19 +113,7 @@ void QParser::RmvWSC (){ // Remove whitespace and comments.
     }
 }
 
-char QParser::peek(){
-    if (stream.fail()) throw "Unexpected end of file";
-    return stream.peek();
-}
 
-#define ChkNEOF {if(stream.eof() || stream.fail()) throw "Unexpected End of file";}
-#define getToken(tok) {RmvWSC(); ChkNEOF; tok=streamGet();}
-#define getbuf(c) {ChkNEOF; for(p=0;(c);buf[p++]=streamGet()){if (p>=bufmax) throw "String Overflow";} buf[p]=0;}
-//#define readTag(tag)  {getbuf(iscsym(peek())); if(!p){throw "Tag expected";} else {lstngCpy(tag,buf,p);}}
-#define Peek(tok) {RmvWSC(); tok=stream.peek();}
-#define check(ch) {getToken(tok);  if(tok != ch) {std::cout<<"Expected "<<ch<<"\n"; throw "Unexpected character";}}
-#define chk(ch) {if(stream.peek()==ch) streamGet(); else throw "Expected something else";}
-                                                                                                                     
 
 const char* altTok(std::string tok){
     // later this should load from a dictionary file for different languages.
@@ -154,7 +145,7 @@ bool QParser::chkStr(const char* tok){
 const char* QParser::nxtTokN(int n, ...){
     char* tok; va_list ap; va_start(ap,n); int i,p;
     for(i=n; i; --i){
-        tok=va_arg(ap, char*); Peek(nTok);
+        tok=va_arg(ap, char*); nTok=Peek();
         if(strcmp(tok,"ABC")==0) {if(iscsym(nTok)&&!isdigit(nTok)&&(nTok!='_')) {getbuf(iscsym(peek())); break;} else tok=0;}
         else if(strcmp(tok,"123")==0) {if(isdigit(nTok)) {getbuf(isdigit(peek())); break;} else tok=0;}
         else if (chkStr(tok) || chkStr(altTok(tok))) break; else tok=0;
@@ -173,8 +164,21 @@ void  chk4HardFunc(infon* i){
 
 infon* grok(infon* item, UInt tagCode, int* code){
     if((item->wFlag&mFindMode)==iTagUse) {(*code)|=tagCode; return item;}
-    else if((item->wFlag&mFindMode)==iGetLast) {return item->spec1;}
-    else return 0;
+    //else if((item->wFlag&mFindMode)==iGetLast) {return item->spec1;}
+    else {
+        if (tagCode==c1Left || tagCode==c1Right) {
+            if((item->wFlag&mFindMode)>=iGetLast) {return item->spec1;}
+        } else if (tagCode==c2Left || tagCode==c2Right) {
+            if((item->wFlag&mFindMode)>=iGetLast) {
+                // if (item->spec1->spec2 a tag)  mark inner-tag; return it.
+                if ((item->spec1->spec2->wFlag&mFindMode)>=iGetLast) return item->spec1->spec2->spec1;
+            } else{ // { [A V R] | ...} ::= ABC
+                // if (item->spec2 a tag)  mark inner-tag; return it.
+                if ((item->spec2->wFlag&mFindMode)>=iGetLast) return item->spec2->spec1;
+            }  
+        }
+    }
+    return 0;
 }
 
 char errMsg[100];
@@ -186,7 +190,7 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
         else {rchr='}'; *pFlag|=tList;}
         RmvWSC(); int foundRet=0; int foundBar=0;
         for(tok=peek(); tok != rchr && stay; tok=peek()){
-            if(tok=='<') {foundRet=1; getToken(tok); j=ReadInfon();}
+            if(tok=='<') {foundRet=1; streamGet(); j=ReadInfon();}
             else if(nxtTok("...")){
                 j=new infon(fUnknown+isVirtual+(tUInt<<goSize),iNone,(infon*)(size+1));stay=0;
             } else j=ReadInfon();
@@ -206,10 +210,6 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
         }
         check(rchr);
         if(nxtTok("~"))  (*wFlag)|=mAssoc;
-    /*    {
-            s2=(infon*)new assocInfon(new infon(pFlag, wFlag, iSize,iVal,0,s1,s2));
-            wFlag=iGetAssoc; fs=fv=fUnknown; // TODO B4: Should pFlag, qFlag, iSize, iVal, s1 and s2 be reset?
-        }*/
     } else if (nxtTok("123")) {   // read number
         *pFlag+=tUInt; 
         *i=(infon*)atoi(buf);
@@ -226,10 +226,9 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
 
 infon* QParser::ReadInfon(int noIDs){
     char op=0; UInt size=0; infon*iSize=0,*iVal=0,*s1=0,*s2=0; UInt pFlag=0,wFlag=0,fs=0,fv=0; infNode *IDp=0;
-	stng* tags=0; const char* cTok; int textEnd=0; /*int textStart=textParsed.size();*/
+	stng* tags=0; const char* cTok, *eTok, *cTok2; int textEnd=0; /*int textStart=textParsed.size();*/
     if(nxtTok("@")){pFlag|=toExec;}
     if(nxtTok("#")){pFlag|=asDesc;}
-    if(nxtTok(".")){pFlag|=matchType;} // This is a hint that idents must match type, not just value.
     if(nxtTok("?")){fs=fv=fUnknown; wFlag=iNone;}
     else if(nxtTok("ABC")){
         wFlag|=iTagUse; tags=new stng;
@@ -274,16 +273,19 @@ infon* QParser::ReadInfon(int noIDs){
     if ((i->size && ((fs&tType)==tList))||(fs&fConcat)) i->size->top=i;
     if ((i->value&& ((fv&tType)==tList))||(fv&fConcat))i->value->top=i;
     if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~(mFindMode+mAssoc); i->wFlag|=mIsHeadOfGetLast; i=new infon(0,wFlag,0,0,0,i); i->spec1->prev=i;}
-    while (!(noIDs&1) && (cTok=nxtTokN(5, ": = :", ": =", "= :", ":", "="))){
-        std::string tok=cTok; infon *R, *toSet=0, *toRef=0; int code=0;
-        if(tok==":"){
+    for(char c=Peek(); !(noIDs&1) && (c==':' || c=='='); c=Peek()){
+        cTok=nxtTokN(2,"::",":");
+        eTok=nxtTokN(2,"==","=");
+        infon *R, *toSet=0, *toRef=0; int code=0;
+        if(isEq(cTok,":") && (eTok==0)){
             if(peek()=='>') {streamPut(1); break;}
-            toRef=i; i=ReadInfon(0); toSet=grok(i,0x200,&code); 
-            if((toRef->wFlag&mFindMode)!=iTagUse) toRef->top=i;}
-        else { 
-            if(tok==": =" || tok==": = :"){
-                toSet=grok(i,0x200,&code); R=ReadInfon(4);
-                if((i->wFlag&mFindMode)==iGetLast) {
+            toRef=i; i=ReadInfon(0); toSet=grok(i,c1Left,&code);
+            if((toRef->wFlag&mFindMode)!=iTagUse) toRef->top=i;
+        } else {
+            cTok2=nxtTokN(2,"::",":");
+            if(isEq(cTok,":")){
+                toSet=grok(i,c1Left,&code); R=ReadInfon(4);
+                if((i->wFlag&mFindMode)>=iGetLast) {
                     i->spec1->top=R;
                     if((noIDs&4)==0){ //  set 'top' for any \\^, etc.
                         infon *p, *q;
@@ -292,8 +294,12 @@ infon* QParser::ReadInfon(int noIDs){
                         }
                     }
                 }
+            } else if(isEq(cTok,"::")){
+                toSet=grok(i,c2Left,&code); R=ReadInfon(4);
             } else {toSet=i; R=ReadInfon(1);}
-            if(tok=="= :" || tok==": = :"){toRef=grok(R,0x100,&code);}
+            if(isEq(eTok,"==")) {code|=mMatchType;}
+            if(isEq(cTok2,":")){toRef=grok(R,c1Right,&code);}
+            if(isEq(cTok2,"::")){toRef=grok(R,c2Right,&code);} // REPAIR HERE
             else toRef=R;
         }
         if(toSet==0) throw ":= operator requires [....] on the left side";
@@ -325,4 +331,3 @@ infon* QParser::parse(){
     if(stream.fail()) std::cout << "End of File Reached";
     return 0;
 }
-

@@ -4,12 +4,13 @@
     The SlipStream Engine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
     You should have received a copy of the GNU General Public License along with the SlipStream Engine.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 //#define OUT(msg) {std::cout<< msg;}
 //#define DEB(msg) {std::cout<< msg << "\n";}
 
 // GraphicsEngine: OPENGL, GLES, DIRECTX
 // CPU: Ix86, ARMEH, ARMEL
-// OpSys: LINUX, MAC, WINDOWS
+// OpSys: LINUX, MAC, WINDOWS, IOS, ANDROID
 #define GraphicsEngine_NONE
 #define CPU_ARMEL
 #define OpSys_LINUX
@@ -17,24 +18,13 @@
 #include <time.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_thread.h>
-#include "fastevents.h"
 #include <SDL/SDL_image.h>
 #include <SDL/SDL_ttf.h>
-#include <SDL/SDL_gfxPrimitives.h>
-
-#ifdef GraphicsEngine_OPENGL
-#include "SDLUtils.h"
-#include <GL/gl.h>
-#include <GL/glu.h>
-#elif defined GraphicsEngine_GLES
-#include <SDL/SDL_gles.h>
-#include <GLES2/gl2.h>
-#elif GraphicsEngine_DIRECTX
-
-#endif
+//#include <SDL/SDL_gfxPrimitives.h>
+#include "sprig.h"
 
 
-enum {LINUX, MACINTOSH, WINDOWS}
+enum {LINUX, MACINTOSH, WINDOWS, IOS, ANDROID}
 
 const QPLATFORM=LINUX;
 
@@ -58,6 +48,31 @@ int bg_blue = 0;
 #include <fstream>
 #include <sstream>
 #include "../core/Proteus.h"
+
+const UInt MAX_SURFACES = 200;
+const UInt MAX_SCREENS = 24;
+
+struct ProtSurface{
+	infon* frameInfon;
+	bool needsToBeDrawn;
+
+	ProtSurface(){frameInfon=0; needsToBeDrawn=0;};
+};
+
+struct ProtScreen{
+	UInt screenType; // SDL, meta, non-local, etc.
+	ProtSurface* SurfaceForThisScreen;  // This stores the picture vector infon for this screen.
+	SDL_Surface* screen; // This stores the SDL bitmap for the display.
+	bool visible; // true if we oughtn't display this screen.
+	bool needsUpdate; // If this is true then the ProtSurface has changed and we need to re-draw this screen or part of it, then flip it.
+
+	ProtScreen(){screenType=0; SurfaceForThisScreen=0;  screen=0; visible=false; needsUpdate=false;};
+};
+
+ProtSurface protSurfaces[MAX_SURFACES];
+ProtScreen protScreens[MAX_SCREENS];
+
+UInt numScreens;
 
 #define gINT gInt()
 #define gZto1 (float)(((float)gInt()) / 1024.0)
@@ -125,13 +140,11 @@ int getArrayz(float* array){ // gets an array of 0..1 values (Zero)
     return size;
 }
 
-static inline uint32_t map_value(uint32_t val, uint32_t max, uint32_t tomax)
-{
+static inline uint32_t map_value(uint32_t val, uint32_t max, uint32_t tomax){
 	return((uint32_t)((double)val * (double)tomax/(double)max));
 }
 
-static inline SDL_Surface *load_image(const char *filename)
-{
+static inline SDL_Surface *load_image(const char *filename){
 	SDL_Surface* loadedImage = NULL;
 	SDL_Surface* optimizedImage = NULL;
 
@@ -150,76 +163,74 @@ std::cout << "The Color is:" << printInfon(color) << "\n";
     color=color->next; *alpha=(int)color->value;
 }
 
-static inline int show_message(int x, int y, const char *msg)
-{
+static inline int show_message(SDL_Surface* scn, int x, int y, const char *msg){
 	SDL_Surface *message = NULL;
 	SDL_Rect offset;
 	offset.x = x - 1; // >
 	offset.y = y - 1; // V
 
 	message = TTF_RenderText_Solid(font, msg, hiColor);
-	SDL_BlitSurface(message, NULL, screen, &offset );
+	SDL_BlitSurface(message, NULL, scn, &offset );
 
 	SDL_FreeSurface(message);
 	message = TTF_RenderText_Solid(font, msg, loColor);
 	offset.x += 2;
 	offset.y += 2;
-	SDL_BlitSurface(message, NULL, screen, &offset );
+	SDL_BlitSurface(message, NULL, scn, &offset );
 
 	SDL_FreeSurface(message);
 	message = TTF_RenderText_Solid(font, msg, textColor);
 	offset.x--;
 	offset.y--;
-	SDL_BlitSurface(message, NULL, screen, &offset );
+	SDL_BlitSurface(message, NULL, scn, &offset );
 
 	SDL_FreeSurface(message);
 
 	return(1);
 }
 
-static inline void add_msg(const char *msg)
-{
-	show_message(10, 50, msg);
+static inline void add_msg(SDL_Surface* scn, const char *msg){
+	show_message(scn, 10, 50, msg);
 }
 
-static inline void draw_rect(infon* color, int x, int y, int size_x, int size_y)
-{
+static inline void draw_rect(SDL_Surface* scn, infon* color, int x, int y, int size_x, int size_y){
     	int red,green,blue,alpha;
     	getColorComponents(color, &red, &green, &blue, &alpha);
-	boxRGBA(screen, x, y, size_x+x, size_y+y, red, green, blue, alpha);
+//	boxRGBA(scn, x, y, size_x+x, size_y+y, red, green, blue, alpha);
+		SPG_RectFilledBlend(scn, x, y, size_x+x, size_y+y, SDL_MapRGB(scn->format, red, green, blue), alpha);
 }
 
-static inline void draw_RelLine(infon* color, int x, int y, int size_x, int size_y)
-{
+static inline void draw_RelLine(SDL_Surface* scn, infon* color, int x, int y, int size_x, int size_y){
     	int red,green,blue,alpha;
     	getColorComponents(color, &red, &green, &blue, &alpha);
-	lineRGBA(screen, x, y, size_x/15+x, size_y/15+x, red, green, blue, alpha);
+//	lineRGBA(scn, x, y, size_x/15+x, size_y/15+x, red, green, blue, alpha);
+		SPG_LineBlend(scn, x, y, size_x/15+x, size_y/15+x, SDL_MapRGB(scn->format, red, green, blue), alpha);
 }
-static inline void draw_line(infon* color, int x, int y, int size_x, int size_y)
-{
+static inline void draw_line(SDL_Surface* scn, infon* color, int x, int y, int size_x, int size_y){
     	int red,green,blue,alpha;
     	getColorComponents(color, &red, &green, &blue, &alpha);
-	lineRGBA(screen, x, y, size_x, size_y, red, green, blue, alpha);
+//	lineRGBA(scn, x, y, size_x, size_y, red, green, blue, alpha);
+		SPG_LineBlend(scn, x, y, size_x, size_y, SDL_MapRGB(scn->format, red, green, blue), alpha);
 }
 
-static inline void draw_round(infon* color, int x, int y, int size_x, int size_y, int corner)
-{
+static inline void draw_round(SDL_Surface* scn, infon* color, int x, int y, int size_x, int size_y, int corner){
         int red,green,blue,alpha;
        getColorComponents(color, &red, &green, &blue, &alpha);
-	roundedBoxRGBA(screen, x, y, size_x+x, size_y+y, corner, red, green, blue, alpha);
+//	roundedBoxRGBA(scn, x, y, size_x+x, size_y+y, corner, red, green, blue, alpha);
+		SPG_RectRoundFilledBlend(scn, x, y, size_x+x, size_y+y, corner, SDL_MapRGB(scn->format, red, green, blue), alpha);
 }
 
-static inline void draw_circle(infon* color, int x, int y, int radius)
-{
+static inline void draw_circle(SDL_Surface* scn, infon* color, int x, int y, int radius){
     	int red,green,blue,alpha;
        getColorComponents(color, &red, &green, &blue, &alpha);
 	if(radius < x && radius < y) {
-		filledCircleRGBA(screen, x, y, radius, red, green, blue, alpha);
+//		filledCircleRGBA(scn, x, y, radius, red, green, blue, alpha);
+		SPG_CircleFilledBlend(scn, x, y, radius, SDL_MapRGB(scn->format, red, green, blue), alpha);
 	}
 }
 
-void DrawProteusDescription(infon* ProteusDesc){
-if (ProteusDesc==0) std::cout << "Err1\n";
+void DrawProteusDescription(SDL_Surface* scn, infon* ProteusDesc){
+if (scn==0 || ProteusDesc==0) std::cout << "Err1\n";
 if (ProteusDesc->size==0) std::cout << "Err2\n";
 std::cout<<"DISPLAY:["<<printInfon(ProteusDesc)<<"]\n"; 
     int count=0;
@@ -235,13 +246,13 @@ while(!EOT_d1){
         int cmd=gINT;
 std::cout<<"\n[CMD:"<< cmd << "]";
         switch(cmd){
-            case 0:  		OldItmPtr=ItmPtr; DrawProteusDescription(OldItmPtr); ItmPtr=OldItmPtr;
-            case 1: I4 		draw_rect(args, Ia, Ib, Ic, Id);  break;
-            case 2: I5 		draw_round(args, Ia, Ib, Ic, Id, Ie);  break;
-            case 3: I3		draw_circle(args, Ia, Ib, Ic);  break;
-            case 4: I4 		draw_RelLine(args, Ia, Ib, Ic, Id);  break;
-            case 5: I4 		draw_line(args, Ia, Ib, Ic, Id);  break;
-            case 10: I2 S1	show_message(Ia, Ib, Sa);  break;
+            case 0:  		OldItmPtr=ItmPtr; DrawProteusDescription(scn, OldItmPtr); ItmPtr=OldItmPtr; break;
+            case 1: I4 		draw_rect(scn, args, Ia, Ib, Ic, Id);  break;
+            case 2: I5 		draw_round(scn, args, Ia, Ib, Ic, Id, Ie);  break;
+            case 3: I3		draw_circle(scn, args, Ia, Ib, Ic);  break;
+            case 4: I4 		draw_RelLine(scn, args, Ia, Ib, Ic, Id);  break;
+            case 5: I4 		draw_line(scn, args, Ia, Ib, Ic, Id);  break;
+            case 10: I2 S1	show_message(scn, Ia, Ib, Sa);  break;
         }
     if (++count==90) break;
     EOT_d1=theAgent.getNextTerm(&i);
@@ -287,6 +298,27 @@ extern infon *World; World=q.parse();
     std::cout<< printInfon(displayList) << "\n";
 }
 
+////////////////////////////////////////////
+
+class DisplayItem {
+	uint surfaceID;
+	uint itemID;
+	uint locX, locY, rotate, scale, alpha;
+	bool hidden;
+	uint maxRect;
+	uint ItemList;
+	bool changedFlag;
+
+	void ProcessStateChanges(infon* delta);
+	// commands: Select Item or Primative by it's itemID; created if the itemID is new. Delete
+	//        Set: loc, rot, scale, alpha, hidden. Set screen
+	//         In ItemList, go: home, end. Insert before, after, move: to-front, to-back, up, down. Clear list
+};
+
+void DisplayItem::ProcessStateChanges(infon* delta){
+	
+}
+
 //////////////////// End of Slip Specific Code, Begin OpenGL Code
 #define FRAME_RATE_SAMPLES 50
 int FrameCount=0;
@@ -307,13 +339,12 @@ static void ourDoFPS(){
    }
 }
 
-void DrawScreen(){
-   DrawProteusDescription(ProteusDesc);
-    SDL_Flip(screen); // SDL_GL_SwapBuffers( );// All done drawing.  Let's show it.
-
- //   X_Rot+=X_Speed; Y_Rot+=Y_Speed; // Now let's do the motion calculations.
-std::cout<<"."<<std::flush;
-    ourDoFPS();// And collect our statistics.
+void DrawScreen(ProtScreen* scn){
+   DrawProteusDescription(scn->screen, scn->SurfaceForThisScreen->frameInfon);
+	SPG_RectFilled (scn->screen, 20,20,200,200,  SDL_MapRGB(screen->format, 50, 222, 99));
+    SDL_Flip(scn->screen);
+sleep(100);
+    ourDoFPS();// collect our statistics.
     }
 
 void ResizeScene(int Width,int Height){
@@ -325,9 +356,9 @@ void ResizeScene(int Width,int Height){
 
 //////////////////// SDL Init and loop
 void EXIT(char* errmsg){std::cout << errmsg << "\n\n";exit(1);}
-void cleanup(void){FE_Quit(); SDL_Quit();}
+void cleanup(void){SDL_Quit();}
 
-static int runThread(void *nothing){
+static int SimThread(void *nothing){
     int i;
     int val;
     SDL_Event ev;
@@ -337,7 +368,7 @@ static int runThread(void *nothing){
     while (!doneYet) {
         SDL_Delay(100);
         ev.user.data1 = (void *)i;
-        val = FE_PushEvent(&ev); // don't call this in the main thread
+       // val = FE_PushEvent(&ev); // don't call this in the main thread
         num++;
       //  DEB("Sending Event:" << i);
         i++;
@@ -346,13 +377,14 @@ static int runThread(void *nothing){
 }
 
 void setupSDL(){
-    // This "FastEvent" code won't work on pre OSX versions of Macintosh.
-    int InitSDLEventThread=0;
-    if (QPLATFORM==LINUX || QPLATFORM==MACINTOSH) InitSDLEventThread=SDL_INIT_EVENTTHREAD;
+#if SDL_VERSION_ATLEAST(1,3,0)
+	std::cout<<"SDL 1.3+\n";
+#else
+	std::cout<<"SDL 1.2\n";
+#endif	
 
-    SDL_Init(SDL_INIT_AUDIO|SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_NOPARACHUTE|InitSDLEventThread);
+    SDL_Init(SDL_INIT_AUDIO|SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_NOPARACHUTE);
     TTF_Init();
-    FE_Init();
     atexit(cleanup);
 
     /// SELECT VIDEO MODE AND INIT OPENGL
@@ -381,22 +413,33 @@ void setupSDL(){
 		exit(EXIT_FAILURE);
 	}
 }
+enum {PROT_UPDATE_SURFACE=1, PROT_ADD_SCREEN, PROT_DEL_SCREEN, PROT_ADD_SURFACE, PROT_DEL_SURFACE};
 
 void eventLoop(int argc, char** argv){
     int count=0, start=0, end=0, limit = 10*1000;
     double rate=0.0;
     if (2 <= argc) limit = 1000 * atoi(argv[1]);
-
-    SDL_Thread *thread = SDL_CreateThread(runThread, NULL);
+	numScreens=1;  // later, this can change to support multiple screens.
+	SDL_Thread *simulationThread = SDL_CreateThread(SimThread, "Proteus", NULL);
     SDL_Event ev;
     start = SDL_GetTicks();
-    while ((SDL_GetTicks() < (start + limit)) && FE_WaitEvent(&ev)){
+    while ((SDL_GetTicks() < (start + limit)) && SDL_PollEvent(&ev)){
         num--;
         // DEB("Got: " << num);
         // DEB ("Time: " << SDL_GetTicks());
         switch (ev.type) {
-        case SDL_USEREVENT: // Handle user events here.
-            // DEB("count: " << count << "   event.data1: " << (int)ev.user.data1);
+        case SDL_USEREVENT:
+			switch(ev.user.code){
+				case PROT_UPDATE_SURFACE: 
+					protSurfaces[(uint)ev.user.data1].frameInfon=(infon*)ev.user.data2;
+					protSurfaces[(uint)ev.user.data1].needsToBeDrawn=true;
+					break;
+				case PROT_ADD_SCREEN: break;
+				case PROT_DEL_SCREEN: break;
+				case PROT_ADD_SURFACE: break;
+				case PROT_DEL_SURFACE: break;
+			}
+
             count++;
             break;
         case SDL_KEYDOWN: // Handle any key presses here.
@@ -416,19 +459,19 @@ void eventLoop(int argc, char** argv){
                break;
         case SDL_QUIT: EXIT ((char*)"SDL Quit Event: Forced Exit?."); break;
         default:; // printSDLEvent(&ev); break;
-       }
-       DrawScreen();
+		}
+		for (uint scn=0; scn<numScreens; scn++)
+			DrawScreen(&protScreens[scn]);
       }
       doneYet = 1;
 
-    while (FE_PollEvent(&ev)){} // drain the que
-    SDL_WaitThread(thread, NULL); // wait for it to die
+	SDL_WaitThread(simulationThread, NULL); // wait for it to die
     end = SDL_GetTicks();
     rate = ((double)count) / (((double)(end - start)) / 1000.0);
     DEB("Events/Second:" << rate);
 }
 
-int main(int argc, char **argv){
+int main(int argc, char *argv[]){
     initWorldAndEventQueues();
     setupSDL();
   //  setupOpenGL();

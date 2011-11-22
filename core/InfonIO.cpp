@@ -174,7 +174,7 @@ infon* grok(infon* item, UInt tagCode, int* code){
                 if ((item->spec1->spec2->wFlag&mFindMode)>=iGetLast) return item->spec1->spec2->spec1;
             } else{ // { [A V R] | ...} ::= ABC
                 // if (item->spec2 a tag)  mark inner-tag; return it.
-                if ((item->spec2->wFlag&mFindMode)>=iGetLast) return item->spec2->spec1;
+                if ((item->spec2->wFlag&mFindMode)>=iGetLast) return item; //item->spec2->spec1;
             }  
         }
     }
@@ -272,7 +272,7 @@ infon* QParser::ReadInfon(int noIDs){
     if(i->pFlag&fConcat && i->size==(infon*)1){infon* ret=i->value; delete(i); return ret;} // BUT we lose i's idents and some flags (desc, ...)
     if ((i->size && ((fs&tType)==tList))||(fs&fConcat)) i->size->top=i;
     if ((i->value&& ((fv&tType)==tList))||(fv&fConcat))i->value->top=i;
-    if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~(mFindMode+mAssoc); i->wFlag|=mIsHeadOfGetLast; i=new infon(0,wFlag,0,0,0,i); i->spec1->prev=i;}
+    if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~(mFindMode+mAssoc); i->wFlag|=mIsHeadOfGetLast; i=new infon(0,wFlag,0,0,0,i); i->spec1->top2=i;}
     for(char c=Peek(); !(noIDs&1) && (c==':' || c=='='); c=Peek()){
         cTok=nxtTokN(2,"::",":");
         eTok=nxtTokN(2,"==","=");
@@ -295,7 +295,8 @@ infon* QParser::ReadInfon(int noIDs){
                     }
                 }
             } else if(isEq(cTok,"::")){
-                toSet=grok(i,c2Left,&code); R=ReadInfon(4);
+				// Add a new head to the spec list.
+                toSet=grok(i,c2Left,&code); code=InitSearchList; R=ReadInfon(4);
             } else {toSet=i; R=ReadInfon(1);}
             if(isEq(eTok,"==")) {code|=mMatchType;}
             if(isEq(cTok2,":")){toRef=grok(R,c1Right,&code);}

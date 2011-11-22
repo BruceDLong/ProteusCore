@@ -38,8 +38,8 @@ enum vals {toGiven=0, toWorldCtxt=0x0100, toHomePos=0x0200, fromHere=0x0300, asF
     isFirst=0x01000000, isLast=0x02000000, isTop=0x04000000, isBottom=0x8000000,
     noAlts=0, hasAlts=0x10000000, noMoreAlts=0x20000000, isTentative=0x40000000, isVirtual=0x80000000
     };
-enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,iAssocNxt,iHardFunc,
-                   iGetSize,iGetType,iGetLast,iGetFirst,iGetMiddle};
+enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,iHardFunc,
+                   iGetSize,iGetType,iAssocNxt,iGetLast,iGetFirst,iGetMiddle};
 enum seeds {mSeed=0x30, sNone=0x00, sUseAsFirst=0x10, sUseAsList=0x20, sUseAsLast=0x30};
 enum wMasks {mFindMode = 0x0f, mIsTopRefNode = 0x1000, mIsHeadOfGetLast=0x2000, mAsProxie=0x4000, mAssoc=0x8000};
 enum colonFlags {c1Left=0x100, c2Left=0x200, c1Right=0x400, c2Right=0x800, };
@@ -48,18 +48,18 @@ struct infon;
 struct assocInfon {infon *VarRef, *nextRef; assocInfon(infon* first=0):VarRef(first),nextRef(0){};};
 
 struct infNode {infon* item; infon* slot; UInt idFlags; infNode* next; infNode(infon* itm=0, UInt f=0):item(itm),idFlags(f){};};
-enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, CountSize=2, SetComplete=3, NodeDoneFlag=8, NoMatch=16,isRawFlag=32, 
+enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, InitSearchList=2, SetComplete=3, NodeDoneFlag=8, NoMatch=16,isRawFlag=32, 
     skipFollower=64, mMatchType=128};
 
 struct infon {
     infon(UInt pf=0, UInt wf=0, infon* s=0, infon*v=0,infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0):
-        pFlag(pf), wFlag(wf), size(s), value(v), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {prev=0; top=0; type=0;};
+        pFlag(pf), wFlag(wf), size(s), value(v), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {prev=0; top=0; top2=0; type=0;};
     infon* isntLast(); // 0=this is the last one. >0 = pointer to predecessor of the next one.
     UInt pFlag, wFlag;
     UInt wSize; // get rid if this. disallow strings and lists in "size"
     infon *size;        // The *-term; number of states, chars or items
     infon *value;       // Summand List
-    infon *next, *prev, *top, *pred;
+    infon *next, *prev, *top, *top2, *pred;
     infon *spec1, *spec2;   // Used to store indexes, functions args, etc.
     infNode* wrkList;
 	stng* type;

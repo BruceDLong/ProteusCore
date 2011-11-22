@@ -104,7 +104,7 @@ int agent::getNextTerm(infon** p) {
     if ((*p)->pFlag&isLast){     // if isLast && Parent is spec1-of-get-last, get parent, apply any idents
         parent=getTop((*p));
         if(parent->wFlag&mIsHeadOfGetLast) {
-            parent=parent->prev; // This is a different use for 'prev'. It should be OK.
+            parent=parent->top2; // This is a different use for 'prev'. It should be OK.
             infNode *j=parent->wrkList, *k, *IDp;  // Merge Identity Lists
             if(j) do {
                 k=new infNode; k->item=new infon; k->idFlags=j->idFlags;
@@ -185,7 +185,7 @@ void deTagWrkList(infon* i){ // After a tag is derefed, move any c1Left wrkList 
 }
 
 void agent::deepCopy(infon* from, infon* to, infon* args, PtrMap* ptrs){
-    UInt fm=from->wFlag&mFindMode;
+    UInt fm=from->wFlag&mFindMode; infon* tmp;
     to->pFlag=(from->pFlag&0x0fffffff)/*|(to->pFlag&0xff000000)*/; to->wFlag=from->wFlag; to->type=from->type;
     
     if(((from->pFlag>>goSize)&tType)==tList || ((from->pFlag>>goSize)&fConcat)){to->size=copyList(from->size); if(to->size)to->size->top=to;}
@@ -193,13 +193,14 @@ void agent::deepCopy(infon* from, infon* to, infon* args, PtrMap* ptrs){
     
     if((from->pFlag&tType)==tList || ((from->pFlag)&fConcat)){to->value=copyList(from->value); if(to->value)to->value->top=to;}
     else to->value=from->value;
-    if(from->wFlag&mIsHeadOfGetLast) to->prev=(*ptrs)[from->prev]; // Hmmm. I haven't proven this use of prev is OK. It's OK if all tests pass.
+    if(from->wFlag&mIsHeadOfGetLast) to->top2=(*ptrs)[from->top2]; // The 'mIsHeadOfGetLast' use of prev
     if(fm==iToPath || fm==iToPathH || fm==iToArgs || fm==iToVars) {
         to->spec1=from->spec1; 
         if (ptrs) to->top=(*ptrs)[from->top];
     } else if((fm==iGetFirst || fm==iGetLast || fm==iGetMiddle) && from->spec1) {
         PtrMap *ptrMap = (ptrs)?ptrs:new PtrMap;
-        to->spec1=new infon; 
+		if ((to->prev) && (tmp=to->prev->spec1) && (tmp->wFlag&mIsHeadOfGetLast) && (tmp=tmp->next)) to->spec1=tmp;
+        else to->spec1=new infon; 
         (*ptrMap)[from]=to;
         deepCopy (from->spec1, to->spec1, 0, ptrMap);  // In Old List Copy this was copyTo, not DeepCopy!!!!!!!!!!!!!
         if(ptrs==0) delete ptrMap;
@@ -213,8 +214,8 @@ void agent::deepCopy(infon* from, infon* to, infon* args, PtrMap* ptrs){
 				to->spec1->value=nextNode->prev;  // to->spec1->value now points to where search should continue.
 				to->spec1->size=(infon*)((UInt)to->prev->spec1->size - (UInt)nextNode->size); // We've moved, so size is less.
 			}
-		}
-    } else {to->spec1=new infon; deepCopy((args)?args:from->spec1,to->spec1);}
+		}}
+    else {to->spec1=new infon; deepCopy((args)?args:from->spec1,to->spec1);}
     
     if ((from->wFlag&mFindMode)==iAssocNxt) {to->spec2=from;}  // Breadcrumbs to later find next associated item.
     else if(!from->spec2) to->spec2=0;
@@ -278,17 +279,7 @@ void agent::processVirtual(infon* v){
     if (spec){
         if((spec->wFlag&mFindMode)==iAssocNxt) {copyTo(spec, v); v->pFlag=((fUnknown+tUInt)<<goSize)+fUnknown; v->spec1=spec->spec2;}
         else {deepCopy(spec, v); }
-         if(posArea=='?' && v->spec1) posArea= 'N'; // N='Not greater'
-   //     if((mode=(spec->pFlag&mRepMode))==asFunc){
-//            deepCopy(spec,v,args);
-//            EOT = ((args->wFlag&mFindMode)==mAssoc) ? 0 : getNextNormal(&args); // TODO B4: don't forget this.
-//        } else  
-  /*          if((spec->wFlag&mFindMode)==iGetLast){ // TODO: This is where we add Middle and First.
-                if((spec->wFlag&mAssoc) && spec->spec2) 
-                {v->spec2=spec->spec2;}
-                else deepCopy(spec,v);
-                if(posArea=='?' && v->spec1) posArea= 'N'; // N='Not greater'
-        } else deepCopy(spec, v);*/
+        if(posArea=='?' && v->spec1) posArea= 'N'; 
     }
     v->pFlag|=tmpFlags;  // TODO B4: move this flag stuff into deepCopy.
     v->pFlag&=~isVirtual; 
@@ -315,19 +306,19 @@ void agent::InitList(infon* item) {
 int agent::getFollower(infon** lval, infon* i){
     infon* size; int levels=0;
     gnsTop: if(i->next==0) {*lval=0; return levels;}
-    if((i->next->pFlag&isVirtual) && i->spec2 && i->spec2->prev==(infon*)2){
+ /*   if((i->next->pFlag&isVirtual) && i->spec2 && i->spec2->prev==(infon*)2){
 		i->pFlag|=(isLast+isBottom);
 		size=i->next->size-1;
 		i->next->next->prev=i; i->next=i->next->next;// TODO when working on mem mngr: i->next is dangling
 		i=getTop(i); i->size=size; i->pFlag&= ~fLoop; ++levels;
 		goto gnsTop;
-	}
+	}*/
     if(i->pFlag&isLast && i->prev){
         i=getTop(i); ++levels;
         if(i) goto gnsTop;
         else {*lval=0; return levels;}
     }
-    *lval=i; getNextTerm(lval); // *lval=i->next;
+    *lval=i; getNextTerm(lval);
     if((*lval)->pFlag&isVirtual) processVirtual(*lval);
     return levels;
 }
@@ -429,8 +420,20 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
     if(CIfol && !CIfol->pred) CIfol->pred=ci;
     if(wrkNode)do{
         wrkNode=wrkNode->next; item=wrkNode->item; IDfol=(infon*)1; DEB(" Doing Work Order:" << item);
-		if (wrkNode->idFlags&skipFollower) CIfol=0;    
+		if (wrkNode->idFlags&skipFollower) CIfol=0;
         switch (wrkNode->idFlags&WorkType){
+		case InitSearchList: // e.g., {[....]|...}::={3 4 5 6}
+			tmp=new infon();
+			tmp->top2=ci; tmp->value=ci->value->spec1;
+			{tmp->size=ci->size; cpFlags(ci,tmp,0xff0000);} tmp->pFlag|=(fLoop+fUnknown+tList);
+			insertID(&tmp->wrkList, item, MergeIdent);  // apending the {3 4 5 6}
+			tmp->value->next = tmp->value->prev = tmp->value;
+			tmp->value->pFlag|=(isTop+isBottom+isFirst+isVirtual);
+			tmp->value->top=tmp;			
+			insertID(&tmp->value->wrkList, item->value, MergeIdent);
+			processVirtual (tmp->value); tmp->value->next->size=2;
+			result=DoNext;
+			break;
         case ProcessAlternatives:
             if (altCount>=1) break; // don't keep looking after found
             if(wrkNode->idFlags&isRawFlag){
@@ -494,7 +497,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
 
                         // MERGE VALUES
                         if(!(item->pFlag&fUnknown)){
-                            
+
                             if ((CIsType+4*ItemsType)== tUInt+4*tUInt){
                                 if(ci->pFlag&fUnknown) {ci->value=item->value; flagMask|=0xff;}
                                 else if (ci->value!=item->value){SetBypassDeadEnd(); std::cout<<"Values contradict\n"; break;}
@@ -513,10 +516,10 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                         }
                         if(flagMask) cpFlags(item,ci,(flagMask+0xff00));
                     }
-                     isIndef=0;
-                    getFollower(&IDfol, item);
+                    isIndef=0;
                     if(CIfol){
                         if(infonSizeCmp(ci,item)==0 || ((CIsType+4*ItemsType)!= tString+4*tString)){
+							getFollower(&IDfol, item);
                             if(IDfol) addIDs(CIfol, IDfol, asAlt);
                             else  if( ((CIsType+4*ItemsType)!= tList+4*tList)) {// temporaty hack
                                 if ((tmp=ci->isntLast()) && (tmp->next->pFlag&isTentative)) {
@@ -544,8 +547,8 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             }
             break;
         }
-        if(!CIfol && ((tmp2=getVeryTop(ci))!=0) && (tmp2->prev==((infon*)1)))
-			tmp2->prev=(IDfol==0)?(infon*)2:IDfol; // Set the next seed for index-lists
+ //       if(!CIfol && ((tmp2=getVeryTop(ci))!=0) && (tmp2->prev==((infon*)1)))
+//			tmp2->prev=(IDfol==0)?(infon*)2:IDfol; // Set the next seed for index-lists
     }while (wrkNode!=ci->wrkList); else result=(ci->next && (ci->pFlag&isTentative))?DoNextIf:DoNext;
     if(altCount==1){
             for (f=1, tmp=getTop(ci); tmp!=0; tmp=getTop(tmp)) // check ancestors for alts
@@ -616,6 +619,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                         CI->pFlag|=fUnknown;
                     } else{
                         normalize(CI->spec1, cn.firstID); 
+						if( ! CI->spec1->isntLast ()) CI->pFlag|=(isBottom+isLast);
                         if(CI->spec1->pFlag&hasAlts) {  // migrate alternates from spec1 to CI... Later, build this into LastTerm.
                             infNode *wrkNode=CI->spec1->wrkList; infon* item=0;
                             if(wrkNode)do{
@@ -629,10 +633,10 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                         else LastTerm(CI->spec1, &newID);
                     }
                     CI->pFlag|=fUnknown; 
-                    break; 
+                    break;
                 case iGetSize:      break; // TODO: make this work;
-                case iGetType:     break; // TODO: make this work; 
-                case iHardFunc: autoEval(CI, this); break;  
+                case iGetType:     break; // TODO: make this work;
+                case iHardFunc: autoEval(CI, this); break;
                 case iNone: default: throw "Invalid Find Mode";
             }
             if(newID){
@@ -648,7 +652,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                         closeListAtItem((masterItem)?masterItem : getMasterList(CI));
                     }
                 }
-                insertID(&CI->wrkList, newID,(CIFindMode==iAssocNxt)?skipFollower:0);
+                insertID(&CI->wrkList, newID,(CIFindMode>=iAssocNxt)?skipFollower:0);
                 CI->pFlag&=~tType; CI->wFlag&=~mFindMode;
             }
         }

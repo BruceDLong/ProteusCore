@@ -11,7 +11,7 @@ CC = g++
 CFLAGS = $(COMPILERFLAGS) $(UNCOMMENT_TO_DO_GCOVERAGE)
 
 slip: slip.o Proteus.o InfonIO.o Functions.o fastevents.o
-	g++ $(CFLAGS)  -L/usr/local/lib -lSDL_gfx slip.o fastevents.o ./Proteus.o InfonIO.o Functions.o ${SDL_LDFLAGS} -lSDL_ttf  -o slip
+	g++ $(CFLAGS)  -L/usr/local/lib -lSDL_gfx slip.o fastevents.o ./Proteus.o InfonIO.o Functions.o ${SDL_LDFLAGS} -lSDL_ttf -lsprig  -o slip
 
 slip.o: slip.cpp ../core/Proteus.h
 	g++ $(CFLAGS)  ${SDL_CFLAGS} -I. -c slip.cpp

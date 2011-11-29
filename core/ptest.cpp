@@ -18,7 +18,7 @@ void readln(std::string &str){
     for(ch=getCH(); ch!='\n';ch=getCH())str+=ch;
 }
 #include <signal.h>
-static void reportFault(int Signal){DEB(printHTMLFooter("Segmentation Fault.")) fflush(stdout); abort();}
+static void reportFault(int Signal){OUT("Segmentation Fault."); fflush(stdout); abort();}
 extern infon *World;
 infon* topInfon;
 
@@ -55,8 +55,8 @@ do{
     else {std::cout<<"Error: "<<q.buf<<"\n"; exit(0);}
 if (mode==2){
     // Load DispList
-    std::cout << "Parsing query ["<<query<<"]\n";
-DEB(printHTMLHeader(query))
+    std::cout<<"Parsing query ["<<query<<"]\n";
+
     std::istrstream fin2(query.c_str());
     QParser D(fin2);
     infon* queryinf=D.parse(); std::cout << "parsed\n";
@@ -66,7 +66,6 @@ DEB(printHTMLHeader(query))
     topInfon=queryinf;
     a.normalize(queryinf); std::cout<<"Normed\n";
     std::cout<<printInfon(queryinf);
-DEB(printHTMLFooter(D.buf))
 }
  }while (mode!=5 && ! std::cin.eof());
 
@@ -95,18 +94,18 @@ int main(int argc, char **argv)
     else {std::cout<<"Error:"<<D.buf<<"\n"; exit(1);}
 
     a.normalize(displayList);
-//    DEB("Normed.");
-//    DEB(printInfon(displayList))
+//    OUT("Normed.");
+//    OUT(printInfon(displayList))
 
-	int count=0;
-	int EOT=0;
-	infon* i=0;
-	infon* CI=displayList; topInfon=displayList;
-	EOT=StartTerm(CI, &i);
-	while(!EOT){
-		std::cout << count<<":[" << printInfon(i).c_str() << "]\n";
-		if (++count==20) return 0;
-		EOT= getNextTerm(&i);
+    int count=0;
+    int EOT=0;
+    infon* i=0;
+    infon* CI=displayList; topInfon=displayList;
+    EOT=StartTerm(CI, &i);
+    while(!EOT){
+        std::cout << count<<":[" << printInfon(i).c_str() << "]\n";
+        if (++count==20) return 0;
+        EOT= getNextTerm(&i);
 }
 std::cout << "DONE\n";
 

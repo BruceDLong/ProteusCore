@@ -48,7 +48,7 @@ struct infon;
 struct assocInfon {infon *VarRef, *nextRef; assocInfon(infon* first=0):VarRef(first),nextRef(0){};};
 
 struct infNode {infon* item; infon* slot; UInt idFlags; infNode* next; infNode(infon* itm=0, UInt f=0):item(itm),idFlags(f){};};
-enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, InitSearchList=2, SetComplete=3, NodeDoneFlag=8, NoMatch=16,isRawFlag=32, 
+enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, InitSearchList=2, SetComplete=3, NodeDoneFlag=8, NoMatch=16,isRawFlag=32,
     skipFollower=64, mMatchType=128};
 
 struct infon {
@@ -62,7 +62,7 @@ struct infon {
     infon *next, *prev, *top, *top2, *pred;
     infon *spec1, *spec2;   // Used to store indexes, functions args, etc.
     infNode* wrkList;
-	stng* type;
+    stng* type;
 };
 
 struct Qitem{infon* item; infon* firstID; UInt IDStatus; UInt level; int bufCnt;
@@ -75,17 +75,17 @@ extern std::map<stng,infon*> tag2Ptr;
 extern std::map<infon*,stng> ptr2Tag;
 struct agent {
     agent(){world=World;};
-    inline int StartTerm(infon* varIn, infon** varOut);
-    inline int LastTerm(infon* varIn, infon** varOut);
-    inline int getNextTerm(infon** p);
-    inline int getPrevTerm(infon** p);
-	inline int getNextNormal(infon** p);
-	void append(infon* i, infon* list);
+    int StartTerm(infon* varIn, infon** varOut);
+    int LastTerm(infon* varIn, infon** varOut);
+    int getNextTerm(infon** p);
+    int getPrevTerm(infon** p);
+    int getNextNormal(infon** p);
+    void append(infon* i, infon* list);
     int compute(infon* i);
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
     infon* normalize(infon* i, infon* firstID=0, bool doShortNorm=false);
     infon *world, context;
-        void deepCopy(infon* from, infon* to, infon* args=0, PtrMap* ptrs=0);
+    void deepCopy(infon* from, infon* to, infon* args=0, PtrMap* ptrs=0);
     private:
         void InitList(infon* item);
         infon* copyList(infon* from);
@@ -106,7 +106,7 @@ struct QParser{
     infon* parse(); // if there is an error it is returned in buf as a char* string.
     UInt ReadPureInfon(infon** i, UInt* pFlag, UInt *flags2, infon** s2);
     infon* ReadInfon(int noIDs=0);
-	char streamGet();
+    char streamGet();
     void scanPast(char* str);
     bool chkStr(const char* tok);
     const char* nxtTokN(int n, ...);
@@ -118,21 +118,21 @@ struct QParser{
     char buf[bufmax];
     char nTok; // First character of last token
     int line;  // linenumber, position in text
-	std::string textParsed;
+    std::string textParsed;
     infon* ti; // top infon
 };
 //extern std::fstream log;
-#define OUT(msg) /*{std::cout<< msg;}*/
-#define DEB(msg) /*{std::cout<< msg << "\n";}*/
+#define OUT(msg) {std::cout<< msg;}
+#define Debug(msg) /*{std::cout<< msg << "\n";}*/
 #define getInt(inf, num, sign) {/*normalize(inf);  */           \
   UInt f=inf->pFlag;                           \
   if((f&tType)==tUInt && !(f&fUnknown)) num=(UInt)inf->value; else num=0;     \
   sign=f&fInvert;}
 
 inline void getStng(infon* i, stng* str) {
-	if((i->pFlag&tType)==tString && !(i->pFlag&fUnknown)) {
-		str->S=(char*)i->value; str->L=(UInt)i->size;
-	}
+    if((i->pFlag&tType)==tString && !(i->pFlag&fUnknown)) {
+        str->S=(char*)i->value; str->L=(UInt)i->size;
+    }
 }
 
 #define appendID(list, node) {IDp=(*list); (*list)=node; if(IDp){(*list)->next=IDp->next; IDp->next=(*list);} else (*list)->next=(*list);}

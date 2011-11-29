@@ -1,13 +1,13 @@
 <% {
-///////////////  tree theme
+///////////////  list theme
   {'list',
     {'simple',
       { ? { red drawComplex 
-        {{blue text 20,100,  \\\\[$]. } |...}
+        {{blue text 20,100,  "BLOO TEXT" } |...}
        }
       }
 	}
-	{'lined',   // { [5, 7, 3, 8] ({0} {+(\\\\[_]. \\\^[_].) | ...})}
+/*	{'lined',   // { [5, 7, 3, 8] ({0} {+(\\\\[_]. \\\^[_].) | ...})}
       { ? 
 		//({0} {+(\\\\[_]. \\\^[_].) | ...})  // X-values
 		({0} {+(+50 \\\^[_].) | ...})  // Y-values
@@ -20,64 +20,11 @@
        }
       }
     }
-
+*/
 	{'blocked',
-      { ? {
-        {red text 200,200,  \\\[$] }
-      } }
-    }
-  }
-
-///////////////  tree theme
-  {'tree',
-    {'dropdown',
-      { ? {
-        {blue text 200,200,  \\\[$] }
-      } }
-    }
-
-	{'outline',
-      { ? {
-        {green text 200,200,  \\\[$] }
-      } }
-    }
-
-	{'outline',
-      { ? {
-        {red text 200,200,  \\\[$] }
-      } }
-    }
-  }
-
-///////////////  time theme
-  {'time',
-    {'digital',
-      { ? { red drawComplex {
-        {gray text 200,200,  "The Time Is Past Bed Time" }
-		{transparent_blue text 200,250,  "Hit the sack!" }
-		}
-       }
-    }
-	}
-	{'analog',
-      { ? 
-        {white text 200,300,  \\[$] }
-      } 
-    }
-  }
-
-///////////////  number theme
-{'number',
-    {'digital',
-      { ? {
-        {purple text 200,200,  \\\[$] }
-      } }
-    }
-
-	{'roman',
-      { ? {
-        {transparent_blue text 200,200,  \\\[$] }
-      } }
+      [ ? 
+        {{red line 0 70 100 500  }}
+       ]
     }
   }
 

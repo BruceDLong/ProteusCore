@@ -24,7 +24,7 @@ std::string printPure (infon* i, UInt f, UInt wSize, infon* CI){
         s+=(f&fConcat)?"(":"{";
         for(infon* p=i;p;) {
             if(p==i && f&fLoop && i->spec2){printInfon(i->spec2,CI); s+=" | ";}
-			if(p->pFlag&isTentative) {s+="..."; break;}
+            if(p->pFlag&isTentative) {s+="..."; break;}
             else {s+=printInfon(p, CI); s+=' ';}
             if (p->pFlag&isBottom) p=0; else p=p->next;
         }
@@ -123,7 +123,7 @@ const char* altTok(std::string tok){
     if (tok=="%C") return "the";
     if (tok=="%W") return "thee";
     if (tok=="%A") return "%Arg";
-    if (tok=="%V") return "%Var";                                                               
+    if (tok=="%V") return "%Var";
 
     return 0;
 }
@@ -132,7 +132,7 @@ bool QParser::chkStr(const char* tok){
     int startPos=textParsed.size();
     if (tok==0) return 0;
     for(const char* p=tok; *p; p++) {
-        if ((*p)==' ') RmvWSC(); 
+        if ((*p)==' ') RmvWSC();
         else if ((*p) != streamGet ()){
             streamPut(textParsed.size()-startPos);
             return false;
@@ -157,8 +157,8 @@ const char* QParser::nxtTokN(int n, ...){
 
 void  chk4HardFunc(infon* i){
     if((i->wFlag&mFindMode)==iTagUse)
-        if(strcmp(i->type->S,"addOne")==0)// ||i->type=="loadInfon" || i->type=="draw" || i->type=="time" || i->type=="cos" || i->type=="sin")
-            {i->wFlag&=~iTagUse; 
+        if(isEq(i->type->S,"addOne") || isEq(i->type->S,"loadInfon") || isEq(i->type->S,"draw") || isEq(i->type->S,"time") || isEq(i->type->S,"cos") || isEq(i->type->S,"sin"))
+            {i->wFlag&=~iTagUse;
                 i->wFlag|=iHardFunc;}
 }
 
@@ -175,7 +175,7 @@ infon* grok(infon* item, UInt tagCode, int* code){
             } else{ // { [A V R] | ...} ::= ABC
                 // if (item->spec2 a tag)  mark inner-tag; return it.
                 if ((item->spec2->wFlag&mFindMode)>=iGetLast) return item; //item->spec2->spec1;
-            }  
+            }
         }
     }
     return 0;
@@ -211,7 +211,7 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
         check(rchr);
         if(nxtTok("~"))  (*wFlag)|=mAssoc;
     } else if (nxtTok("123")) {   // read number
-        *pFlag+=tUInt; 
+        *pFlag+=tUInt;
         *i=(infon*)atoi(buf);
         size=1;
     } else if (nxtTok("_")){*pFlag+=fUnknown+tUInt;
@@ -226,7 +226,7 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
 
 infon* QParser::ReadInfon(int noIDs){
     char op=0; UInt size=0; infon*iSize=0,*iVal=0,*s1=0,*s2=0; UInt pFlag=0,wFlag=0,fs=0,fv=0; infNode *IDp=0;
-	stng* tags=0; const char* cTok, *eTok, *cTok2; int textEnd=0; /*int textStart=textParsed.size();*/
+    stng* tags=0; const char* cTok, *eTok, *cTok2; /*int textEnd=0; int textStart=textParsed.size();*/
     if(nxtTok("@")){pFlag|=toExec;}
     if(nxtTok("#")){pFlag|=asDesc;}
     if(nxtTok("?")){fs=fv=fUnknown; wFlag=iNone;}
@@ -247,7 +247,7 @@ infon* QParser::ReadInfon(int noIDs){
         }
     }else{  // OK, then we're parsing some form of *... +...
         wFlag|=iNone;
-        if(nxtTok("+") || nxtTok("-")) op='+'; else if(nxtTok("*") || nxtTok("/")) op='*'; 
+        if(nxtTok("+") || nxtTok("-")) op='+'; else if(nxtTok("*") || nxtTok("/")) op='*';
         if( nTok=='-' || nTok=='/') fs|=fInvert;
         size=ReadPureInfon(&iSize, &fs, &wFlag, &s2);
         if(op=='+'){
@@ -295,7 +295,7 @@ infon* QParser::ReadInfon(int noIDs){
                     }
                 }
             } else if(isEq(cTok,"::")){
-				// Add a new head to the spec list.
+                // Add a new head to the spec list.
                 toSet=grok(i,c2Left,&code); code=InitSearchList; R=ReadInfon(4);
             } else {toSet=i; R=ReadInfon(1);}
             if(isEq(eTok,"==")) {code|=mMatchType;}
@@ -313,17 +313,17 @@ infon* QParser::ReadInfon(int noIDs){
         else if(nxtTok("!>")) {}
         else if(nxtTok("<!")){}
     }
-	textEnd=textParsed.size();
+    /*textEnd=textParsed.size(); */
     return i;
 }
 
 infon* QParser::parse(){
     char tok;
     try{
-		textParsed="";
+        textParsed="";
         line=1; scanPast((char*)"<%");
         infon*i=ReadInfon();
-		//std::cout<<"\n["<<textParsed<<"]\n";
+        //std::cout<<"\n["<<textParsed<<"]\n";
         check('%'); check('>'); buf[0]=0; return i;
     }
     catch(char const* err){char l[30]; itoa(line,l); strcpy(buf,"An Error Occured: "); strcat(buf,err);

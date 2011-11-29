@@ -1,37 +1,66 @@
 <%
 {
-	 eval=#+{{{...} {...}}, @\[{...}]: \[{...} {...}]}
+     // eval=#+{{{...} {...}}, @\[{...}]: \[{...} {...}]}
 
-	white={255,255,255,255}
-	black={0,0,0,255}
-	gray={150,150,150,255}
-	red={255,0,0,255}
-	green={0,255,0,255}
-	blue={0,0,255,255}
-	transparent_blue={0,0,255,32}
-	purple={255,0,255,255}
+    %white={255,255,255,255}
+    %black={0,0,0,255}
+    %gray={150,150,150,255}
+    %red={255,0,0,255}
+    %green={0,255,0,255}
+    %blue={0,0,255,255}
+    %transparent_blue={0,0,255,32}
+    %purple={255,0,255,255}
 
-	drawComplex=+0
-	rectangle=+1
-	curvedRect=+2
-	circle=+3
-	RelLine=+4
-	line=+5
-	text=+10
+    %drawItem       = 0
+    %rectangle      = 1
+    %curvedRect     = 2
+    %circle         = 3
+    %lineTo         = 4
+    %lineRel        = 5
+    %moveTo         = 6
+    %moveRel        = 7
+    %curveTo        = 8
+    %curveRel       = 9
+    %arcClockwise   = 10
+    %arcCtrClockW   = 11
+    %text           = 12
 
+    %strokePath     = 16
+    %fillPath       = 17
+    %paintSurface   = 18
+    %closePath      = 19
 
+    %inkColor       = 20
+    %inkGradient    = 21
+    %inkImage       = 22
+    %inkDrawing     = 23  // Pull ink from another surface
+
+    %lineWidth      = 25
+    %lineStyle      = 26
+    %fontFace       = 27
+    %fontSize       = 28
+
+    %drawToScrnN    = 30
+    %drawToWindowN  = 31
+    %drawToMemory   = 32
+    %drawToPDF      = 33
+    %drawToPS       = 34
+    %drawToSVG      = 35
+    %drawToPNG      = 36
+
+/*
 {show_clock= {
   {_, _, _} // hours, minutes, seconds
-	{ {1,2,3} drawComplex
-		{
-		{blue circle 200,210,80}
-		{purple RelLine 200,210,  cos:*1+(*1-6 \\\\\\[_,_,_] *1+90)  sin:*1+(*1-6  \\\\\\[_,_,_] *1+90 ) }  // second hand
-		{red RelLine 200,210,  cos:*1+(*1-6 \\\\\\[_,_] *1+90)  sin:*1+(*1-6 \\\\\\[_,_] *1+90)}   // minute hand
-		{green RelLine 200,210,  cos:*1+(*1-30 \\\\\\[_] *1+90)  sin:*1+(*1-30 \\\\\\[_] *1+90 ) }  // hour hand
-		}
-	}
+    { {1,2,3} drawItem
+        {
+        {blue circle 200,210,80}
+        {purple lineTo 200,210,  cos:*1+(*1-6 \\\\\\[_,_,_] *1+90)  sin:*1+(*1-6  \\\\\\[_,_,_] *1+90 ) }  // second hand
+        {red lineTo 200,210,  cos:*1+(*1-6 \\\\\\[_,_] *1+90)  sin:*1+(*1-6 \\\\\\[_,_] *1+90)}   // minute hand
+        {green lineTo 200,210,  cos:*1+(*1-30 \\\\\\[_] *1+90)  sin:*1+(*1-30 \\\\\\[_] *1+90 ) }  // hour hand
+        }
+    }
      }
-   }
+   } */
 }
 %>
 

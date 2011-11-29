@@ -15,7 +15,7 @@ using namespace std;
 #include <readline/history.h>
 
 /* A static variable for holding the line. */
-static char *line_read = (char *)NULL;
+static char *line_read = (char *)NULL; 
 
 /* Read a string, and return a pointer to it.
    Returns "quit" on EOF. */
@@ -35,7 +35,7 @@ rl_gets (const char* prompt)
 
   /* If the line has any text in it,
      save it on the history. */
-  if (line_read && *line_read)
+  if (line_read && *line_read) 
     add_history (line_read);
 
   if (line_read == NULL)

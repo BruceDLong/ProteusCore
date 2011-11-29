@@ -1,10 +1,31 @@
 <%
- {{
-		LIST={'list', 'lined', {'Shop' 'change cat litter' 'sing blues'} }
-		{'time', 'digital', {"Hello There"} } 
-		{'time', 'analog', {"co-Nietzsche-wa"} }
+{
+    { drawItem 321 scn0 {1024 0 0 0 255} {
+        {sourceColor blue}
+        {lineTo 140 50}
+        {lineTo 50 200}
 
-	}
+        }
+    }
+}
+%>
+
+<%
+{
+    {{0,255,0,255} 5, 10 40 200 100 }
+    {draw<:{'list' 'blocked' {'Howdy!'} }}
+    {draw<:{'desktop' 'darkTouchScreen' %world:MyStuff }}
+}
+%>
+
+
+<%
+ {{
+        LIST={'list', 'lined', {'Shop' 'change cat litter' 'sing blues'} }
+        {'time', 'digital', {"Hello There"} }
+        {'time', 'analog', {"co-Nietzsche-wa"} }
+
+    }
  {draw:\\[?]. | ...}}:?
 
 %>

@@ -142,11 +142,11 @@ std::cout << "#############" << printInfon(args) << "\n";
             return 0;
         }
 
-        infon *funcToCall=0;
-        funcToCall=new infon();
-        a->deepCopy(foundMinorType->value->next, funcToCall);
-	//	CI->spec2=funcToCall; CI->spec1=args; //Not "Spec2" anymore. but CI.
-	std::cout << "######HARD FUNC" << printInfon(funcToCall) << "\n"; exit(1);
+        //infon *funcToCall=0;
+       // funcToCall=new infon();
+        a->deepCopy(foundMinorType->value->next, CI);
+		CI->spec2=args; //	CI->spec2=funcToCall; CI->spec1=args; //Not "Spec2" anymore. but CI.
+//	std::cout << "######HARD FUNC" << printInfon(CI) << "\n"; exit(1);
         a->normalize(CI);
 		
     } else if (strcmp(funcName.S, "loadInfon")==0){

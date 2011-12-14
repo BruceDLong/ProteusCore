@@ -8,7 +8,7 @@ SDL_LDFLAGS := $(shell sdl-config --libs)
 PROTEUS_OBJS = slip.o Proteus.o InfonIO.o Functions.o sdl_common.o
 
 
-COMPILERFLAGS = -fpermissive -fno-for-scope -Wno-deprecated -g
+COMPILERFLAGS = -fpermissive -Wno-write-strings -fno-for-scope -Wno-deprecated -g
 CC = g++
 CFLAGS = $(COMPILERFLAGS) $(UNCOMMENT_TO_DO_GCOVERAGE)
 

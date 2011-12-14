@@ -5,6 +5,9 @@
     You should have received a copy of the GNU General Public License along with the SlipStream Engine.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#define windowTitle "Turbulance"
+#define MAX_PORTALS 24
+
 // GraphicsEngine: OPENGL, GLES, DIRECTX
 // CPU: Ix86, ARMEH, ARMEL
 // OpSys: LINUX, MAC, WINDOWS, IOS, ANDROID
@@ -35,18 +38,7 @@ const QPLATFORM=LINUX;
 
 int height, width, bpp;
 static int doneYet = 0;
-static int num = 0;
-
-static CommonState *SDL_state;
-SDL_Surface *screen;
-TTF_Font *font = NULL; // TODO: Are these 8 lines needed?
-SDL_Color textColor = { 128, 128, 128 };
-SDL_Color hiColor = { 255, 255, 255 };
-SDL_Color loColor = { 0, 0, 0 };
-
-int bg_red = 0;
-int bg_green = 0;
-int bg_blue = 0;
+static int num = 0, numPortals=0;
 
 //////////////////// Slip Code
 #include <strstream>
@@ -63,14 +55,15 @@ int bg_blue = 0;
 #define ERRl(msg) {std::cout<< msg << "\n";}
 
 #define gINT gInt()
-#define gZto1 (float)(((float)gInt()) / 1024.0)
+#define gZto1 (float)(((float)gInt()) / 1000.0)
 #define gSTR gStr()
 
-#define Z2 {a=gZto1; b=gZto1;}
-#define Z3 {a=gZto1; b=gZto1; c=gZto1;}
-#define Z4 {a=gZto1; b=gZto1; c=gZto1; d=gZto1;}
+#define Z1 {a=gZto1;  DEB(a)}
+#define Z2 {a=gZto1; b=gZto1; DEB(a<<", "<<b)}
+#define Z3 {a=gZto1; b=gZto1; c=gZto1; DEB(a<<", "<<b<<", "<< c)}
+#define Z4 {a=gZto1; b=gZto1; c=gZto1; d=gZto1; DEB(a<<", "<<b<<", "<< c<<", "<< d)}
 #define Z5 {a=gZto1; b=gZto1; c=gZto1; d=gZto1; e=gZto1;}
-#define Z6 {a=gZto1; b=gZto1; c=gZto1; d=gZto1; e=gZto1; f=gZto1;}
+#define Z6 {a=gZto1; b=gZto1; c=gZto1; d=gZto1; e=gZto1; f=gZto1; DEB(a<<", "<<b<<", "<< c<<", "<< d<<", "<< e<<", "<< f)}
 #define I2 {Ia=gINT; Ib=gINT;}
 #define I3 {Ia=gINT; Ib=gINT; Ic=gINT;}
 #define I4 {Ia=gINT; Ib=gINT; Ic=gINT;  Id=gINT;}
@@ -85,6 +78,7 @@ agent theAgent;
 int EOT_d2,j,sign;
 char textBuff[1024];
 extern infon* Theme;
+char* worldFile="World.pr";
 
 int gInt(){
     getInt(ItmPtr,j,sign);  // DEB(j << ", ");
@@ -141,110 +135,67 @@ static inline SDL_Surface *load_image(const char *filename){
     return optimizedImage;
 }
 
-int getColorComponents(infon* color, int* red, int* green, int* blue, int* alpha){
-DEBl ("The Color is:" << printInfon(color));
-    color=color->value; *red=(int)color->value;
-    color=color->next; *green=(int)color->value;
-    color=color->next; *blue=(int)color->value;
-    color=color->next; *alpha=(int)color->value;
+void roundedRectangle(cairo_t *cr, double x, double y, double w, double h, double r){
+    cairo_new_sub_path (cr);
+    cairo_move_to(cr,x+r,y);                      //# Move to A
+    cairo_line_to(cr,x+w-r,y);                    //# Straight line to B
+    cairo_curve_to(cr,x+w,y,x+w,y,x+w,y+r);       //# Curve to C, Control points are both at Q
+    cairo_line_to(cr,x+w,y+h-r);                  //# Move to D
+    cairo_curve_to(cr,x+w,y+h,x+w,y+h,x+w-r,y+h); //# Curve to E
+    cairo_line_to(cr,x+r,y+h);                    //# Line to F
+    cairo_curve_to(cr,x,y+h,x,y+h,x,y+h-r);       //# Curve to G
+    cairo_line_to(cr,x,y+r);                      //# Line to H
+    cairo_curve_to(cr,x,y,x,y,x+r,y);             //# Curve to A;
+    cairo_close_path(cr);
 }
 
-void DrawRects(SDL_Renderer * renderer)
-{
-    int i;
-    SDL_Rect rect;
-    SDL_Rect viewport;
-
-    /* Query the sizes */
-    SDL_RenderGetViewport(renderer, &viewport);
-
-    for (i = 0; i < 8 / 4; ++i) {
-
-        SDL_SetRenderDrawColor(renderer, rand() % 256, rand() % 256, rand() % 256, (Uint8) 255);
-
-        rect.w = rand() % (viewport.w / 2);
-        rect.h = rand() % (viewport.h / 2);
-        rect.x = (rand() % (viewport.w*2) - viewport.w) - (rect.w / 2);
-        rect.y = (rand() % (viewport.h*2) - viewport.h) - (rect.h / 2);
-        SDL_RenderFillRect(renderer, &rect);
-    }
-}
-
-static inline int show_message(SDL_Surface* scn, int x, int y, const char *msg){ // TODO: Integrate Pango
-    SDL_Surface *message = NULL;
-    SDL_Rect offset;
-    offset.x = x - 1; // >
-    offset.y = y - 1; // V
-
-    message = TTF_RenderText_Solid(font, msg, hiColor);
-    SDL_BlitSurface(message, NULL, scn, &offset );
-
-    SDL_FreeSurface(message);
-    message = TTF_RenderText_Solid(font, msg, loColor);
-    offset.x += 2;
-    offset.y += 2;
-    SDL_BlitSurface(message, NULL, scn, &offset );
-
-    SDL_FreeSurface(message);
-    message = TTF_RenderText_Solid(font, msg, textColor);
-    offset.x--;
-    offset.y--;
-    SDL_BlitSurface(message, NULL, scn, &offset );
-
-    SDL_FreeSurface(message);
-
-    return(1);
-}
-
-static inline void add_msg(SDL_Surface* scn, const char *msg){
-    show_message(scn, 10, 50, msg);
-}
-
-enum dTools{drawItem=0, rectangle, curvedRect, circle, lineTo, lineRel, moveTo, moveRel, curveTo, curveRel, arcClockWise, arcCtrClockW, text,
+enum dTools{rectangle=1, curvedRect, circle, lineTo, lineRel, moveTo, moveRel, curveTo, curveRel, arcClockWise, arcCtrClockW, text,
             strokePath=16, fillPath, paintSurface, closePath,
             inkColor=20, inkGradient, inkImage, inkDrawing,
             lineWidth=25, lineStyle, fontFace, fontSize,
-            drawToScrnN=30, drawToWindowN, drawToMemory, drawToPDF, drawToPS, drawToSVG, drawToPNG
+            drawToScrnN=30, drawToWindowN, drawToMemory, drawToPDF, drawToPS, drawToSVG, drawToPNG,
+            shiftTo=40, scale, rotate,
+            drawItem=100
 };
 
-void DrawProteusDescription(SDL_Surface* scn, infon* ProteusDesc){
-    if (scn==0 || ProteusDesc==0 || ProteusDesc->size==0) ERRl("Missing description.");
-    DEBl("DISPLAY:["<<printInfon(ProteusDesc));
+void DrawProteusDescription(cairo_surface_t* surface, infon* ProteusDesc){
+    if (surface==0 || ProteusDesc==0 || ProteusDesc->size==0) ERRl("Missing description.");
+    //DEBl("DISPLAY:["<<printInfon(ProteusDesc));
     int count=0;
-    infon *i, *OldItmPtr;
+    infon *i, *OldItmPtr, *subItem;
+    cairo_t *cr = cairo_create(surface); cairo_set_antialias(cr,CAIRO_ANTIALIAS_GRAY);
+DEB("\n-----------------")
     int size, size2; float a,b,c,d,e,f; int Ia,Ib,Ic,Id,Ie,If,Ih,II; char  *Sa, *Sb;
     for(int EOL=theAgent.StartTerm(ProteusDesc, &i); !EOL; EOL=theAgent.getNextTerm(&i)){
         DEBl(count<<":[" << printInfon(i).c_str() << "]");
         EOT_d2=theAgent.StartTerm(i, &ItmPtr);
-        //infon* args=gList();
         int cmd=gINT;
         DEB("\n[CMD:"<< cmd << "]");
-        switch(cmd){ // TODO: Add more commands: Cairo, Pango, Audio, etc.
-            case drawItem: cairo_push_group(cr); OldItmPtr=ItmPtr; DrawProteusDescription(scn, OldItmPtr); ItmPtr=OldItmPtr; cairo_pop_group_to_source (cr); break;
-            case rectangle: cairo_rectangle (cr, 0, 0, 1, 1); break;
-            case curvedRect:  break;
+        switch(cmd){ // TODO: Pango, Audio, etc.
+            case rectangle:DEB("rectangle:") Z4 cairo_rectangle (cr, a,b,c,d); break;
+            case curvedRect:DEB("curvedRect:")  Z5 roundedRectangle(cr, a,b,c,d,e); break;
             case circle:  break;
-            case lineTo:   Z2   cairo_line_to(cr, a,b);             break;
-            case lineRel:  Z2   cairo_rel_line_to(cr, a,b);         break;
-            case moveTo:   Z2   cairo_move_to(cr, a,b);             break;
+            case lineTo: DEB("lineTo:")  Z2   cairo_line_to(cr, a,b);             break;
+            case lineRel: DEB("lineRel:") Z2   cairo_rel_line_to(cr, a,b);         break;
+            case moveTo: DEB("moveTo:")  Z2   cairo_move_to(cr, a,b);             break;
             case moveRel:  Z2   cairo_rel_move_to(cr, a,b);         break;
             case curveTo:  Z6   cairo_curve_to(cr, a,b,c,d,e,f);    break;
             case curveRel: Z6   cairo_rel_curve_to(cr, a,b,c,d,e,f);break;
             case arcClockWise:Z5 cairo_arc(cr, a,b,c,d,e);          break; //xc, yc, radius, angle1, angle2
             case arcCtrClockW:Z5 cairo_arc_negative(cr, a,b,c,d,e); break;
-            case text: I2 S1  show_message(scn, Ia, Ib, Sa); break;
+            case text: S1   cairo_show_text (cr, Sa); DEB("text")  break;
 
-            case strokePath:   cairo_stroke(cr);     break;
-            case fillPath:     cairo_fill(cr);       break;
+            case strokePath:   cairo_stroke(cr); DEB("strokePath")    break;
+            case fillPath:     cairo_fill(cr); DEB("fillPath")      break;
             case paintSurface: cairo_paint(cr);      break;
             case closePath:    cairo_close_path(cr); break;
 
-            case inkColor: cairo_set_source_rgb(cr, 0, 0, 0); break;
+            case inkColor:DEB("inkColor:") Z3 cairo_set_source_rgba(cr, a, b, c, 1);  break;
             case inkGradient:  break;
             case inkImage:  break;
             case inkDrawing:  break;
 
-            case lineWidth: cairo_set_line_width (cr, 0.1); break;
+            case lineWidth:DEB("lineWidth:")  Z1 cairo_set_line_width (cr, a); break;
             case lineStyle:  break;
             case fontFace:  break;
             case fontSize:  break;
@@ -257,13 +208,40 @@ void DrawProteusDescription(SDL_Surface* scn, infon* ProteusDesc){
             case drawToSVG:  break;
             case drawToPNG:  break;
 
-            default: ERRl("Invalid Drawing Command.");
+            case shiftTo: Z2 cairo_translate(cr, a,b); break;
+            case scale: Z2 cairo_scale(cr, a,b); break;
+            case rotate: Z2 cairo_rotate(cr, a); break;
+
+            case drawItem: DEB(">");
+                subItem=gList();
+             //   cairo_new_sub_path(cr); //cairo_push_group(cr);
+                OldItmPtr=ItmPtr; DrawProteusDescription(surface, subItem); ItmPtr=OldItmPtr;
+             //    cairo_close_path(cr); //cairo_pop_group_to_source (cr);
+                //cairo_paint_with_alpha (cr, 1);
+                DEB("<"); break;
+
+            default: {ERRl("Invalid Drawing Command."); exit(2);}
         }
-    if (++count==90) break;
+    if (++count==200) break;
     }
+    cairo_destroy (cr);
 //    DEBl("\nCount: " << count << "\n======================");
 }
 /////////////////// End of Slip Drawing, Begin Interface to Proteus Engine
+
+struct InfonPortal {
+    SDL_Window *window;
+    SDL_Surface *surface;
+    SDL_Renderer *renderer;
+    cairo_surface_t *cairoSurf;
+    infon *theme, *user, *topView, *crntView;
+    char* title;
+    bool needsToBeDrawn;
+};
+
+InfonPortal *portals[MAX_PORTALS];
+
+
 int initModelsAndEventQueues(){ // TODO: Clean infon loading, use command line options, hard code some things
    // Load World
     MSGl("Loading world...");
@@ -298,33 +276,40 @@ extern infon *World; World=q.parse();
 
     theAgent.normalize(displayList);
 
-//  protScreens[0].SurfaceForThisScreen=&protSurfaces[0];
-//  protScreens[0].screen=screen;
-//  protSurfaces[0].frameInfon=displayList;
+  portals[0]->topView=displayList;
+  portals[0]->needsToBeDrawn=true;
 
     MSGl("Normed");
     DEBl(printInfon(displayList));
 }
 
 /////////////////////////////////////////////
-// TODO: Is this (DisplayItem) needed?
-class DisplayItem {
-    uint surfaceID;
-    uint itemID;
-    uint locX, locY, rotate, scale, alpha;
-    bool hidden;
-    uint maxRect;
-    uint ItemList;
-    bool changedFlag;
 
-    void ProcessStateChanges(infon* delta);
-    // commands: Select Item or Primative by it's itemID; created if the itemID is new. Delete
-    //        Set: loc, rot, scale, alpha, hidden. Set screen
-    //         In ItemList, go: home, end. Insert before, after, move: to-front, to-back, up, down. Clear list
-};
+bool CreateTurbulancePortal(char* title, int x, int y, int w, int h, int flags, char* userName, char* themeFilename, char* stuffName){
+    if(numPortals >= MAX_PORTALS) return 1;
+    char winTitle[1024] = windowTitle;
+    InfonPortal* portal=new InfonPortal;
+    if (numPortals>0){SDL_snprintf(winTitle, strlen(title), "%s %d", title, numPortals+1);}
+    else {strcpy(winTitle, title);}
+    portal->window=SDL_CreateWindow(winTitle, x,y,w,h, flags);
+//TODO: Hardcode: Title, icon, bpp-depth/vid_mode, resizable
+//    SDL_SetWindowDisplayMode(portal->window, ); // Mode for use during fullscreen mode
+//    LoadIcon()
+    portal->renderer = SDL_CreateRenderer(portal->window, -1, SDL_RENDERER_ACCELERATED);
+    portal->surface = SDL_CreateRGBSurface (0, w, h, 32,0x00ff0000,0x0000ff00,0x000000ff,0);
+    SDL_SetRenderDrawColor(portal->renderer, 0xA0, 0xA0, 0xc0, 0xFF);
+    portal->cairoSurf = cairo_image_surface_create_for_data((unsigned char*)portal->surface->pixels, CAIRO_FORMAT_RGB24, w, h,portal->surface->pitch);
+    portals[numPortals]=portal; ++numPortals;
 
-void DisplayItem::ProcessStateChanges(infon* delta){
+// TODO: Load independant Stuff and Theme for this window., Detach Theme from Functions.cpp:draw()
+}
 
+void DestroyTurbulancePortal(InfonPortal *p){
+    //TODO slide portals items down
+    cairo_surface_destroy(p->cairoSurf);
+    SDL_FreeSurface(p->surface);
+    SDL_DestroyRenderer(p->renderer);
+    //SDL_DestroyTexture(p->tex);
 }
 
 //////////////////// End of Slip Specific Code, Begin Rendering Code
@@ -342,8 +327,7 @@ void EXIT(char* errmsg){ERRl(errmsg << "\n"); exit(1);}
 void cleanup(void){SDL_Quit();}   //TODO: Add items to cleanup routine
 
 static int SimThread(void *nothing){ // TODO: Make SimThread funtional
-    initModelsAndEventQueues();
-    // TODO: Load fonts etc. Init freetype, cairo, pango, etc.
+ //   initModelsAndEventQueues();
     SDL_Event ev;
     ev.type = SDL_USEREVENT;  ev.user.code = 0;  ev.user.data1 = 0;  ev.user.data2 = 0;
     int val, i = 0;
@@ -356,97 +340,101 @@ static int SimThread(void *nothing){ // TODO: Make SimThread funtional
   return 0;
 }
 
-void setupSDL(CommonState** SDL_state, int argc, char** argv){
-
-    if(!(*SDL_state = CommonCreateState(argv, /*SDL_INIT_AUDIO|*/SDL_INIT_VIDEO))) EXIT((char*)"Couldn't Create SDL State"); //TODO: InitAudio
+void InitializePortalSystem(int argc, char** argv){
+    srand(time(NULL));
+    numPortals=0;
+    char* userName="Demo_user"; char* theme="default"; char* portalContent="MyStuff";
     for (int i=1; i<argc;) { // Handle command line arguments
-        int consumed = CommonArg(*SDL_state, i); // Handle common arguments
+        int consumed = 0; //CommonArg(*SDL_state, i); // Handle common arguments
         if (consumed == 0) {
             consumed = -1;
-            if (SDL_strcasecmp(argv[i], "--world") == 0) if (argv[i + 1]) {/*argv[i+1] is filename; consumed = 2; */ }
+            if (SDL_strcasecmp(argv[i], "--world") == 0) if (argv[i + 1]) {worldFile=argv[i]; consumed = 2;}
             if (SDL_strcasecmp(argv[i], "--theme") == 0) if (argv[i + 1]) {/*argv[i+1] is filename; consumed = 2; */ }
             if (SDL_strcasecmp(argv[i], "--user") == 0) if (argv[i + 1]) {/*argv[i+1] is username; consumed = 2; */ }
             if (SDL_strcasecmp(argv[i], "--pass") == 0) if (argv[i + 1]) {/*argv[i+1] is password; consumed = 2; */ }
             else if (SDL_isdigit(*argv[i])) {secondsToRun = SDL_atoi(argv[i]); consumed = 1;}
         }
         if (consumed < 0) {
-            fprintf(stderr, "Usage: %s %s [--blend none|blend|add|mod] [--cyclecolor] [--cyclealpha]\n", argv[0], CommonUsage(*SDL_state));
+            fprintf(stderr, "Usage: %s <seconds to run> [--world <filename>] [--theme <filename>] [--user <username>]\n", argv[0]);
             exit(1);
         }
         i += consumed;
     }
+    if (SDL_VideoInit(NULL) < 0) {MSGl("Couldn't initialize Video Driver: "<<SDL_GetError()); exit(2);}
+    if (SDL_AudioInit(NULL) < 0) {MSGl("Couldn't initialize Audio Driver: "<<SDL_GetError()); exit(2);}
+ //   if (SDL_TimerInit() < 0) {MSGl("Couldn't initialize Timer Driver: "<<SDL_GetError()); exit(2);}
 
-    //TODO: Hardcode: Title, icon, bpp-depth/vid_mode, resizable
-    if (!CommonInit(*SDL_state)) {exit(2);}
-
-    for (i = 0; i < (*SDL_state)->num_windows; ++i) {  // Create the windows and initialize the renderers
-        SDL_Renderer *renderer = (*SDL_state)->renderers[i];
-        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
-        SDL_SetRenderDrawColor(renderer, 0xA0, 0xA0, 0xA0, 0xFF);
-        SDL_RenderClear(renderer);
-    }
+    //TODO: if (DebugMode) PrintConfiguration from common.c Set debugmode via command-line argument
+    CreateTurbulancePortal(windowTitle, 100,120,800,480, 0, userName, theme, portalContent);
 
     //TODO: Enable Key Repeat and Unicode support in SDL. (See Harfbuzz.c) : SDL_EnableKeyRepeat(300, 130);  SDL_EnableUNICODE(1)
-    // SDL_InitTimer(); TODO: Init and Quit for SDL_Timer.
-    TTF_Init();
     atexit(cleanup);
-    srand((unsigned int)time(NULL));
 }
 enum userActions {TURB_UPDATE_SURFACE=1, TURB_ADD_SCREEN, TURB_DEL_SCREEN, TURB_ADD_WINDOW, TURB_DEL_WINDOW};
 
-void eventLoop(CommonState* SDL_state){
+void StreamEvents(){
     Uint32 frames=0, then=SDL_GetTicks(), now=0, limit = secondsToRun*1000;
-    SDL_Thread *simulationThread = SDL_CreateThread(SimThread, "Proteus", NULL);
+//    SDL_Thread *simulationThread = SDL_CreateThread(SimThread, "Proteus", NULL);
+    initModelsAndEventQueues();
     SDL_Event ev;
     while (secondsToRun && (SDL_GetTicks() < (then+limit)) && !doneYet){
         --num; ++frames;
         while (SDL_PollEvent(&ev)) {
-            CommonEvent(SDL_state, &ev, &doneYet);
             switch (ev.type) {
             case SDL_USEREVENT:
                 switch(ev.user.code){
                     case TURB_UPDATE_SURFACE:
-                //      protSurfaces[(uint)ev.user.data1].frameInfon=(infon*)ev.user.data2;
-                //      protSurfaces[(uint)ev.user.data1].needsToBeDrawn=true;
-                        break;
+                      portals[(uint)ev.user.data1]->topView=(infon*)ev.user.data2;
+                      portals[(uint)ev.user.data1]->needsToBeDrawn=true;
+                      break;
                     case TURB_ADD_SCREEN: break;
                     case TURB_DEL_SCREEN: break;
                     case TURB_ADD_WINDOW: break;
                     case TURB_DEL_WINDOW: break;
                 }
                 break;
+            case SDL_WINDOWEVENT: break; // e.g., close
+            case SDL_KEYDOWN:
+                switch (ev.key.keysym.sym) {
+                case SDLK_PRINTSCREEN: break; // see sdl_common.c
+                case SDLK_c: if (ev.key.keysym.mod & KMOD_CTRL) {SDL_SetClipboardText("SDL rocks!\nYou know it!");} break;
+                case SDLK_v: break;       // paste. see sdl_common.c
+                case SDLK_g: break;       // Grab Input. see sdl_common.c
+                case SDLK_RETURN: break;  // Toggle fullscreen. see sdl_common.c
+                case SDLK_n: break;      // New Portal
+                }
+            case SDL_QUIT: doneYet=true; break;
+
             }
         }
-        for (int i = 0; i < SDL_state->num_windows; ++i) {
-            SDL_Renderer *renderer = SDL_state->renderers[i];
+        for (int i = 0; i < numPortals; ++i) {
+            InfonPortal* portal=portals[i];
+            if(! portal->needsToBeDrawn) continue;
+            SDL_Renderer *renderer = portal->renderer;
             SDL_SetRenderDrawColor(renderer, 0xA0, 0xA0, 0xc0, 0xFF);
 
-            SDL_RendererInfo RenInfo;
-            SDL_GetRendererInfo(renderer, &RenInfo);
-            int width=RenInfo.max_texture_width; int height=RenInfo.max_texture_height;
+            DrawProteusDescription(portal->cairoSurf, portal->topView);
 
-            SDL_Surface *sdl_surface = SDL_CreateRGBSurface (0, width, height, 32,0x00ff0000,0x0000ff00,0x000000ff,0);
-            SDL_FillRect(sdl_surface,NULL,SDL_MapRGB(sdl_surface->format, 30,250,30));
-            SDL_Texture *tex = SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGB888,SDL_TEXTUREACCESS_STREAMING,width,height);
-            SDL_UpdateTexture(tex, NULL, sdl_surface->pixels, sdl_surface->pitch);
-            SDL_FreeSurface(sdl_surface);
-            //DrawProteusDescription(scn->screen, scn->SurfaceForThisScreen->frameInfon);
-            // TODO: Here is where to blit from surface to texture if needed
-            SDL_RenderClear(renderer);
+            SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer,portal->surface);
+        //   SDL_Texture *tex = SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGB888,SDL_TEXTUREACCESS_STREAMING,width,height);
+        //   SDL_LockTexture(tex,NULL,sdl_surface->pixels,sdl_surface->pitch);
+        //   SDL_UpdateTexture(tex, NULL, sdl_surface->pixels, sdl_surface->pitch);
+        //   SDL_UnlockTexture(tex);
+        //   SDL_RenderClear(renderer);
+
             SDL_RenderCopy(renderer, tex, NULL, NULL);
-         //   DrawRects(renderer);
             SDL_RenderPresent(renderer);
+            SDL_DestroyTexture(tex);
         }
     }
+    doneYet=true;
+    if ((now = SDL_GetTicks()) > then) printf("\nFrames per second: %2.2f\n", (((double) frames * 1000) / (now - then)));
 
-    now = SDL_GetTicks();  // Print out some timing information
-    if (now > then) printf("%2.2f frames per second\n", (((double) frames * 1000) / (now - then)));
-
-    SDL_WaitThread(simulationThread, NULL); // wait for it to die
+ //   SDL_WaitThread(simulationThread, NULL);
 }
 
 int main(int argc, char *argv[]){
-    setupSDL(&SDL_state, argc, argv);
-    eventLoop(SDL_state);
+    InitializePortalSystem(argc, argv);
+    StreamEvents();
     return (0);
 }

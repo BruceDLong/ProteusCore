@@ -2,28 +2,39 @@
 ///////////////  list theme
   {'list',
     {'simple',
-      { ? { red drawComplex 
+      { ? { red drawComplex
         {{blue text 20,100,  "BLOO TEXT" } |...}
        }
       }
-	}
-/*	{'lined',   // { [5, 7, 3, 8] ({0} {+(\\\\[_]. \\\^[_].) | ...})}
-      { ? 
-		//({0} {+(\\\\[_]. \\\^[_].) | ...})  // X-values
-		({0} {+(+50 \\\^[_].) | ...})  // Y-values
+    }
+/*  {'lined',   // { [5, 7, 3, 8] ({0} {+(\\\\[_]. \\\^[_].) | ...})}
+      { ?
+        //({0} {+(\\\\[_]. \\\^[_].) | ...})  // X-values
+        ({0} {+(+50 \\\^[_].) | ...})  // Y-values
 
-		{ red drawComplex 
+        { red drawComplex
         {
-			{blue text 20,\\\\^[? _].  \\\\[$]. }
-			// {green line 0, \\\\^[? _]. 100, \\\\^[? _]. }
-		|...}
+            {blue text 20,\\\\^[? _].  \\\\[$]. }
+            // {green line 0, \\\\^[? _]. 100, \\\\^[? _]. }
+        |...}
        }
       }
     }
 */
-	{'blocked',
-      [ ? 
-        {{red line 0 70 100 500  }}
+    {'blocked',
+      [ ?
+        {drawItem {
+            {shiftTo 400000, 30000}
+            {scale 500 500}
+            {rotate 400}
+            {inkColor 1000 100 1000}
+            {curvedRect 25000 30000 400000 600000 60000}
+            {fillPath}
+            {scale 5000 5000}
+            {text %A:[$]}
+            {fillPath}
+          }
+        }
        ]
     }
   }

@@ -67,7 +67,7 @@ void setIntSize(infon* CI, int i){
 }
 
 int autoEval(infon* CI, agent* a){
-    int int1;
+    int int1, EOT;
     stng funcName=*CI->type;
    std::cout << "EVAL:"<<funcName.S<<"\n";
     if (strcmp(funcName.S, "sin")==0){
@@ -90,8 +90,8 @@ int autoEval(infon* CI, agent* a){
         char majorType[100];
         char minorType[100];
         infon* args=CI->spec2;
-		args->top=CI;
-		a->normalize(args);
+        args->top=CI;
+        a->normalize(args);
 std::cout << "#############" << printInfon(args) << "\n";
         infon* foundMajorType=0;
         infon* foundMinorType=0;
@@ -115,10 +115,11 @@ std::cout << "#############" << printInfon(args) << "\n";
             args=args->next;
         }
         infon* i=0;
-		char tagBuf[100];
-        for (int EOT=a->StartTerm(Theme, &i); !EOT; EOT=a->getNextTerm(&i)) {
+        char tagBuf[100];
+        for (EOT=a->StartTerm(Theme, &i); !EOT; EOT=a->getNextTerm(&i)) {
             if ((i->value->pFlag&tType) != tString) continue;
-			copyInfonString2charBuf(i->value, tagBuf);
+            copyInfonString2charBuf(i->value, tagBuf);
+            std::cout<<tagBuf<<"<<\n";
             if (strcmp(tagBuf, majorType) == 0) {
                 foundMajorType = i;
                 break;
@@ -129,9 +130,9 @@ std::cout << "#############" << printInfon(args) << "\n";
             return 0;
         }
         i=0;
-        for (int EOT=a->StartTerm(foundMajorType, &i); !EOT; EOT=a->getNextTerm(&i)) {
+        for (EOT=a->StartTerm(foundMajorType, &i); !EOT; EOT=a->getNextTerm(&i)) {
             if ((i->value->pFlag&tType) != tString) continue;
-			copyInfonString2charBuf(i->value, tagBuf);
+            copyInfonString2charBuf(i->value, tagBuf);
             if (strcmp(tagBuf, minorType) == 0) {
                 foundMinorType=i;
                 break;
@@ -141,28 +142,25 @@ std::cout << "#############" << printInfon(args) << "\n";
             std::cout<<"Error: no associated minorType found in Theme\n";
             return 0;
         }
+        UInt tmpFlags=(CI->pFlag&0xff000000); a->deepCopy(foundMinorType->value->next, CI); CI->pFlag=(CI->pFlag&0x00ffffff)+tmpFlags;
+        CI->spec2=args;
+        std::cout << "ARGUMENT: "<< printInfon(args) << " FUNC: "<< printInfon(CI->spec1)<<".\n";
+       // a->normalize(CI);
 
-        //infon *funcToCall=0;
-       // funcToCall=new infon();
-        a->deepCopy(foundMinorType->value->next, CI);
-		CI->spec2=args; //	CI->spec2=funcToCall; CI->spec1=args; //Not "Spec2" anymore. but CI.
-//	std::cout << "######HARD FUNC" << printInfon(CI) << "\n"; exit(1);
-        a->normalize(CI);
-		
     } else if (strcmp(funcName.S, "loadInfon")==0){
-		stng str1;
-		if (!getStrArg(CI, &str1, a)) return 0;
-		str1.S[str1.L]=0;
-		std::fstream fin(str1.S);
-//		while (!fin.eof() && !fin.fail()) {std::cout<<(char)fin.get();} exit(0);
-		QParser q(fin);
-		infon* I=q.parse();// std::cout <<"P "; std::cout<<"<"<<printInfon(I)<<"> \n";
-		agent a;
-		a.normalize(I); // std::cout << "N ";
-		if (I==0) {std::cout<<"Error: "<<q.buf<<"\n";}
-		
+        stng str1;
+        if (!getStrArg(CI, &str1, a)) return 0;
+        str1.S[str1.L]=0;
+        std::fstream fin(str1.S);
+//      while (!fin.eof() && !fin.fail()) {std::cout<<(char)fin.get();} exit(0);
+        QParser q(fin);
+        infon* I=q.parse();// std::cout <<"P "; std::cout<<"<"<<printInfon(I)<<"> \n";
+        agent a;
+        a.normalize(I); // std::cout << "N ";
+        if (I==0) {std::cout<<"Error: "<<q.buf<<"\n";}
+
         copyTo(I,CI);
-		
+
     } else if (strcmp(funcName.S, "addOne")==0){
         if (!getIntArg(CI, &int1, a)) return 0;
         setIntVal(CI, int1+1);

@@ -60,7 +60,6 @@ int agent::StartTerm(infon* varIn, infon** varOut) {
       if (getNextTerm(varOut)) return 4;
     } while(1);
   }
-  // if(varIn->wFlag&mAssoc){ ((assocInfon*)(varIn->spec2))->nextRef=0;  *varOut=varIn; return 0;} // TODO B4: remove this if it isn't used.
   if ((varIn->pFlag&tType)!=tList) {return 3;}
   else {*varOut=varIn->value; if (*varOut==0) return 4;}
   return 0;
@@ -561,7 +560,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
 }
 
 infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
-    int nxtLvl, override, CIFindMode=0; infon *CI, *CIfol, *newID; infNode* IDp;
+    int nxtLvl, s, override, CIFindMode=0; infon *CI, *CIfol, *newID; infNode* IDp;
     if (i==0) return 0;
     if((i->pFlag&tType)==tList) InitList(i);
     infQ ItmQ; ItmQ.push(Qitem(i,firstID,(firstID)?1:0,0));
@@ -579,8 +578,11 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
             switch(CIFindMode){
                 case iToWorld: copyTo(world, CI); break;
                 case iToCtxt:   copyTo(&context, CI); break; // TODO B4: make this work.
-                case iToArgs:   copyTo(world, CI); break; // TODO B4: make this work.
-                case iToVars:   copyTo(world, CI); break; // TODO B4: make this work.
+                case iToArgs: case iToVars:
+                    for (newID=CI->top; newID && !(newID->top->wFlag&mIsHeadOfGetLast); newID=newID->top){}
+                    if(newID && CIFindMode==iToVars) newID=newID->next;
+                    if(newID) {copyTo(newID, CI); newID=0;}
+                    break;
                 case iAssocNxt:
                     newID=CI->spec2->spec2;
                     getNextNormal(&newID);
@@ -588,7 +590,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                 case iToPath: //  Handle ^, \^, \\^, \\\^, etc.
                 case iToPathH:  //  Handle \, \\, \\\, etc. Path with 'Home'
                     newID=CI->top;
-                    for(UInt i=1; i<(UInt)CI->spec1; ++i) {  // for  backslashes-1 go to parent
+                    for(s=1; s<(UInt)CI->spec1; ++s) {  // for  backslashes-1 go to parent
                         newID=getTop(newID); if (newID==0 ) {std::cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';}
                     }
                     if(CIFindMode==iToPathH) {  // If no '^', move to first item in list.
@@ -637,7 +639,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     break;
                 case iGetSize:      break; // TODO: make this work;
                 case iGetType:     break; // TODO: make this work;
-                case iHardFunc: autoEval(CI, this); break;
+                case iHardFunc: autoEval(CI, this); cn.firstID=CI->spec2; break;
                 case iNone: default: throw "Invalid Find Mode";
             }
             if(newID){
@@ -668,9 +670,9 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
         case DoNext:
             if((CI->pFlag&(fConcat+tType))==(fConcat+tUInt)){
                 compute(CI); if(CIfol && !(CI->pFlag&isLast)){pushCIsFollower;}
-            }else if(!((CI->pFlag&asDesc)&&!override)&&((CI->value&&((CI->pFlag&tType)==tList))||(CI->pFlag&fConcat))){
+            }else if(!((CI->pFlag&asDesc)&&!override)&&((CI->value&&((CI->pFlag&tType)==tList))||(CI->pFlag&fConcat)) && !(CI->value->pFlag&isNormed)){
                 ItmQ.push(Qitem(CI->value,cn.firstID,((cn.IDStatus==1)&!(CI->pFlag&fConcat))?2:cn.IDStatus,cn.level+1)); // push CI->value
-            }else if (CIfol){pushCIsFollower;} // push CI's follower
+            }else if (CIfol){pushCIsFollower;}
             break;
         case BypassDeadEnd: {nxtLvl=getFollower(&CIfol,getTop(CI))+1; pushCIsFollower;} break;
         case DoNothing: break;

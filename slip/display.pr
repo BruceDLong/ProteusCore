@@ -1,19 +1,27 @@
 <%
 {
-    { drawItem 321 scn0 {1024 0 0 0 255} {
-        {sourceColor blue}
-        {lineTo 140 50}
-        {lineTo 50 200}
+        {inkColor 100 1000 100}
+        {lineWidth 10000}
+        {moveTo 20000 32000}
+        {lineRel 800000 700000}
+        {strokePath}
 
-        }
-    }
+        draw<:{'list' 'blocked' {'Howdy!'} }
+        {inkColor 1000 100 100}
+        {lineWidth 10000}
+        {moveTo 14000 32000}
+        {lineRel 500000 700000}
+        {strokePath}
+        {moveTo 14000 32000}
+
+
 }
 %>
 
 <%
 {
     {{0,255,0,255} 5, 10 40 200 100 }
-    {draw<:{'list' 'blocked' {'Howdy!'} }}
+    {draw<:{'list' 'blocked' 'Howdy!' }}
     {draw<:{'desktop' 'darkTouchScreen' %world:MyStuff }}
 }
 %>

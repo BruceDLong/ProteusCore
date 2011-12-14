@@ -11,7 +11,6 @@
     %transparent_blue={0,0,255,32}
     %purple={255,0,255,255}
 
-    %drawItem       = 0
     %rectangle      = 1
     %curvedRect     = 2
     %circle         = 3
@@ -47,6 +46,13 @@
     %drawToPS       = 34
     %drawToSVG      = 35
     %drawToPNG      = 36
+
+    %shiftTo        = 40
+    %scale          = 41
+    %rotate         = 42
+
+    %drawItem       = 100
+
 
 /*
 {show_clock= {

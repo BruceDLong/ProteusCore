@@ -157,7 +157,7 @@ const char* QParser::nxtTokN(int n, ...){
 
 void  chk4HardFunc(infon* i){
     if((i->wFlag&mFindMode)==iTagUse)
-        if(isEq(i->type->S,"addOne") || isEq(i->type->S,"loadInfon") || isEq(i->type->S,"draw") || isEq(i->type->S,"time") || isEq(i->type->S,"cos") || isEq(i->type->S,"sin"))
+        if(isEq(i->type->S,"addOne") || isEq(i->type->S,"loadInfon") || isEq(i->type->S,"imageOf") || isEq(i->type->S,"time") || isEq(i->type->S,"cos") || isEq(i->type->S,"sin"))
             {i->wFlag&=~iTagUse;
                 i->wFlag|=iHardFunc;}
 }

@@ -1,28 +1,27 @@
 <%
 {
-        {inkColor 100 1000 100}
-        {lineWidth 10000}
-        {moveTo 20000 32000}
-        {lineRel 800000 700000}
-        {strokePath}
-
-        draw<:{'list' 'blocked' {'Howdy!'} }
+        {loadImage 'bkground1.jpg'}
+    {moveTo 14000 32000}
+    {text "Hello World!"} {moveRel 0 50000}
+    {text "Let's Party!"}
+    {fillPath}
+      //  imageOf<:{"Howdy Brother!" 'text'}
+       {moveTo 0 0} imageOf<:{ {'Howdy Folks, Welcome to Golden!' 'There' 'Friend'} }
+    //    imageOf<:{'list' 'wide' {'Email'} }
+    {fillPath}
         {inkColor 1000 100 100}
         {lineWidth 10000}
         {moveTo 14000 32000}
-        {lineRel 500000 700000}
+        {lineRel 500000 000000}
         {strokePath}
-        {moveTo 14000 32000}
-
-
 }
 %>
 
 <%
 {
     {{0,255,0,255} 5, 10 40 200 100 }
-    {draw<:{'list' 'blocked' 'Howdy!' }}
-    {draw<:{'desktop' 'darkTouchScreen' %world:MyStuff }}
+    {imageOf<:{'list' 'wide' 'Howdy!' }}
+    {imageOf<:{'desktop' 'darkTouchScreen' %world:MyStuff }}
 }
 %>
 
@@ -34,7 +33,7 @@
         {'time', 'analog', {"co-Nietzsche-wa"} }
 
     }
- {draw:\\[?]. | ...}}:?
+ {imageOf:\\[?]. | ...}}:?
 
 %>
 

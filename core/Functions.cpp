@@ -86,7 +86,7 @@ int autoEval(infon* CI, agent* a){
         now=*localtime(&rawtime);
         if (!getIntArg(CI, &int1, a)) return 0;
         if (int1==0)  setIntVal(CI, now.tm_sec);
-    } else if (strcmp(funcName.S, "draw")==0){
+    } else if (strcmp(funcName.S, "imageOf")==0){
         char majorType[100];
         char minorType[100];
         infon* args=CI->spec2;
@@ -95,25 +95,30 @@ int autoEval(infon* CI, agent* a){
 std::cout << "#############" << printInfon(args) << "\n";
         infon* foundMajorType=0;
         infon* foundMinorType=0;
-        if ((args->pFlag&tType) != tList) {
-            std::cout<<"Error: Argument to draw is not a list\n";
+        infon* objectToImage=0;
+        UInt argsSize=(UInt)args->size;
+        if ((args->pFlag&tType) != tList) {std::cout<<"Error: Argument to imageOf is not a list\n"; return 0;}
+        objectToImage=args=args->value;
+        if(objectToImage->type==0){
+            switch(objectToImage->pFlag&tType){
+                case tUInt: strcpy(majorType, "tUInt"); break;
+                case tString: strcpy(majorType, "tString"); break;
+                case tList: strcpy(majorType, "tList"); break;
+                case tUnknown: strcpy(majorType, "tUnknown"); break;
+            }
+        } else {memcpy(majorType,objectToImage->type->S, objectToImage->type->L); majorType[objectToImage->type->L]=0;}
+/*        if ((args->pFlag&tType) != tString) {
+            std::cout<<"Error: majorType in imageOf is not a string\n";
             return 0;
-        }
-        args=args->value;
-        if ((args->pFlag&tType) != tString) {
-            std::cout<<"Error: majorType in draw is not a string\n";
-            return 0;
-        } else {
-            copyInfonString2charBuf(args, majorType);
+        } else {copyInfonString2charBuf(args, majorType);}*/
+        if(argsSize>1){
             args=args->next;
+            if ((args->pFlag&tType) != tString) {
+                std::cout<<"Error: minorType in imageOf is not a string\n";
+                return 0;
+            } else {copyInfonString2charBuf(args, minorType);}
         }
-        if ((args->pFlag&tType) != tString) {
-            std::cout<<"Error: minorType in draw is not a string\n";
-            return 0;
-        } else {
-            copyInfonString2charBuf(args, minorType);
-            args=args->next;
-        }
+        args=args->next;
         infon* i=0;
         char tagBuf[100];
         for (EOT=a->StartTerm(Theme, &i); !EOT; EOT=a->getNextTerm(&i)) {
@@ -133,7 +138,7 @@ std::cout << "#############" << printInfon(args) << "\n";
         for (EOT=a->StartTerm(foundMajorType, &i); !EOT; EOT=a->getNextTerm(&i)) {
             if ((i->value->pFlag&tType) != tString) continue;
             copyInfonString2charBuf(i->value, tagBuf);
-            if (strcmp(tagBuf, minorType) == 0) {
+            if (argsSize==1 || strcmp(tagBuf, minorType) == 0) {
                 foundMinorType=i;
                 break;
             }
@@ -144,7 +149,6 @@ std::cout << "#############" << printInfon(args) << "\n";
         }
         UInt tmpFlags=(CI->pFlag&0xff000000); a->deepCopy(foundMinorType->value->next, CI); CI->pFlag=(CI->pFlag&0x00ffffff)+tmpFlags;
         CI->spec2=args;
-        std::cout << "ARGUMENT: "<< printInfon(args) << " FUNC: "<< printInfon(CI->spec1)<<".\n";
        // a->normalize(CI);
 
     } else if (strcmp(funcName.S, "loadInfon")==0){

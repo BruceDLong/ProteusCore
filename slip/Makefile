@@ -5,6 +5,8 @@ LIBDIR  = -L/usr/X11R6/lib
 
 SDL_CFLAGS := $(shell sdl-config --cflags)
 SDL_LDFLAGS := $(shell sdl-config --libs)
+PANGO_CFLAGS := $(shell pkg-config --cflags pangocairo)
+PANGO_LDFLAGS := $(shell pkg-config --libs pangocairo)
 PROTEUS_OBJS = slip.o Proteus.o InfonIO.o Functions.o sdl_common.o
 
 
@@ -13,10 +15,10 @@ CC = g++
 CFLAGS = $(COMPILERFLAGS) $(UNCOMMENT_TO_DO_GCOVERAGE)
 
 slip: $(PROTEUS_OBJS)
-	g++ $(CFLAGS)  -L/usr/local/lib -L. -lSDL_gfx $(PROTEUS_OBJS) ${SDL_LDFLAGS} -lSDL_ttf -lsprig -lcairo -o slip
+	g++ $(CFLAGS)  -L/usr/local/lib -L. -lSDL_gfx $(PROTEUS_OBJS) ${SDL_LDFLAGS} $(PANGO_LDFLAGS) -lSDL_image -lcairo -o slip
 
 slip.o: slip.cpp ../core/Proteus.h
-	g++ $(CFLAGS)  ${SDL_CFLAGS} $(INCLUDE) -c slip.cpp
+	g++ $(CFLAGS)  ${SDL_CFLAGS} $(PANGO_CFLAGS) $(INCLUDE) -c slip.cpp
 
 Proteus.o: ../core/Proteus.h  ../core/Proteus.cpp
 	g++ $(CFLAGS) -c -I../core/  ../core/Proteus.cpp

@@ -581,7 +581,8 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                 case iToArgs: case iToVars:
                     for (newID=CI->top; newID && !(newID->top->wFlag&mIsHeadOfGetLast); newID=newID->top){}
                     if(newID && CIFindMode==iToVars) newID=newID->next;
-                    if(newID) {copyTo(newID, CI); newID=0;}
+                    if(newID) {CI->wFlag|=mAsProxie; CI->value=newID; newID->pFlag|=isNormed; CI->wFlag&=~mFindMode; newID=0;}// if(newID) {copyTo(newID, CI); newID=0;}
+                    doShortNorm=true;
                     break;
                 case iAssocNxt:
                     newID=CI->spec2->spec2;

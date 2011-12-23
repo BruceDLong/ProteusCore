@@ -33,6 +33,7 @@
     %inkGradient    = 21
     %inkImage       = 22
     %inkDrawing     = 23  // Pull ink from another surface
+    %inkColorAlpha  = 24
 
     %lineWidth      = 25
     %lineStyle      = 26
@@ -50,6 +51,8 @@
     %shiftTo        = 40
     %scale          = 41
     %rotate         = 42
+
+    %loadImage      = 50
 
     %drawItem       = 100
 

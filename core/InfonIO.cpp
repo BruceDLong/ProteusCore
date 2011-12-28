@@ -9,6 +9,8 @@
 #include <iostream>
 #include <string>
 #include <stdlib.h>
+#include <math.h>
+#include <cstdio>
 #include "remiss.h"
 
 #define Indent {for (int x=0;x<indent;++x) s+=" ";}
@@ -18,6 +20,7 @@ std::string printPure (infon* i, UInt f, UInt wSize, infon* CI){
     UInt type=f&tType;
     if (type==tUInt){
         if (f & fUnknown) s+='_';
+        else if(f&tReal){char buf[70]; sprintf(buf,"%f", fix16_to_dbl((fix16_t)i)); s.append(buf);}
         else {char buf[70]; itoa((UInt)i, buf); s.append(buf);}
     } else if(type==tString){s+="\"";s.append((char*)i,wSize);s+="\""; }
     else if(type==tList||(f&fConcat)){
@@ -147,7 +150,7 @@ const char* QParser::nxtTokN(int n, ...){
     for(i=n; i; --i){
         tok=va_arg(ap, char*); nTok=Peek();
         if(strcmp(tok,"ABC")==0) {if(iscsym(nTok)&&!isdigit(nTok)&&(nTok!='_')) {getbuf(iscsym(peek())); break;} else tok=0;}
-        else if(strcmp(tok,"123")==0) {if(isdigit(nTok)) {getbuf(isdigit(peek())); break;} else tok=0;}
+        else if(strcmp(tok,"123")==0) {if(isdigit(nTok)) {getbuf((isdigit(peek())||peek()=='.')); break;} else tok=0;}
         else if (chkStr(tok) || chkStr(altTok(tok))) break; else tok=0;
     }
     va_end(ap);
@@ -158,8 +161,7 @@ const char* QParser::nxtTokN(int n, ...){
 void  chk4HardFunc(infon* i){
     if((i->wFlag&mFindMode)==iTagUse)
         if(isEq(i->type->S,"addOne") || isEq(i->type->S,"loadInfon") || isEq(i->type->S,"imageOf") || isEq(i->type->S,"time") || isEq(i->type->S,"cos") || isEq(i->type->S,"sin"))
-            {i->wFlag&=~iTagUse;
-                i->wFlag|=iHardFunc;}
+            {i->wFlag&=~iTagUse; i->wFlag|=iHardFunc;}
 }
 
 infon* grok(infon* item, UInt tagCode, int* code){
@@ -211,11 +213,10 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
         check(rchr);
         if(nxtTok("~"))  (*wFlag)|=mAssoc;
     } else if (nxtTok("123")) {   // read number
-        *pFlag+=tUInt;
-        *i=(infon*)atoi(buf);
-        size=1;
-    } else if (nxtTok("_")){*pFlag+=fUnknown+tUInt;
-    } else if (nxtTok("$")){*pFlag+=fUnknown+tString;
+        *pFlag|=tUInt; size=1;
+        if(strchr(buf,'.')) {(*i)=(infon*)fix16_from_dbl(atof(buf)); *pFlag|=tReal;} else *i=(infon*)atoi(buf);
+    } else if (nxtTok("_")){*pFlag|=fUnknown+tUInt;
+    } else if (nxtTok("$")){*pFlag|=fUnknown+tString;
     } else if (nxtTok("\"") || nxtTok("'")){   // read string
         getbuf(peek()!=nTok); streamGet();
         *pFlag+=tString; *i=(((*pFlag)&fUnknown)? 0 : (infon*)new char[p]); memcpy(*i,buf,p);

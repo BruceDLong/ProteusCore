@@ -34,14 +34,14 @@ static int doneYet=0, numEvents=0, numPortals=0;
 #define ERRl(msg) {std::cout<< msg << "\n";}
 
 #define gINT gInt()
-#define gZto1 (float)(((float)gInt()) / 1000.0)
+#define gZto1 fix16_to_dbl(gReal())
 #define gSTR gStr()
 
 #define Z1 {a=gZto1;  DEB(a)}
 #define Z2 {a=gZto1; b=gZto1; DEB(a<<", "<<b)}
 #define Z3 {a=gZto1; b=gZto1; c=gZto1; DEB(a<<", "<<b<<", "<< c)}
 #define Z4 {a=gZto1; b=gZto1; c=gZto1; d=gZto1; DEB(a<<", "<<b<<", "<< c<<", "<< d)}
-#define Z5 {a=gZto1; b=gZto1; c=gZto1; d=gZto1; e=gZto1;}
+#define Z5 {a=gZto1; b=gZto1; c=gZto1; d=gZto1; e=gZto1; DEB(a<<", "<<b<<", "<< c<<", "<< d<<", "<< e)}
 #define Z6 {a=gZto1; b=gZto1; c=gZto1; d=gZto1; e=gZto1; f=gZto1; DEB(a<<", "<<b<<", "<< c<<", "<< d<<", "<< e<<", "<< f)}
 #define I2 {Ia=gINT; Ib=gINT;}
 #define I3 {Ia=gINT; Ib=gINT; Ic=gINT;}
@@ -61,6 +61,7 @@ extern infon* Theme;
 char* worldFile="World.pr";
 
 struct InfonPortal {
+    InfonPortal(){memset(this, 0, sizeof(InfonPortal));};
     SDL_Window *window;
     SDL_Surface *surface;
     SDL_Renderer *renderer;
@@ -69,15 +70,23 @@ struct InfonPortal {
     infon *theme, *user, *topView, *crntView;
     char* title;
     bool needsToBeDrawn, isMinimized;
+    int posX, posY; // location in parent window.
+    InfonPortal *parent, *child, *nextSibling;
 };
 
 InfonPortal *portals[MAX_PORTALS];
 
 
 int gInt(){
-    getInt(ItmPtr,j,sign);  // DEB(j << ", ");
+    getInt(ItmPtr,j,sign);
     theAgent.getNextTerm(&ItmPtr);
     return (sign)?-j:j;
+}
+
+fix16_t gReal(){
+    fix16_t ret=getReal(ItmPtr);
+    theAgent.getNextTerm(&ItmPtr);
+    return ret;
 }
 
 char* gStr() {
@@ -102,7 +111,7 @@ int getArrayi(int* array){
     }
     return size;
 }
-int getArrayz(float* array){ // gets an array of 0..1 values (Zero)
+int getArrayz(double* array){ // gets an array of 0..1 values (Zero)
     int size=gInt();
     for (int i=0; i<size; ++i){
         array[i]=gZto1;
@@ -177,7 +186,7 @@ void DrawProteusDescription(InfonPortal* portal, infon* ProteusDesc){
     cairo_t *cr = portal->cr;
     SDL_Surface* utilSurface;
 DEB("\n-----------------\n")
-    int size, size2; float a,b,c,d,e,f; int Ia,Ib,Ic,Id,Ie,If,Ih,II; char  *Sa, *Sb;
+    int size, size2; double a,b,c,d,e,f; int Ia,Ib,Ic,Id,Ie,If,Ih,II; char  *Sa, *Sb;
     for(int EOL=theAgent.StartTerm(ProteusDesc, &i); !EOL; EOL=theAgent.getNextTerm(&i)){
   //      DEBl(count<<":[" << printInfon(i).c_str() << "]");
         EOT_d2=theAgent.StartTerm(i, &ItmPtr);
@@ -237,7 +246,6 @@ DEB("\n-----------------\n")
          //       cairo_new_sub_path(cr); //cairo_push_group(cr);
                 OldItmPtr=ItmPtr; DrawProteusDescription(portal, subItem); ItmPtr=OldItmPtr;
            //      cairo_close_path(cr); //cairo_pop_group_to_source (cr);
-                //cairo_paint_with_alpha (cr, 1);
                 DEB("<"); break;
 
             default: {ERRl("Invalid Drawing Command."); exit(2);}
@@ -248,7 +256,6 @@ DEB("\n-----------------\n")
     DEBl("\nCount: " << count << "\n======================");
 }
 /////////////////// End of Slip Drawing, Begin Interface to Proteus Engine
-
 
 int initModelsAndEventQueues(){ // TODO: Clean infon loading, use command line options, hard code some things
    // Load World
@@ -285,56 +292,52 @@ debugInfon=displayList;
     theAgent.normalize(displayList);
 
   portals[0]->topView=displayList;
-  portals[0]->needsToBeDrawn=true;
+  //portals[0]->needsToBeDrawn=true;
 
     MSGl("Normed");
-    DEBl(printInfon(displayList));
 }
 
 /////////////////////////////////////////////
 void ResizeTurbulancePortal(InfonPortal* portal, int w, int h){
     if(portal->cairoSurf) cairo_surface_destroy(portal->cairoSurf);
     if(portal->surface) SDL_FreeSurface(portal->surface);
-    if(portal->cr) cairo_destroy(portal->cr);
     portal->surface = SDL_CreateRGBSurface (0, w, h, 32,0x00ff0000,0x0000ff00,0x000000ff,0);
     portal->cairoSurf = cairo_image_surface_create_for_data((unsigned char*)portal->surface->pixels, CAIRO_FORMAT_RGB24, w, h,portal->surface->pitch);
-    portal->cr = cairo_create(portal->cairoSurf); cairo_set_antialias(portal->cr,CAIRO_ANTIALIAS_GRAY);
+    SDL_RenderSetViewport(portal->renderer, NULL);
 }
 
 bool CreateTurbulancePortal(char* title, int x, int y, int w, int h, int flags, char* userName, char* themeFilename, char* stuffName){
     if(numPortals >= MAX_PORTALS) return 1;
     char winTitle[1024] = windowTitle;
-    InfonPortal* portal=new InfonPortal; portal->surface=0; portal->cairoSurf=0; portal->cr=0;
+    InfonPortal* portal=new InfonPortal;
     if (numPortals>0){SDL_snprintf(winTitle, strlen(title), "%s %d", title, numPortals+1);}
     else {strcpy(winTitle, title);}
     portal->window=SDL_CreateWindow(winTitle, x,y,w,h, flags|SDL_WINDOW_RESIZABLE);
     SDL_SetWindowData(portal->window, "portal", portal);
-//TODO: Hardcode: icon, bpp-depth/vid_mode, resizable
-//    SDL_SetWindowDisplayMode(portal->window, ); // Mode for use during fullscreen mode
+//TODO: Hardcode: icon, bpp-depth=SDL_PIXELFORMAT_RGB24 / vid_mode
+//    SDL_SetWindowDisplayMode(portal->window, NULL); // Mode for use during fullscreen mode
 //    LoadIcon()
     portal->renderer = SDL_CreateRenderer(portal->window, -1, SDL_RENDERER_ACCELERATED);
     SDL_SetRenderDrawColor(portal->renderer, 0xA0, 0xA0, 0xc0, 0xFF);
     ResizeTurbulancePortal(portal, w, h);
     portal->isMinimized=false;
-    portals[numPortals]=portal; ++numPortals;
+    portal->needsToBeDrawn=true;
+ //   portal->topView=displayList;
+    portals[numPortals++]=portal;
 
-// TODO: Load independant Stuff and Theme for this window., Detach Theme from Functions.cpp:draw()
+// TODO: Load independant Stuff and Theme for this window. Detach Theme from Functions.cpp:draw()
 }
 
 void DestroyTurbulancePortal(InfonPortal *p){
     //TODO slide portals items down
-  //  cairo_destroy(p->cr);
     cairo_surface_destroy(p->cairoSurf);
     SDL_FreeSurface(p->surface);
     SDL_DestroyRenderer(p->renderer);
-    //SDL_DestroyTexture(p->tex);
 }
 
 //////////////////// End of Slip Specific Code, Begin Rendering Code
-// TODO: Make resizing screens work. See example in testCairoSDL.cpp.
 
-//////////////////// SDL Init and loop
-int secondsToRun=30; // time until the program exits automatically. 0 = don't exit.
+int secondsToRun=120; // time until the program exits automatically. 0 = don't exit.
 void EXIT(char* errmsg){ERRl(errmsg << "\n"); exit(1);}
 void cleanup(void){SDL_Quit();}   //TODO: Add items to cleanup routine
 
@@ -379,7 +382,8 @@ void InitializePortalSystem(int argc, char** argv){
     //TODO: if (DebugMode) PrintConfiguration from common.c Set debugmode via command-line argument
     CreateTurbulancePortal(windowTitle, 100,1300,1024,768, 0, userName, theme, portalContent);
 
-    //TODO: Enable Key Repeat and Unicode support in SDL. (See Harfbuzz.c) : SDL_EnableKeyRepeat(300, 130);  SDL_EnableUNICODE(1)
+    SDL_EnableKeyRepeat(300, 130);
+    SDL_EnableUNICODE(1);
     atexit(cleanup);
 }
 enum userActions {TURB_UPDATE_SURFACE=1, TURB_ADD_SCREEN, TURB_DEL_SCREEN, TURB_ADD_WINDOW, TURB_DEL_WINDOW};
@@ -432,13 +436,28 @@ void StreamEvents(){
                 case SDLK_k: if (IS_CTRL) {} break;       // Toggle on-screen Keyboard
                 case SDLK_t: if (IS_CTRL) {} break;       // Cycle Themes
                 case SDLK_s: if (IS_CTRL) {} break;       // Shift window to a new screen or computer.
+                case SDLK_j: if (IS_CTRL) {
+                    // Find top meta-window
+                    // Find 2nd meta-window
+                    // Fill in top's posX, posY, DPI
+                    // Get parent-to-be's coordinates (min/max of top and 2nd's pos's)
+                    // CreatePortal();
+                        // set it's parent to top and top->nextSibling to 2nd
+                        // set top and 2nd's parent pointer
+                        // Place this in front of 2nd in Portals[]
+        //TODO: Make child windows do 'blit', make meta-window not display.
+        //TODO: Make 'd'isconnect window and close windows work in all cases.
+        //TODO: make sure clicking windows can't get a meta-window after its children in Portals[]
+                }
+                break;
                 case SDLK_f: // Toggle fullscreen.
                     if (IS_CTRL && window) {
                             if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) {
                                 SDL_SetWindowFullscreen(window, SDL_FALSE);
                             } else {SDL_SetWindowFullscreen(window, SDL_TRUE);}
                     }
-                case SDLK_n: if (IS_CTRL) {} break;       // New Portal
+                    break;
+                case SDLK_n: if (IS_CTRL) {CreateTurbulancePortal(windowTitle, 100,1300,1024,768, 0, "userName", "theme", "portalContent");} break;       // New Portal
                 case SDLK_RETURN: break;
                 case SDLK_ESCAPE: doneYet=true; break;
                 }

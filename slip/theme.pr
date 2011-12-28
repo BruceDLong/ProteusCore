@@ -6,9 +6,9 @@
       [ ?
         {drawItem {
 
-            {inkColorAlpha 100 500 1000 900}
-     //       {shiftTo 50000, 90000}
-      //      {scale 500 500}
+            {inkColorAlpha 0.1 0.5 1.0 0.9}
+     //       {shiftTo 50.0, 90.0}
+      //      {scale 0.5 0.5}
             {text %A:[$]}
         //    {fillPath}
           }
@@ -19,15 +19,15 @@
     {'wide'
       [ ?
         {drawItem {
-          //  {shiftTo 50000, 40000}
-            {scale 500 500}
-            //{rotate 400}
-            {inkColorAlpha 100 100 1000 800}
-            {curvedRect 25000 30000 800000 500000 60000}
+          //  {shiftTo 50.0, 40.0}
+            {scale 0.5 0.5}
+            //{rotate 0.4}
+            {inkColorAlpha 0.1 0.1 1.0 0.8}
+            {curvedRect 25.0 30.0 800.0 500.0 60.0}
          //   {fillPath}
-            {inkColorAlpha 100 500 100 900}
-         //   {shiftTo 50000, 90000}
-        //    {scale 5000 5000}
+            {inkColorAlpha 0.1 0.5 0.1 0.9}
+         //   {shiftTo 50.0, 90.0}
+        //    {scale 5.0 5.0}
             {text %A:[$]}
          //   {fillPath}
           }
@@ -42,10 +42,10 @@
   {'tList',
     {'simple',
       [ ?
-       {5000 42000 12000 25000 56000} // ({0} {+(+40000 (%\\\\:[_]~)) | ...})  // Y-values
+       {5.0 42.0 12.0 25.0 56.0} // ({0.0} {+(+40.0 (%\\\\:[_]~)) | ...})  // Y-values
 
        { drawItem
-        { {drawItem {{moveRel 50000 40000 }   imageOf <: {%A:[$]~}   }} |...} //(%V:[_]~)
+        { {drawItem {{moveRel 50.0 40.0 }   imageOf <: {%A:[$]~}   }} |...} //(%V:[_]~)
        }
       ]
     }
@@ -73,15 +73,12 @@
     {'blocked',
       [ ?
         {drawItem {
-           // {shiftTo 50000, 40000}
-           // {scale 500 500}
-            //{rotate 400}
-            {inkColorAlpha 100 1000 100 800}
-            {curvedRect 25000 30000 400000 600000 60000}
-      //      {fillPath}
-            {inkColorAlpha 100 500 100 900}
-          //  {shiftTo 50000, 90000}
-   //         {scale 5000 5000}
+            {inkColorAlpha 0.1 1.0 0.1 0.8}
+            {curvedRect 25.0 30.0 400.0 600.0 60.0}
+
+            {inkColorAlpha 0.1 0.5 0.1 0.9}
+
+   //         {scale 5.0 5.0}
             {text %A:[$]}
  //           {fillPath}
           }
@@ -93,15 +90,15 @@
     {'wide',
       [ ?
         {drawItem {
-            {shiftTo 200000, 20000}
-            {scale 500 500}
-            //{rotate 400}
-            {inkColorAlpha 100 300 1000 800}
-            {curvedRect 20000 20000 650000 500000 60000}
+            {shiftTo 200.0, 20.0}
+            {scale 0.5 0.5}
+            //{rotate 0.4}
+            {inkColorAlpha 0.1 0.3 1.0 0.8}
+            {curvedRect 20.0 20.0 650.0 500.0 60.0}
             {fillPath}
-            {inkColorAlpha 110 1000 110 1000}
-            {shiftTo 300000, 75000}
-            {scale 5000 5000}
+            {inkColorAlpha 0.11 1.0 0.11 1.0}
+            {shiftTo 300.0, 75.0}
+            {scale 5.0 5.0}
             {text %A:[$]}
             {fillPath}
           }

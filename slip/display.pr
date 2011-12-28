@@ -1,18 +1,18 @@
 <%
 {
         {loadImage 'bkground1.jpg'}
-    {moveTo 14000 32000}
-    {text "Hello World!"} {moveRel 0 50000}
+    {moveTo 14.0 32.0}
+    {text "Hello World!"} {moveRel 0.0 50.0}
     {text "Let's Party!"}
     {fillPath}
       //  imageOf<:{"Howdy Brother!" 'text'}
-       {moveTo 0 0} imageOf<:{ {'Howdy Folks, Welcome to Golden!' 'There' 'Friend'} }
+       {moveTo 0.0 0.0} imageOf<:{ {'Howdy Folks, Welcome to Golden!' 'There' 'Friend'} }
     //    imageOf<:{'list' 'wide' {'Email'} }
     {fillPath}
-        {inkColor 1000 100 100}
-        {lineWidth 10000}
-        {moveTo 14000 32000}
-        {lineRel 500000 000000}
+        {inkColor 1.0 0.1 0.1}
+        {lineWidth 10.0}
+        {moveTo 14.0 32.0}
+        {lineRel 500.0 0.0}
         {strokePath}
 }
 %>

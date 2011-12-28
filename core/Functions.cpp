@@ -11,9 +11,9 @@
 #include <strstream>
 #include <iostream>
 #include <fstream>
-#include "Proteus.h"
 #include <stdlib.h>
 #include <math.h>
+#include "Proteus.h"
 #include <ctime>
 
 #define pi 3.14159
@@ -49,12 +49,28 @@ int getIntArg(infon* i, int* Int1, agent* a){
     return 1;
 }
 
+int getRealArg(infon* i, fix16_t* Real1, agent* a){
+    i->spec2->top=i;
+    a->normalize(i->spec2);
+    if(!(i->spec2->pFlag&tReal)) return 0;
+    *Real1=getReal(i->spec2);
+    return 1;
+}
+
 void setIntVal(infon* CI, int i){
     UInt tmpFlags=CI->pFlag&0xff000000;
     CI->size=CI->spec2->size;
     CI->value=(infon*) abs(i);
     if (i<0)tmpFlags|=fInvert;
     CI->pFlag=tmpFlags + (tUInt<<goSize)+tUInt;
+    CI->wFlag=iNone;
+}
+
+void setFloatVal(infon* CI, fix16_t i){
+    UInt tmpFlags=CI->pFlag&0xff000000;
+    CI->size=CI->spec2->size;
+    CI->value=(infon*) i;
+    CI->pFlag=tmpFlags + (tUInt<<goSize)+tUInt+tReal;
     CI->wFlag=iNone;
 }
 
@@ -71,14 +87,11 @@ int autoEval(infon* CI, agent* a){
     stng funcName=*CI->type;
    std::cout << "EVAL:"<<funcName.S<<"\n";
     if (strcmp(funcName.S, "sin")==0){
-        if (!getIntArg(CI, &int1, a)) return 0;
-        float f=Zto1(int1)*pi/180;
-        float a=sin(f);
-        setIntVal(CI, a*1024);
+        if (!getRealArg(CI, &int1, a)) {CI->wFlag=iNone; return 0;}
+        setFloatVal(CI, fix16_sin(int1));  // *pi/180
     } else if (strcmp(funcName.S, "cos")==0){
-         if (!getIntArg(CI, &int1, a)) return 0;
-        float f=Zto1(int1)*pi/180;
-        setIntVal(CI, cos(f)*1024);
+        if (!getRealArg(CI, &int1, a)) {CI->wFlag=iNone; return 0;}
+        setFloatVal(CI, fix16_cos(int1));  // *pi/180
     } else if (strcmp(funcName.S, "time")==0){
         tm now;
         time_t rawtime;

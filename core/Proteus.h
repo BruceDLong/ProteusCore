@@ -72,11 +72,8 @@ struct Qitem{infon* item; infon* firstID; UInt IDStatus; UInt level; int bufCnt;
 typedef std::queue<Qitem> infQ;
 typedef std::map<infon*, infon*> PtrMap;
 
-extern infon* World;
-extern std::map<stng,infon*> tag2Ptr;
-extern std::map<infon*,stng> ptr2Tag;
 struct agent {
-    agent(){world=World;};
+    agent(infon* World=0){world=World;};
     int StartTerm(infon* varIn, infon** varOut);
     int LastTerm(infon* varIn, infon** varOut);
     int getNextTerm(infon** p);
@@ -88,7 +85,11 @@ struct agent {
     infon* normalize(infon* i, infon* firstID=0, bool doShortNorm=false);
     infon *world, context;
     void deepCopy(infon* from, infon* to, infon* args=0, PtrMap* ptrs=0);
+    int loadInfon(char* filename, infon** inf, bool normIt=true);
     private:
+        std::map<stng,infon*> tag2Ptr;
+        std::map<infon*,stng> ptr2Tag;
+        std::map<dblPtr,UInt> alts;
         void InitList(infon* item);
         infon* copyList(infon* from);
         void processVirtual(infon* v);

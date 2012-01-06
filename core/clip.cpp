@@ -15,7 +15,7 @@ using namespace std;
 #include <readline/history.h>
 
 /* A static variable for holding the line. */
-static char *line_read = (char *)NULL; 
+static char *line_read = (char *)NULL;
 
 /* Read a string, and return a pointer to it.
    Returns "quit" on EOF. */
@@ -35,7 +35,7 @@ rl_gets (const char* prompt)
 
   /* If the line has any text in it,
      save it on the history. */
-  if (line_read && *line_read) 
+  if (line_read && *line_read)
     add_history (line_read);
 
   if (line_read == NULL)
@@ -79,42 +79,42 @@ std::string readln(std::string prompt){
 #include <signal.h>
 
 static void reportFault(int Signal){cout<<"\nSegmentation Fault.\n"; fflush(stdout); abort();}
-extern infon *World;
+
 infon *topInfon, *Entry;
 
 int main(int argc, char **argv){
         rl_init(); // with IFDEF readline?
-	signal(SIGSEGV, reportFault);
-	
+    signal(SIGSEGV, reportFault);
+
     // Load World
+    agent a;
     std::cout << "Loading world\n";
     std::fstream InfonInW("world.pr");
     QParser q(InfonInW);
-    World=q.parse();
-    if (!World) {std::cout<<"Error:"<<q.buf<<"\n"; exit(1);}
-    topInfon=World;  // use topInfon in the ddd debugger to view World
+    a.world=q.parse();
+    if (!a.world) {std::cout<<"Error:"<<q.buf<<"\n"; exit(1);}
+    topInfon=a.world;  // use topInfon in the ddd debugger to view World
 
-	agent a;
-    a.normalize (World);
+    a.normalize (a.world);
     cout<<"\nThe Proteus CLI. Type some infons or 'quit'\n\n";
-	while(!cin.eof()){
-		std::string entry= readln("Proteus: ");
-		if (entry=="quit") break;
-		if (entry=="") continue;
-		//char ch='x', pr; do {pr=ch; ch=getCH(); entry+=ch;} while (!(pr=='%' && ch=='>'));
-		//cout << "Parsing ["<<entry<<"]\n";
-		entry="<%" + entry + "%>";
-		istrstream fin(entry.c_str());
-		QParser q(fin);
-		Entry=q.parse(); // cout <<"Parsed.\n";
+    while(!cin.eof()){
+        std::string entry= readln("Proteus: ");
+        if (entry=="quit") break;
+        if (entry=="") continue;
+        //char ch='x', pr; do {pr=ch; ch=getCH(); entry+=ch;} while (!(pr=='%' && ch=='>'));
+        //cout << "Parsing ["<<entry<<"]\n";
+        entry="<%" + entry + "%>";
+        istrstream fin(entry.c_str());
+        QParser q(fin);
+        Entry=q.parse(); // cout <<"Parsed.\n";
         try{
             a.normalize(Entry); // cout << "Normalizd\n";
         } catch (char const* errMsg){std::cout<<errMsg<<"\n";}
-	//	a.append(Entry, World);
+    //  a.append(Entry, a.world);
 
-		if (Entry) cout<<"\n"<<printInfon(Entry)<<"\n\n";
-		else {cout<<"\nError: "<<q.buf<<"\n\n";}
-	}
+        if (Entry) cout<<"\n"<<printInfon(Entry)<<"\n\n";
+        else {cout<<"\nError: "<<q.buf<<"\n\n";}
+    }
         rl_finalize(); // with IFDEF readline?
  return 0;
 }

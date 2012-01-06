@@ -19,7 +19,7 @@ void readln(std::string &str){
 }
 #include <signal.h>
 static void reportFault(int Signal){OUT("Segmentation Fault."); fflush(stdout); abort();}
-extern infon *World;
+
 infon* topInfon;
 
 int main(int argc, char **argv)
@@ -27,6 +27,7 @@ int main(int argc, char **argv)
 signal(SIGSEGV, reportFault);
 std::string desc, world, query, line; world=""; query="";
 int mode;
+agent a;
 do{
     std::cin >> mode;
     if(mode==5) return 0;
@@ -45,13 +46,13 @@ do{
     std::cout << "Parsing ["<<world<<"]\n";
     std::istrstream fin(world.c_str());
     QParser q(fin);
-    World=q.parse(); std::cout <<"Parsed.\n";
+    a.world=q.parse(); std::cout <<"Parsed.\n";
     if (mode>0){
-        agent a;  std::cout <<"Norming World...\n";
-        topInfon=World;
-        a.normalize(World);  std::cout << "Normed\n";
+        std::cout <<"Norming World...\n";
+        topInfon=a.world;
+        a.normalize(a.world);  std::cout << "Normed\n";
     }
-    if (World) std::cout<<"<"<<printInfon(World)<<"> \n";
+    if (a.world) std::cout<<"<"<<printInfon(a.world)<<"> \n";
     else {std::cout<<"Error: "<<q.buf<<"\n"; exit(0);}
 if (mode==2){
     // Load DispList
@@ -62,7 +63,7 @@ if (mode==2){
     infon* queryinf=D.parse(); std::cout << "parsed\n";
     if(queryinf) std::cout<<"<<["<<printInfon(queryinf).c_str()<<"]>>\n";
     else {std::cout<<"Error: "<<D.buf<<"\n"; exit(0);}
-    agent a; std::cout<<"Norming query...";
+    std::cout<<"Norming query...";
     topInfon=queryinf;
     a.normalize(queryinf); std::cout<<"Normed\n";
     std::cout<<printInfon(queryinf);
@@ -79,11 +80,11 @@ int main(int argc, char **argv)
     std::cout << "Loading world.pr\n";
     std::fstream fin("../slyp/world.pr");
     QParser q(fin);
-    World=q.parse();
-    if (World) std::cout<<"["<<printInfon(World)<<"]\n";
+    a.world=q.parse();
+    if (a.world) std::cout<<"["<<printInfon(a.world)<<"]\n";
     else {std::cout<<"Error:"<<q.buf<<"\n"; exit(1);}
     agent a;
-    a.normalize(World);
+    a.normalize(a.world);
 
     // Load DispList
     std::cout << "Loading display.pr\n";

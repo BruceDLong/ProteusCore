@@ -53,6 +53,8 @@
     %rotate         = 42
 
     %loadImage      = 50
+    %setBackgndImg  = 51
+    %dispBackgnd    = 52
 
     %drawItem       = 100
 

@@ -105,7 +105,7 @@ int autoEval(infon* CI, agent* a){
         infon* args=CI->spec2;
         args->top=CI;
         a->normalize(args);
-std::cout << "#############" << printInfon(args) << "\n";
+std::cout << "###ImageOf:" << printInfon(args) << "\n";
         infon* foundMajorType=0;
         infon* foundMinorType=0;
         infon* objectToImage=0;
@@ -120,10 +120,6 @@ std::cout << "#############" << printInfon(args) << "\n";
                 case tUnknown: strcpy(majorType, "tUnknown"); break;
             }
         } else {memcpy(majorType,objectToImage->type->S, objectToImage->type->L); majorType[objectToImage->type->L]=0;}
-/*        if ((args->pFlag&tType) != tString) {
-            std::cout<<"Error: majorType in imageOf is not a string\n";
-            return 0;
-        } else {copyInfonString2charBuf(args, majorType);}*/
         if(argsSize>1){
             args=args->next;
             if ((args->pFlag&tType) != tString) {
@@ -137,7 +133,6 @@ std::cout << "#############" << printInfon(args) << "\n";
         for (EOT=a->StartTerm(Theme, &i); !EOT; EOT=a->getNextTerm(&i)) {
             if ((i->value->pFlag&tType) != tString) continue;
             copyInfonString2charBuf(i->value, tagBuf);
-            std::cout<<tagBuf<<"<<\n";
             if (strcmp(tagBuf, majorType) == 0) {
                 foundMajorType = i;
                 break;
@@ -169,11 +164,9 @@ std::cout << "#############" << printInfon(args) << "\n";
         if (!getStrArg(CI, &str1, a)) return 0;
         str1.S[str1.L]=0;
         std::fstream fin(str1.S);
-//      while (!fin.eof() && !fin.fail()) {std::cout<<(char)fin.get();} exit(0);
         QParser q(fin);
         infon* I=q.parse();// std::cout <<"P "; std::cout<<"<"<<printInfon(I)<<"> \n";
-        agent a;
-        a.normalize(I); // std::cout << "N ";
+        a->normalize(I); // std::cout << "N ";
         if (I==0) {std::cout<<"Error: "<<q.buf<<"\n";}
 
         copyTo(I,CI);

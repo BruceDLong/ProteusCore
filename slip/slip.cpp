@@ -24,14 +24,17 @@ static int doneYet=0, numEvents=0, numPortals=0;
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <map>
 #include "../core/Proteus.h"
 
-#define DEB(msg)  {std::cout<< msg;}
-#define DEBl(msg) {std::cout<< msg << "\n";}
-#define MSG(msg)  {std::cout<< msg;}
-#define MSGl(msg) {std::cout<< msg << "\n";}
-#define ERR(msg)  {std::cout<< msg;}
-#define ERRl(msg) {std::cout<< msg << "\n";}
+using namespace std;
+
+#define DEB(msg)  //{std::cout<< msg;}
+#define DEBl(msg) //{std::cout<< msg << "\n";}
+#define MSG(msg)  {cout<< msg;}
+#define MSGl(msg) {cout<< msg << "\n";}
+#define ERR(msg)  {cout<< msg;}
+#define ERRl(msg) {cout<< msg << "\n";}
 
 #define gINT gInt()
 #define gZto1 fix16_to_dbl(gReal())
@@ -57,21 +60,31 @@ infon* debugInfon=0; // Assign this to an infon to assist in debugging.
 agent theAgent;
 int EOT_d2,j,sign;
 char textBuff[1024];
-extern infon* Theme;
-char* worldFile="World.pr";
+extern infon *Theme;
+extern infon *World;
+char* worldFile="world.pr";
+
+struct InfonPortal; //forward
+struct InfonViewPort {
+    SDL_Window *window;
+    SDL_Renderer *renderer;
+    bool isMinimized;
+    int posX, posY; // location in parent window.
+    double scale; // POLISH: Make views scalable?
+    InfonPortal *parentPortal;
+    InfonViewPort *next;
+};
 
 struct InfonPortal {
     InfonPortal(){memset(this, 0, sizeof(InfonPortal));};
-    SDL_Window *window;
     SDL_Surface *surface;
-    SDL_Renderer *renderer;
     cairo_surface_t *cairoSurf;
     cairo_t *cr;
-    infon *theme, *user, *topView, *crntView;
-    char* title;
-    bool needsToBeDrawn, isMinimized;
-    int posX, posY; // location in parent window.
-    InfonPortal *parent, *child, *nextSibling;
+    SDL_Surface *SDL_background;
+    cairo_surface_t *cairo_background;
+    infon *theme, *user, *topView;
+    bool needsToBeDrawn, viewsNeedRefactoring, isLocked;
+    InfonViewPort *viewPorts;
 };
 
 InfonPortal *portals[MAX_PORTALS];
@@ -134,6 +147,31 @@ static inline SDL_Surface *load_image(const char *filename){
     return optimizedImage;
 }
 
+SDL_Texture *LoadTexture(SDL_Renderer *renderer, char *file, SDL_bool transparent){
+    SDL_Surface *temp=IMG_Load(file);;
+    SDL_Texture *texture;
+
+    if (temp == NULL) {fprintf(stderr, "Couldn't load %s: %s", file, SDL_GetError()); return NULL;}
+
+    if (transparent) { //Set transparent pixel as the pixel at (0,0)
+        if (temp->format->palette) {
+            SDL_SetColorKey(temp, SDL_TRUE, *(Uint8 *) temp->pixels);
+        } else {
+            switch (temp->format->BitsPerPixel) {
+            case 15: SDL_SetColorKey(temp, SDL_TRUE, (*(Uint16 *) temp->pixels) & 0x00007FFF); break;
+            case 16: SDL_SetColorKey(temp, SDL_TRUE, *(Uint16 *) temp->pixels); break;
+            case 24: SDL_SetColorKey(temp, SDL_TRUE, (*(Uint32 *) temp->pixels) & 0x00FFFFFF); break;
+            case 32: SDL_SetColorKey(temp, SDL_TRUE, *(Uint32 *) temp->pixels); break;
+            }
+        }
+    }
+
+    texture = SDL_CreateTextureFromSurface(renderer, temp);
+    if (!texture) {fprintf(stderr, "Couldn't create texture: %s\n", SDL_GetError()); SDL_FreeSurface(temp);  return NULL; }
+    SDL_FreeSurface(temp);
+    return texture;
+}
+
 void renderText(cairo_t *cr, char* text){
     PangoLayout *layout=pango_cairo_create_layout(cr);
     pango_layout_set_text(layout, text, -1);
@@ -142,14 +180,9 @@ void renderText(cairo_t *cr, char* text){
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 
- //   cairo_new_path(cr);
-  //  cairo_move_to(cr, 0, 0);
     cairo_set_line_width(cr, 0.5);                      // sets the line width, default is 2.0
     pango_cairo_update_layout(cr, layout);                  // update the pango layout to reflect any changes
-
     pango_cairo_layout_path(cr, layout);                    // draw the pango layout onto the cairo surface
-  //  cairo_fill(cr);
-
     g_object_unref(layout);                         // free the layout
 }
 
@@ -173,7 +206,7 @@ enum dTools{rectangle=1, curvedRect, circle, lineTo, lineRel, moveTo, moveRel, c
             lineWidth=25, lineStyle, fontFace, fontSize,
             drawToScrnN=30, drawToWindowN, drawToMemory, drawToPDF, drawToPS, drawToSVG, drawToPNG,
             shiftTo=40, scale, rotate,
-            loadImage=50,
+            loadImage=50, setBackgndImg, dispBackgnd,
             drawItem=100
 };
 
@@ -193,24 +226,20 @@ DEB("\n-----------------\n")
         int cmd=gINT;
         DEB("\n[CMD:"<< cmd << "]");
         switch(cmd){ // TODO: Pango, Audio, etc.
-            case rectangle:DEB("rectangle:") Z4 cairo_rectangle (cr, a,b,c,d); break;
-            case curvedRect:DEB("curvedRect:")  Z5 roundedRectangle(cr, a,b,c,d,e); break;
+            case rectangle:DEB("rectangle:") Z4 cairo_rectangle (cr, a,b,c,d);     break;
+            case curvedRect:DEB("curvedRect:")  Z5 roundedRectangle(cr, a,b,c,d,e);break;
             case circle:  break;
-            case lineTo: DEB("lineTo:")  Z2   cairo_line_to(cr, a,b);             break;
+            case lineTo: DEB("lineTo:")  Z2   cairo_line_to(cr, a,b);              break;
             case lineRel: DEB("lineRel:") Z2   cairo_rel_line_to(cr, a,b);         break;
-            case moveTo:
-                DEB("moveTo:")
-                Z2
-                cairo_move_to(cr, a,b);
-                break;
+            case moveTo: DEB("moveTo:") Z2 cairo_move_to(cr, a,b);                 break;
             case moveRel: DEB("moveRel:") Z2   cairo_rel_move_to(cr, a,b);         break;
             case curveTo:  Z6   cairo_curve_to(cr, a,b,c,d,e,f);    break;
             case curveRel: Z6   cairo_rel_curve_to(cr, a,b,c,d,e,f);break;
             case arcClockWise:Z5 cairo_arc(cr, a,b,c,d,e);          break; //xc, yc, radius, angle1, angle2
             case arcCtrClockW:Z5 cairo_arc_negative(cr, a,b,c,d,e); break;
-            case text: DEB("text:") S1  renderText(cr, Sa);  break;
+            case text: DEB("text:") S1  renderText(cr, Sa);         break;
 
-            case strokePath:   cairo_stroke(cr); DEB("strokePath")    break;
+            case strokePath:   cairo_stroke(cr); DEB("strokePath")  break;
             case fillPath:     cairo_fill(cr); DEB("fillPath")      break;
             case paintSurface: cairo_paint(cr);      break;
             case closePath:    cairo_close_path(cr); break;
@@ -238,9 +267,28 @@ DEB("\n-----------------\n")
             case scale: Z2 cairo_scale(cr, a,b); break;
             case rotate: Z2 cairo_rotate(cr, a); break;
 
-            case loadImage: DEB("background:") S1 utilSurface=IMG_Load(Sa); SDL_BlitSurface(utilSurface,0, portal->surface,0); break;
-       //     case SetBackgroundImage: S1 BackGndImage=IMG_Load(Sa); break;
-
+            case loadImage: DEB("background:") S1 utilSurface=IMG_Load(Sa); SDL_BlitSurface(utilSurface,NULL, portal->surface,NULL); break;
+            case setBackgndImg: S1
+                if(portal->cairo_background!=0) break;
+          //      portal->SDL_background=IMG_Load(Sa);
+                portal->cairo_background = cairo_image_surface_create_from_png (Sa);
+              //  portal->cairo_background = cairo_image_surface_create_for_data((unsigned char*)portal->SDL_background->pixels, CAIRO_FORMAT_RGB24,
+               //             portal->SDL_background->w, portal->SDL_background->h,cairo_format_stride_for_width (CAIRO_FORMAT_RGB24, portal->SDL_background->w));//portal->SDL_background->pitch);
+                if(cairo_surface_status(portal->cairo_background) == CAIRO_STATUS_INVALID_STRIDE) cout << "ERROR Invalid Stride\n";
+                if(cairo_surface_status(portal->cairo_background) != CAIRO_STATUS_SUCCESS) cout << "ERROR CREATING BACKGROUND SURFACE\n";
+                break;
+            case dispBackgnd:{
+         //SDL_BlitSurface(portal->SDL_background,NULL, portal->surface, NULL);
+                int w = cairo_image_surface_get_width (portal->cairo_background);
+                int h = cairo_image_surface_get_height (portal->cairo_background);
+                double pw = portal->surface->w;
+                double ph = portal->surface->h;
+                cairo_save(cr);
+                cairo_scale(cr,pw/w, ph/h);
+                cairo_set_source_surface(cr,portal->cairo_background,0,0);
+                cairo_paint(cr);
+                cairo_restore(cr);
+                } break;
             case drawItem: DEB(">");
                 subItem=gList();
          //       cairo_new_sub_path(cr); //cairo_push_group(cr);
@@ -255,84 +303,128 @@ DEB("\n-----------------\n")
  //   cairo_destroy (cr);
     DEBl("\nCount: " << count << "\n======================");
 }
+
 /////////////////// End of Slip Drawing, Begin Interface to Proteus Engine
+void CloseTurbulanceViewport(InfonViewPort* viewPort){
+    if(viewPort->renderer) SDL_DestroyRenderer(viewPort->renderer);
+    if(viewPort->window) SDL_DestroyWindow(viewPort->window);
+    InfonPortal *portal=viewPort->parentPortal;
+        // Remove this portal from parent
+        InfonViewPort *currP, *prevP=0;
+        for(currP=portal->viewPorts; currP != NULL; prevP=currP, currP=currP->next) {
+            if (currP == viewPort)
+                if (prevP == NULL) portal->viewPorts = currP->next;
+                else prevP->next = currP->next;
+        }
+        delete(viewPort);
+        if (portal->viewPorts==0){
+            if(portal->cairoSurf) cairo_surface_destroy(portal->cairoSurf);
+            if(portal->surface) SDL_FreeSurface(portal->surface);
+            delete(portal->theme); delete(portal->user); delete(portal->topView);
 
-int initModelsAndEventQueues(){ // TODO: Clean infon loading, use command line options, hard code some things
-   // Load World
-    MSGl("Loading world...");
-    std::fstream InfonInW("world.pr");
-//    std::string worldStr("<% eval=#+{{?{}, ?{}}, @\[?{}]: \[?{}, ?{}]} %> \n");
-//    std::istringstream InfonInW(worldStr);
-    QParser q(InfonInW);
-extern infon *World; World=q.parse();
-    if (World) {MSGl("["<<printInfon(World)<<"]");}
-    else {ERRl("Error:"<<q.buf); exit(1);}
-    theAgent.normalize(World);
-
-    //Load Theme
-    MSGl("Loading Theme...");
-    std::fstream InfonInT("theme.pr");
-    QParser T(InfonInT);
-    Theme=T.parse();
-    if (Theme) {MSGl("["<<printInfon(Theme)<<"]");}
-    else {ERRl("Error:"<<T.buf); exit(1);}
-   // theAgent.normalize(Theme);
-
-// Load DispList
-    MSGl("Loading display...");
-    std::fstream InfonInD("display.pr");
-//    std::string dispList("<% \n( {  @eval: { show_clock, +{*1+0 *15+0 *30+0} } /*{XXX}:<ref_to_myStuff>|...}*/ |...} ) %> \n");
-//    std::string dispList("<% { @eval::{show_clock +{*1+0 *15+0 *30+0}} }  %> \n");
-//    std::istringstream InfonInD(dispList);
-    QParser D(InfonInD);
-    infon* displayList=D.parse(); MSGl("parsed");
-    if(displayList) {MSGl("["<<printInfon(displayList).c_str()<<"]");}
-    else {ERRl("Error:"<<D.buf); exit(1);}
-debugInfon=displayList;
-    theAgent.normalize(displayList);
-
-  portals[0]->topView=displayList;
-  //portals[0]->needsToBeDrawn=true;
-
-    MSGl("Normed");
+            // remove self from Portals[]
+            for(int p=0; p<numPortals; ++p){if(portals[p]==portal) break;}
+            while(++p<numPortals) portals[p-1]=portals[p];
+            --numPortals;
+            delete(portal);
+            // if there are no more windows, will app close?
+        }
 }
 
-/////////////////////////////////////////////
 void ResizeTurbulancePortal(InfonPortal* portal, int w, int h){
     if(portal->cairoSurf) cairo_surface_destroy(portal->cairoSurf);
     if(portal->surface) SDL_FreeSurface(portal->surface);
+    portal->needsToBeDrawn=true;
     portal->surface = SDL_CreateRGBSurface (0, w, h, 32,0x00ff0000,0x0000ff00,0x000000ff,0);
     portal->cairoSurf = cairo_image_surface_create_for_data((unsigned char*)portal->surface->pixels, CAIRO_FORMAT_RGB24, w, h,portal->surface->pitch);
-    SDL_RenderSetViewport(portal->renderer, NULL);
+    for(InfonViewPort *portView=portal->viewPorts; portView; portView=portView->next) // for each view
+        SDL_RenderSetViewport(portView->renderer, NULL);
 }
 
-bool CreateTurbulancePortal(char* title, int x, int y, int w, int h, int flags, char* userName, char* themeFilename, char* stuffName){
+void RefactorPortal(InfonPortal *portal){
+    int viewX, viewY, viewW, viewH, portalW, portalH;
+    int windowsHere=0, currPos=0, prevPos=0, gap=0;
+    map <int, InfonViewPort*> sides;
+    map <int, InfonViewPort*>::iterator it;
+    InfonViewPort *currView=0; InfonViewPort *portView=0;
+    // Find X positions for all this portal's views
+    for(portView=portal->viewPorts; portView; portView=portView->next){ // for each view
+        SDL_GetWindowPosition(portView->window, &viewX, &viewY);
+        SDL_GetWindowSize(portView->window, &viewW, &viewH);
+        sides[viewX]=portView;
+        sides[viewX+viewW]=portView;
+    }
+    for (it=sides.begin() ; it != sides.end(); it++ ){
+        currPos=(*it).first;
+        currView=(*it).second;
+        if(windowsHere==0) gap+=(currPos-prevPos);
+        SDL_GetWindowPosition(currView->window, &viewX, &viewY);
+        if(currPos==viewX) {windowsHere++; currView->posX=(currPos-gap);} else windowsHere--;
+        prevPos=currPos;
+    }
+    portalW=(currPos-gap);
+
+    // Find Y positions for all this portal's views
+    sides.clear(); windowsHere=0; currPos=0; prevPos=0; gap=0;
+    for(portView=portal->viewPorts; portView; portView=portView->next){ // for each view
+        SDL_GetWindowPosition(portView->window, &viewX, &viewY);
+        SDL_GetWindowSize(portView->window, &viewW, &viewH);
+        sides[viewY]=portView;
+        sides[viewY+viewH]=portView;
+    }
+    for (it=sides.begin() ; it != sides.end(); it++ ){
+        currPos=(*it).first;
+        currView=(*it).second;
+        if(windowsHere==0) gap+=(currPos-prevPos);
+        SDL_GetWindowPosition(currView->window, &viewX, &viewY);
+        if(currPos==viewY) {windowsHere++; currView->posY=(currPos-gap);} else windowsHere--;
+        prevPos=currPos;
+    }
+    portalH=(currPos-gap);
+
+    ResizeTurbulancePortal(portal, portalW, portalH);
+}
+
+void AddViewToPortal(InfonPortal* portal, char* title, int x, int y, int w, int h){
+    InfonViewPort* VP=new InfonViewPort;
+    VP->window=SDL_CreateWindow(title, x,y,w,h, SDL_WINDOW_RESIZABLE);
+    SDL_SetWindowData(VP->window, "portalView", VP);
+    //TODO: Hardcode: icon, bpp-depth=SDL_PIXELFORMAT_RGB24 / vid_mode
+//    SDL_SetWindowDisplayMode(VP->window, NULL); // Mode for use during fullscreen mode
+//    LoadIcon()
+    VP->renderer=SDL_CreateRenderer(VP->window, -1, SDL_RENDERER_ACCELERATED);
+    SDL_SetRenderDrawColor(VP->renderer, 0xA0, 0xA0, 0xc0, 0xFF);
+    VP->isMinimized=false;
+    VP->posX=0; VP->posY=0; // location in parent window.
+    VP->scale=1.0;
+    VP->parentPortal=portal;
+    VP->next=portal->viewPorts;
+    portal->viewPorts=VP;
+}
+
+bool CreateTurbulancePortal(char* title, int x, int y, int w, int h, char* userName, char* themeFilename, char* stuffName){
     if(numPortals >= MAX_PORTALS) return 1;
-    char winTitle[1024] = windowTitle;
-    InfonPortal* portal=new InfonPortal;
+    char winTitle[1024] = windowTitle; // POLISH: Add Viewport ID to title
     if (numPortals>0){SDL_snprintf(winTitle, strlen(title), "%s %d", title, numPortals+1);}
     else {strcpy(winTitle, title);}
-    portal->window=SDL_CreateWindow(winTitle, x,y,w,h, flags|SDL_WINDOW_RESIZABLE);
-    SDL_SetWindowData(portal->window, "portal", portal);
-//TODO: Hardcode: icon, bpp-depth=SDL_PIXELFORMAT_RGB24 / vid_mode
-//    SDL_SetWindowDisplayMode(portal->window, NULL); // Mode for use during fullscreen mode
-//    LoadIcon()
-    portal->renderer = SDL_CreateRenderer(portal->window, -1, SDL_RENDERER_ACCELERATED);
-    SDL_SetRenderDrawColor(portal->renderer, 0xA0, 0xA0, 0xc0, 0xFF);
-    ResizeTurbulancePortal(portal, w, h);
-    portal->isMinimized=false;
-    portal->needsToBeDrawn=true;
- //   portal->topView=displayList;
-    portals[numPortals++]=portal;
 
-// TODO: Load independant Stuff and Theme for this window. Detach Theme from Functions.cpp:draw()
+    InfonPortal* portal=new InfonPortal;
+    portal->isLocked=false;
+    AddViewToPortal(portal, title, x,y,w,h);
+    ResizeTurbulancePortal(portal, w, h);
+
+    // TODO: Load theme here.  Detach Theme from Functions.cpp:draw()
+    if(theAgent.loadInfon(stuffName, &portal->topView)) exit(1);
+
+    portals[numPortals++]=portal;
 }
 
-void DestroyTurbulancePortal(InfonPortal *p){
+void DestroyTurbulancePortal(InfonPortal *portal){
     //TODO slide portals items down
-    cairo_surface_destroy(p->cairoSurf);
-    SDL_FreeSurface(p->surface);
-    SDL_DestroyRenderer(p->renderer);
+    cairo_surface_destroy(portal->cairoSurf);
+    SDL_FreeSurface(portal->surface);
+    for(InfonViewPort *portView=portal->viewPorts; portView; portView=portView->next) // for each view
+        SDL_DestroyRenderer(portView->renderer);
 }
 
 //////////////////// End of Slip Specific Code, Begin Rendering Code
@@ -342,7 +434,6 @@ void EXIT(char* errmsg){ERRl(errmsg << "\n"); exit(1);}
 void cleanup(void){SDL_Quit();}   //TODO: Add items to cleanup routine
 
 static int SimThread(void *nothing){ // TODO: Make SimThread funtional
- //   initModelsAndEventQueues();
     SDL_Event ev;
     ev.type = SDL_USEREVENT;  ev.user.code = 0;  ev.user.data1 = 0;  ev.user.data2 = 0;
     int val, i = 0;
@@ -358,8 +449,8 @@ static int SimThread(void *nothing){ // TODO: Make SimThread funtional
 void InitializePortalSystem(int argc, char** argv){
     srand(time(NULL));
     numPortals=0;
-    char* userName="Demo_user"; char* theme="default"; char* portalContent="MyStuff";
-    for (int i=1; i<argc;) { // Handle command line arguments
+    char* userName="Demo_user"; char* theme="theme.pr"; char* portalContent="display.pr";
+    for (int i=1; i<argc;) { // POLISH: Handle command line arguments
         int consumed = 0; //CommonArg(*SDL_state, i); // Handle common arguments
         if (consumed == 0) {
             consumed = -1;
@@ -379,27 +470,29 @@ void InitializePortalSystem(int argc, char** argv){
     if (SDL_AudioInit(NULL) < 0) {MSGl("Couldn't initialize Audio Driver: "<<SDL_GetError()); exit(2);}
  //   if (SDL_TimerInit() < 0) {MSGl("Couldn't initialize Timer Driver: "<<SDL_GetError()); exit(2);}
 
-    //TODO: if (DebugMode) PrintConfiguration from common.c Set debugmode via command-line argument
-    CreateTurbulancePortal(windowTitle, 100,1300,1024,768, 0, userName, theme, portalContent);
+    //POLISH: if (DebugMode) PrintConfiguration from common.c Set debugmode via command-line argument
+    if(theAgent.loadInfon(worldFile, &theAgent.world)) exit(1);
+    if(theAgent.loadInfon(theme, &Theme, false)) exit(1);
+    CreateTurbulancePortal(windowTitle, 100,1300,1024,768, userName, theme, portalContent);
 
     SDL_EnableKeyRepeat(300, 130);
     SDL_EnableUNICODE(1);
     atexit(cleanup);
 }
+
 enum userActions {TURB_UPDATE_SURFACE=1, TURB_ADD_SCREEN, TURB_DEL_SCREEN, TURB_ADD_WINDOW, TURB_DEL_WINDOW};
 #define IS_CTRL (ev.key.keysym.mod&KMOD_CTRL)
 
 void StreamEvents(){
     Uint32 frames=0, then=SDL_GetTicks(), now=0, limit = secondsToRun*1000;
 //    SDL_Thread *simulationThread = SDL_CreateThread(SimThread, "Proteus", NULL);
-    initModelsAndEventQueues();
     SDL_Event ev;
-    InfonPortal *portal=0; SDL_Window *window=0;
+    InfonViewPort *portalView=0; SDL_Window *window=0;
     while (secondsToRun && (SDL_GetTicks() < (then+limit)) && !doneYet){
         --numEvents; ++frames;
         while (SDL_PollEvent(&ev)) {
             window = SDL_GetWindowFromID(ev.key.windowID);
-            if(window) portal=(InfonPortal*)SDL_GetWindowData(window, "portal");
+            if(window) portalView=(InfonViewPort*)SDL_GetWindowData(window, "portalView");
             switch (ev.type) {
             case SDL_USEREVENT:
                 switch(ev.user.code){
@@ -415,13 +508,14 @@ void StreamEvents(){
                 break;
             case SDL_WINDOWEVENT:
                 switch (ev.window.event) {
-                case SDL_WINDOWEVENT_RESIZED: ResizeTurbulancePortal(portal, ev.window.data1, ev.window.data2); break;
-                case SDL_WINDOWEVENT_MINIMIZED: portal->isMinimized=true;  break;  // stop rendering
+                case SDL_WINDOWEVENT_MOVED: portalView->parentPortal->viewsNeedRefactoring=true; break;
+                case SDL_WINDOWEVENT_RESIZED: portalView->parentPortal->viewsNeedRefactoring=true; break;//ResizeTurbulancePortal(portalView->parentPortal, ev.window.data1, ev.window.data2); break;
+                case SDL_WINDOWEVENT_MINIMIZED: portalView->isMinimized=true;  break;  // stop rendering
                 case SDL_WINDOWEVENT_MAXIMIZED: break;
-                case SDL_WINDOWEVENT_RESTORED: portal->isMinimized=false;  break;  // resume rendering
+                case SDL_WINDOWEVENT_RESTORED: portalView->isMinimized=false;  break;  // resume rendering
                 case SDL_WINDOWEVENT_FOCUS_GAINED:break; // Move window to front position
                 case SDL_WINDOWEVENT_FOCUS_LOST:break;
-                case SDL_WINDOWEVENT_CLOSE:break;  // Remove portal from portals[]
+                case SDL_WINDOWEVENT_CLOSE:  CloseTurbulanceViewport(portalView); break;
                 case SDL_WINDOWEVENT_ENTER:break; // Mouse enters window
                 case SDL_WINDOWEVENT_LEAVE:break; // Mouse leaves window
                 }
@@ -435,19 +529,14 @@ void StreamEvents(){
                 case SDLK_p: if (IS_CTRL) {} break;       // Create PDF view and render to file
                 case SDLK_k: if (IS_CTRL) {} break;       // Toggle on-screen Keyboard
                 case SDLK_t: if (IS_CTRL) {} break;       // Cycle Themes
+                case SDLK_l: if (IS_CTRL) {               // Toggle portal locking
+                    portalView->parentPortal->isLocked=!portalView->parentPortal->isLocked;
+                    portalView->parentPortal->viewsNeedRefactoring=true;
+                    }
+                    break;
                 case SDLK_s: if (IS_CTRL) {} break;       // Shift window to a new screen or computer.
-                case SDLK_j: if (IS_CTRL) {
-                    // Find top meta-window
-                    // Find 2nd meta-window
-                    // Fill in top's posX, posY, DPI
-                    // Get parent-to-be's coordinates (min/max of top and 2nd's pos's)
-                    // CreatePortal();
-                        // set it's parent to top and top->nextSibling to 2nd
-                        // set top and 2nd's parent pointer
-                        // Place this in front of 2nd in Portals[]
-        //TODO: Make child windows do 'blit', make meta-window not display.
-        //TODO: Make 'd'isconnect window and close windows work in all cases.
-        //TODO: make sure clicking windows can't get a meta-window after its children in Portals[]
+                case SDLK_e: if (IS_CTRL) {               // Extend this portal with another new view
+                    {AddViewToPortal(portalView->parentPortal, "New View!", 100,1300,1024,768);}
                 }
                 break;
                 case SDLK_f: // Toggle fullscreen.
@@ -457,7 +546,7 @@ void StreamEvents(){
                             } else {SDL_SetWindowFullscreen(window, SDL_TRUE);}
                     }
                     break;
-                case SDLK_n: if (IS_CTRL) {CreateTurbulancePortal(windowTitle, 100,1300,1024,768, 0, "userName", "theme", "portalContent");} break;       // New Portal
+                case SDLK_d: if (IS_CTRL) {CreateTurbulancePortal(windowTitle, 100,1300,1024,768, "userName", "theme.pr", "display.pr");} break;       // New Portal
                 case SDLK_RETURN: break;
                 case SDLK_ESCAPE: doneYet=true; break;
                 }
@@ -466,26 +555,32 @@ void StreamEvents(){
 
             }
         }
+        if(doneYet) continue;
         for (int i = 0; i < numPortals; ++i) {
             InfonPortal* portal=portals[i];
-            if(! portal->needsToBeDrawn || portal->isMinimized) continue;
-            SDL_Renderer *renderer = portal->renderer;
-            SDL_SetRenderDrawColor(renderer, 0xA0, 0xA0, 0xc0, 0xFF);
+            if(!portal->needsToBeDrawn) continue;
+            if(portal->viewsNeedRefactoring && !portal->isLocked) RefactorPortal(portal);
+
             portal->cr = cairo_create(portal->cairoSurf); cairo_set_antialias(portal->cr,CAIRO_ANTIALIAS_GRAY);
             DrawProteusDescription(portal, portal->topView);
             cairo_destroy(portal->cr);
+            int viewW, viewH;
+            for(InfonViewPort *portView=portal->viewPorts; portView; portView=portView->next){ // for each view
+                if(portView->isMinimized) continue;
+                SDL_Renderer *renderer = portView->renderer;
+                SDL_GetWindowSize(portView->window, &viewW, &viewH);
+                SDL_Texture *tex = SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGB888,SDL_TEXTUREACCESS_STREAMING,viewW,viewH);
+                SDL_LockSurface( portal->surface );
+                Uint8 *p = (Uint8 *)portal->surface->pixels + portView->posY * portal->surface->pitch + portView->posX * 4;
+                SDL_UpdateTexture(tex, NULL, p, portal->surface->pitch);
+                SDL_UnlockSurface( portal->surface );
 
-  //          SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer,portal->surface);
-            SDL_Texture *tex = SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGB888,SDL_TEXTUREACCESS_STREAMING,portal->surface->w,portal->surface->h);
-            SDL_LockSurface( portal->surface );
-            SDL_UpdateTexture(tex, NULL, portal->surface->pixels, portal->surface->pitch);
-            SDL_UnlockSurface( portal->surface );
-
-            SDL_RenderCopy(renderer, tex, NULL, NULL);
-            SDL_RenderPresent(renderer);
-            SDL_DestroyTexture(tex);
-            SDL_Delay(10);
+                SDL_RenderCopy(renderer, tex, NULL, NULL);
+                SDL_RenderPresent(renderer);
+                SDL_DestroyTexture(tex);
+            }
         }
+        SDL_Delay(10);
     }
     doneYet=true;
     if ((now = SDL_GetTicks()) > then) printf("\nFrames per second: %2.2f\n", (((double) frames * 1000) / (now - then)));

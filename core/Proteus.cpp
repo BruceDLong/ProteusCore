@@ -11,11 +11,6 @@
 
 const int ListBuffCutoff=20;
 
-infon* World;
-std::map<stng,infon*> tag2Ptr;
-std::map<infon*,stng> ptr2Tag;
-
-std::map<dblPtr,UInt> alts;
 typedef std::map<dblPtr,UInt>::iterator altIter;
 
 #define recAlts(lval, rval) {if((rval->pFlag&tType)==tString) alts[dblPtr((char*)rval->value,lval)]++;}
@@ -39,6 +34,18 @@ infon* infon::isntLast(){ // 0=this is the last one. >0 = pointer to predecessor
     infon* parent=getTop(this); infon* gParent=getTop(parent);
     if(gParent && (gParent->pFlag&fConcat))
         return parent->isntLast();
+    return 0;
+}
+
+int agent::loadInfon(char* filename, infon** inf, bool normIt){
+    std::cout<<"Loading:'"<<filename<<"'\n";
+    std::fstream InfonIn(filename);
+    if(InfonIn.fail()){std::cout<<"Error: The file "<<filename<<" was not found.\n"; return 1;}
+    QParser T(InfonIn);
+    *inf=T.parse();
+    if (*inf) {std::cout<<"Loaded:["<<printInfon(*inf)<<"]\n";}
+    else {std::cout<<"Error:"<<T.buf<<"\n"; return 1;}
+    if(normIt) {alts.clear(); normalize(*inf);}
     return 0;
 }
 
@@ -467,7 +474,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             } else isIndef=0;
             if (item->pFlag&fConcat) std::cout << "WARNING: Trying to merge a concatenation.\n";
             if (matchType && (CIsType!= ItemsType))
-                        {result=BypassDeadEnd; std::cout << "Non-matching types\n";}
+                {result=BypassDeadEnd; std::cout << "Non-matching types\n";}
             else switch(CIsType+4*ItemsType){
                 case tUnknown+4*tUnknown: case tUInt+4*tUnknown: case tString+4*tUnknown:
                 case tList+4*tList:
@@ -602,13 +609,13 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                    if(newID) {CI->wFlag|=mAsProxie; CI->value=newID; newID->pFlag|=isNormed; CI->wFlag&=~mFindMode; newID=0;}//  {copyTo(newID, CI); CI->next=newID->next; CI->prev=newID->prev; CI->pFlag=newID->pFlag;  CI->wFlag=newID->wFlag; newID=0;}
                     doShortNorm=true;
                     break;
-                case iTagDef: {std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
+                case iTagDef: {//std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
                     std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
                     if (tagPtr==tag2Ptr.end()) {tag2Ptr[*CI->type]=CI->wrkList->item; CI->wrkList=0;}
                     else{throw("A tag is being redefined, which isn't allowed");}
                     CI->wrkList=0; CI->wFlag=0;
                     break;}
-                case iTagUse: {OUT("Recalling: "<<(char*)CI->type->S)
+                case iTagUse: {//OUT("Recalling: "<<(char*)CI->type->S)
                     std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
                     if (tagPtr!=tag2Ptr.end()) {UInt tmpFlags=CI->pFlag&0xff000000; deepCopy(tagPtr->second,CI); CI->pFlag|=tmpFlags; deTagWrkList(CI);} // TODO B4: move this flag stuff into deepCopy.
                     else{OUT("Bad tag:'"<<(char*)(CI->type->S)<<"'\n");throw("A tag was used but never defined");}

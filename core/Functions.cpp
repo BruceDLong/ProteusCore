@@ -25,6 +25,8 @@
 #define copyInfonString2charBuf(inf, buf) {memcpy(buf, (char*)inf->value, (UInt)inf->size); buf[(UInt)inf->size]=0;}
 infon* Theme;
 
+using namespace std;
+
 int getStrArg(infon* i, stng* str, agent* a){
     i->spec2->top=i;
     a->normalize(i->spec2);
@@ -104,13 +106,14 @@ int autoEval(infon* CI, agent* a){
         char minorType[100];
         infon* args=CI->spec2;
         args->top=CI;
+cout << "###ImageOf:" << printInfon(args) << "\n";
         a->normalize(args);
-std::cout << "###ImageOf:" << printInfon(args) << "\n";
+cout << "###Became:" << printInfon(args) << "\n";
         infon* foundMajorType=0;
         infon* foundMinorType=0;
         infon* objectToImage=0;
         UInt argsSize=(UInt)args->size;
-        if ((args->pFlag&tType) != tList) {std::cout<<"Error: Argument to imageOf is not a list\n"; return 0;}
+        if ((args->pFlag&tType) != tList) {cout<<"Error: Argument to imageOf is not a list\n"; return 0;}
         objectToImage=args=args->value;
         if(objectToImage->type==0){
             switch(objectToImage->pFlag&tType){
@@ -155,7 +158,7 @@ std::cout << "###ImageOf:" << printInfon(args) << "\n";
             std::cout<<"Error: no associated minorType found in Theme\n";
             return 0;
         }
-        UInt tmpFlags=(CI->pFlag&0xff000000); a->deepCopy(foundMinorType->value->next, CI); CI->pFlag=(CI->pFlag&0x00ffffff)+tmpFlags;
+        UInt tmpFlags=(CI->pFlag&0xff000000);std::cout<<"autoEval()\n"; a->deepCopy(foundMinorType->value->next, CI); CI->pFlag=(CI->pFlag&0x00ffffff)+tmpFlags;
         CI->spec2=args;
        // a->normalize(CI);
 

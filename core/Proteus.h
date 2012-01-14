@@ -84,14 +84,14 @@ struct agent {
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
     infon* normalize(infon* i, infon* firstID=0, bool doShortNorm=false);
     infon *world, context;
-    void deepCopy(infon* from, infon* to, infon* args=0, PtrMap* ptrs=0);
+    void deepCopy(infon* from, infon* to, infon* args=0, PtrMap* ptrs=0, int flags=0);
     int loadInfon(char* filename, infon** inf, bool normIt=true);
     private:
         std::map<stng,infon*> tag2Ptr;
         std::map<infon*,stng> ptr2Tag;
         std::map<dblPtr,UInt> alts;
         void InitList(infon* item);
-        infon* copyList(infon* from);
+        infon* copyList(infon* from, int flags);
         void processVirtual(infon* v);
         int getFollower(infon** lval, infon* i);
         void addIDs(infon* Lvals, infon* Rvals, int asAlt=0);

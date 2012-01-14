@@ -9,7 +9,7 @@
     {fillPath}
       //  imageOf<:{"Howdy Brother!" 'text'}
      {moveTo 0.0 0.0} imageOf<:{ {'Howdy Folks, Welcome to Golden!' 'There' 'Friend'} }
-   //  {moveTo 30.0 80.0} imageOf<:{ {'Howdy Folks, Welcome to Boulder!' 'There' 'Friend'} }
+     {moveTo 30.0 80.0} imageOf<:{ {'Howdy Folks, Welcome to Boulder!' 'There' 'Friend'} }
     //    imageOf<:{'list' 'wide' {'Email'} }
     {fillPath}
         {inkColor 1.0 0.1 0.1}

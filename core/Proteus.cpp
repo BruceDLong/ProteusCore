@@ -114,6 +114,7 @@ int agent::getNextTerm(infon** p) {
             infNode *j=parent->wrkList, *k, *IDp;  // Merge Identity Lists
             if(j) do {
                 k=new infNode; k->item=new infon; k->idFlags=j->idFlags;
+                std::cout<<"getNextTerm()\n";
                 deepCopy (j->item, k->item);
                 appendID(&(*p)->wrkList, k);
                 j=j->next;
@@ -153,12 +154,12 @@ void agent::append(infon* i, infon* list){ // appends an item to the end of a li
 //  signalSubscriptions();
 }
 
-infon* agent::copyList(infon* from){
+infon* agent::copyList(infon* from, int flags){
     infon* top=0; infon* follower; infon* p=from;
     if(from==0)return 0;
     do {
         infon* q=new infon;
-        deepCopy(p,q);
+        deepCopy(p,q, 0, 0, flags);
         if (top==0) follower=top=q;
         q->prev=follower; q->top=top; follower=follower->next=q;
         p=p->next;
@@ -190,14 +191,14 @@ void deTagWrkList(infon* i){ // After a tag is derefed, move any c1Left wrkList 
     } while (p!=i->wrkList);
 }
 
-void agent::deepCopy(infon* from, infon* to, infon* args, PtrMap* ptrs){
+void agent::deepCopy(infon* from, infon* to, infon* args, PtrMap* ptrs, int flags){
     UInt fm=from->wFlag&mFindMode; infon* tmp;
     to->pFlag=(from->pFlag&0x0fffffff)/*|(to->pFlag&0xff000000)*/; to->wFlag=from->wFlag; to->type=from->type;
 
-    if(((from->pFlag>>goSize)&tType)==tList || ((from->pFlag>>goSize)&fConcat)){to->size=copyList(from->size); if(to->size)to->size->top=to;}
+    if(((from->pFlag>>goSize)&tType)==tList || ((from->pFlag>>goSize)&fConcat)){to->size=copyList(from->size, flags); if(to->size)to->size->top=to;}
     else to->size=from->size;
 
-    if((from->pFlag&tType)==tList || ((from->pFlag)&fConcat)){to->value=copyList(from->value); if(to->value)to->value->top=to;}
+    if((from->pFlag&tType)==tList || ((from->pFlag)&fConcat)){to->value=copyList(from->value, flags); if(to->value)to->value->top=to;}
     else to->value=from->value;
     if(from->wFlag&mIsHeadOfGetLast) to->top2=(*ptrs)[from->top2]; // The 'mIsHeadOfGetLast' use of prev
     if(fm==iToPath || fm==iToPathH || fm==iToArgs || fm==iToVars) {
@@ -208,9 +209,10 @@ void agent::deepCopy(infon* from, infon* to, infon* args, PtrMap* ptrs){
         if ((to->prev) && (tmp=to->prev->spec1) && (tmp->wFlag&mIsHeadOfGetLast) && (tmp=tmp->next)) to->spec1=tmp;
         else to->spec1=new infon;
         (*ptrMap)[from]=to;
-        deepCopy (from->spec1, to->spec1, 0, ptrMap);  // In Old List Copy this was copyTo, not DeepCopy!!!!!!!!!!!!!
+  std::cout<<"   deepCopy/GetLast(from:"<<from<<", to:"<<to<<")>\n";      deepCopy (from->spec1, to->spec1, 0, ptrMap, flags); std::cout<<"   <  ";  // In Old List Copy this was copyTo, not DeepCopy!!!!!!!!!!!!!
         if(ptrs==0) delete ptrMap;
-        if (from->wFlag&mAssoc) {from->wFlag&= ~(mAssoc+mFindMode); from->wFlag|=iAssocNxt; from->pFlag|=(fUnknown+(fUnknown<<goSize));}
+        if (flags && from->wFlag&mAssoc) { std::cout<<"Initializing ASSOC\n";
+            from->wFlag&= ~(mAssoc+mFindMode); from->wFlag|=iAssocNxt; from->pFlag|=(fUnknown+(fUnknown<<goSize));}
     } else if((UInt)(from->spec1)<=20) to->spec1=from->spec1; // TODO B4: Is this needed?
     else if(fm<(UInt)asFunc){ // Get next item in repeated indexing
         to->spec1=new infon; copyTo(from->spec1,to->spec1); // copy head of list being searched.
@@ -221,16 +223,17 @@ void agent::deepCopy(infon* from, infon* to, infon* args, PtrMap* ptrs){
                 to->spec1->size=(infon*)((UInt)to->prev->spec1->size - (UInt)nextNode->size); // We've moved, so size is less.
             }
         }}
-    else {to->spec1=new infon; deepCopy((args)?args:from->spec1,to->spec1);}
+    else {to->spec1=new infon; std::cout<<"   deepCopy/loadSpec1(from:"<<from<<", to:"<<to<<")>\n"; deepCopy((args)?args:from->spec1,to->spec1);  std::cout<<"   <  "; }
 
-    if ((from->wFlag&mFindMode)==iAssocNxt) {to->spec2=from;}  // Breadcrumbs to later find next associated item.
+    if ((from->wFlag&mFindMode)==iAssocNxt)
+        {to->spec2=from; std::cout<<"TO->SPEC2=FROM\n";}  // Breadcrumbs to later find next associated item.
     else if(!from->spec2) to->spec2=0;
-    else {to->spec2=new infon; deepCopy(from->spec2, to->spec2);}
+    else {to->spec2=new infon;std::cout<<"   deepCopy/loadSpec2(from:"<<from<<", to:"<<to<<")>\n"; deepCopy(from->spec2, to->spec2,0,0,flags);  std::cout<<"   <  "; }
 
     infNode *p=from->wrkList, *q, *IDp;  // Merge Identity Lists
     if(p) do {
         q=new infNode; q->item=new infon; q->idFlags=p->idFlags;
-        if((p->item->pFlag&mFindMode)==iNone) {q->item=new infon; q->idFlags=p->idFlags; deepCopy (p->item, q->item, 0, ptrs);}
+        if((p->item->pFlag&mFindMode)==iNone) {q->item=new infon; q->idFlags=p->idFlags; std::cout<<"   deepCopy/mergeIdentLists(from:"<<from<<", to:"<<to<<")>\n"; deepCopy (p->item, q->item, 0, ptrs);  std::cout<<"   <  "; }
         else {q->item=p->item;}
         appendID(&to->wrkList, q);  // TODO B4: Change this to prepend or adjust somehow.
         p=p->next;
@@ -283,8 +286,9 @@ void agent::processVirtual(infon* v){
     if(posArea=='G'){std::cout << "EXTRA ITEM ALERT!\n"; closeListAtItem(v); return;}
     UInt tmpFlags=v->pFlag&0xff000000;  // TODO B4: move this flag stuff into deepCopy. Clean the following block.
     if (spec){
-        if((spec->wFlag&mFindMode)==iAssocNxt) {copyTo(spec, v); v->pFlag=((fUnknown+tUInt)<<goSize)+fUnknown; v->spec1=spec->spec2;}
-        else {deepCopy(spec, v); }
+        if((spec->wFlag&mFindMode)==iAssocNxt) { std::cout<<"\n########processVirtual(SHALLOW):"<<printInfon(spec)<<"\n";
+            copyTo(spec, v); v->pFlag=((fUnknown+tUInt)<<goSize)+fUnknown; v->spec1=spec->spec2;}
+        else {std::cout<<"\n########processVirtual():"<<printInfon(spec)<<"\n";deepCopy(spec, v,0,0,1); }
         if(posArea=='?' && v->spec1) posArea= 'N';
     }
     v->pFlag|=tmpFlags;  // TODO B4: move this flag stuff into deepCopy.
@@ -554,8 +558,6 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             }
             break;
         }
- //       if(!CIfol && ((tmp2=getVeryTop(ci))!=0) && (tmp2->prev==((infon*)1)))
-//          tmp2->prev=(IDfol==0)?(infon*)2:IDfol; // Set the next seed for index-lists
     }while (wrkNode!=ci->wrkList); else result=(ci->next && (ci->pFlag&isTentative))?DoNextIf:DoNext;
     if(altCount==1){
             for (f=1, tmp=getTop(ci); tmp!=0; tmp=getTop(tmp)) // check ancestors for alts
@@ -645,13 +647,14 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     }
                     CI->pFlag|=fUnknown;
                     break;
-                case iGetSize:      break; // TODO: make this work;
+                case iGetSize:     break; // TODO: make this work;
                 case iGetType:     break; // TODO: make this work;
                 case iHardFunc: autoEval(CI, this); cn.firstID=CI->spec2; break;
                 case iNone: default: throw "Invalid Find Mode";
             }
             if(newID){
-                if(CI->wFlag&mAssoc) {newID=newID->wrkList->item; CIFindMode=iAssocNxt;} // Transition assoc modes
+                if(CI->wFlag&mAssoc) {
+                    newID=newID->wrkList->item; CIFindMode=iAssocNxt;} // Transition assoc modes
                 if(CIFindMode==iAssocNxt){
                     CI->spec2->spec2=newID; // Remember this so later we can fetch the next assoc.
                     infon* masterItem = 0;

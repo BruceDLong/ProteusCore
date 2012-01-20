@@ -29,8 +29,8 @@ static int doneYet=0, numEvents=0, numPortals=0;
 
 using namespace std;
 
-#define DEB(msg)  //{std::cout<< msg;}
-#define DEBl(msg) //{std::cout<< msg << "\n";}
+#define DEB(msg) // {std::cout<< msg;}
+#define DEBl(msg)// {std::cout<< msg << "\n";}
 #define MSG(msg)  {cout<< msg;}
 #define MSGl(msg) {cout<< msg << "\n";}
 #define ERR(msg)  {cout<< msg;}
@@ -77,6 +77,7 @@ struct InfonViewPort {
 
 struct InfonPortal {
     InfonPortal(){memset(this, 0, sizeof(InfonPortal));};
+    ~InfonPortal(){delete surface; };
     SDL_Surface *surface;
     cairo_surface_t *cairoSurf;
     cairo_t *cr;
@@ -124,6 +125,7 @@ int getArrayi(int* array){
     }
     return size;
 }
+
 int getArrayz(double* array){ // gets an array of 0..1 values (Zero)
     int size=gInt();
     for (int i=0; i<size; ++i){
@@ -186,8 +188,31 @@ void renderText(cairo_t *cr, char* text){
     g_object_unref(layout);                         // free the layout
 }
 
+void CreateLinearGradient(cairo_t *cr,double x1, double y1, double x2, double y2, infon* colorStops=0){
+    cairo_pattern_t *pattern=0;
+    pattern=cairo_pattern_create_linear(x1,y1,x2,y2);
+    cairo_set_source(cr, pattern);
+    cairo_pattern_destroy(pattern);
+}
+
+void CreateRadialGradient(cairo_t *cr,double cx1, double cy1, double r1, double cx2, double cy2, double r2, infon* colorStops=0){
+    cairo_pattern_t *pattern=0;
+    pattern=cairo_pattern_create_radial(cx1,cy1,r1,cx2,cy2,r2);
+    cairo_set_source(cr, pattern);
+    cairo_pattern_destroy(pattern);
+}
+
+void AddColorStop(cairo_t *cr, double offset, double r, double g, double b, double alpha){
+    cairo_pattern_add_color_stop_rgba(cairo_get_source(cr), offset, r, g, b, alpha);
+}
+
+void loadImageSurface(cairo_t *cr, char* filename, double x, double y){
+    cairo_surface_t *image=cairo_image_surface_create_from_png(filename);
+    cairo_set_source_surface(cr, image, x, y);
+    cairo_surface_destroy(image);
+}
+
 void roundedRectangle(cairo_t *cr, double x, double y, double w, double h, double r){
-  //  cairo_new_sub_path (cr);
     cairo_move_to(cr,x+r,y);                      //# Move to A
     cairo_line_to(cr,x+w-r,y);                    //# Straight line to B
     cairo_curve_to(cr,x+w,y,x+w,y,x+w,y+r);       //# Curve to C, Control points are both at Q
@@ -197,16 +222,15 @@ void roundedRectangle(cairo_t *cr, double x, double y, double w, double h, doubl
     cairo_curve_to(cr,x,y+h,x,y+h,x,y+h-r);       //# Curve to G
     cairo_line_to(cr,x,y+r);                      //# Line to H
     cairo_curve_to(cr,x,y,x,y,x+r,y);             //# Curve to A;
-  //  cairo_close_path(cr);
 }
 
 enum dTools{rectangle=1, curvedRect, circle, lineTo, lineRel, moveTo, moveRel, curveTo, curveRel, arcClockWise, arcCtrClockW, text,
             strokePath=16, fillPath, paintSurface, closePath,
-            inkColor=20, inkGradient, inkImage, inkDrawing, inkColorAlpha,
-            lineWidth=25, lineStyle, fontFace, fontSize,
-            drawToScrnN=30, drawToWindowN, drawToMemory, drawToPDF, drawToPS, drawToSVG, drawToPNG,
-            shiftTo=40, scale, rotate,
-            loadImage=50, setBackgndImg, dispBackgnd,
+            inkColor=20, inkColorAlpha, inkLinearGrad, inkRadialGrad, inkImage, inkDrawing, inkSetColorPt,
+            lineWidth=40, lineStyle, fontFace, fontSize,
+            drawToScrnN=50, drawToWindowN, drawToMemory, drawToPDF, drawToPS, drawToSVG, drawToPNG,
+            shiftTo=60, scale, rotate,
+            loadImage=70, setBackgndImg, dispBackgnd,
             drawItem=100
 };
 
@@ -221,7 +245,7 @@ void DrawProteusDescription(InfonPortal* portal, infon* ProteusDesc){
 DEB("\n-----------------\n")
     int size, size2; double a,b,c,d,e,f; int Ia,Ib,Ic,Id,Ie,If,Ih,II; char  *Sa, *Sb;
     for(int EOL=theAgent.StartTerm(ProteusDesc, &i); !EOL; EOL=theAgent.getNextTerm(&i)){
-  //      DEBl(count<<":[" << printInfon(i).c_str() << "]");
+        DEBl(count<<":[" << printInfon(i).c_str() << "]");
         EOT_d2=theAgent.StartTerm(i, &ItmPtr);
         int cmd=gINT;
         DEB("\n[CMD:"<< cmd << "]");
@@ -245,12 +269,14 @@ DEB("\n-----------------\n")
             case closePath:    cairo_close_path(cr); break;
 
             case inkColor:DEB("inkColor:") Z3 cairo_set_source_rgba(cr, a, b, c, 1);  break;
-            case inkGradient:  break;
-            case inkImage:  break;
+            case inkLinearGrad: Z4 CreateLinearGradient(cr, a, b, c, d, (infon*)0); break;
+            case inkRadialGrad: Z6 CreateRadialGradient(cr, a, b, c, d, e, f, (infon*)0); break;
+            case inkSetColorPt: Z5 AddColorStop(cr, a, b, c, d, e); break;
+            case inkImage: S1 Z2 loadImageSurface(cr, Sa, a, b); break;
             case inkDrawing:  break;
             case inkColorAlpha:DEB("inkColorAlpha:") Z4 cairo_set_source_rgba(cr, a, b, c, d);  break;
 
-            case lineWidth:DEB("lineWidth:")  Z1 cairo_set_line_width (cr, a); break;
+            case lineWidth:DEB("lineWidth:") Z1 cairo_set_line_width (cr, a); break;
             case lineStyle:  break;
             case fontFace:  break;
             case fontSize:  break;
@@ -271,7 +297,7 @@ DEB("\n-----------------\n")
             case setBackgndImg: S1
                 if(portal->cairo_background!=0) break;
           //      portal->SDL_background=IMG_Load(Sa);
-                portal->cairo_background = cairo_image_surface_create_from_png (Sa);
+                portal->cairo_background = cairo_image_surface_create_from_png(Sa);
               //  portal->cairo_background = cairo_image_surface_create_for_data((unsigned char*)portal->SDL_background->pixels, CAIRO_FORMAT_RGB24,
                //             portal->SDL_background->w, portal->SDL_background->h,cairo_format_stride_for_width (CAIRO_FORMAT_RGB24, portal->SDL_background->w));//portal->SDL_background->pitch);
                 if(cairo_surface_status(portal->cairo_background) == CAIRO_STATUS_INVALID_STRIDE) cout << "ERROR Invalid Stride\n";
@@ -296,7 +322,7 @@ DEB("\n-----------------\n")
            //      cairo_close_path(cr); //cairo_pop_group_to_source (cr);
                 DEB("<"); break;
 
-            default: {ERRl("Invalid Drawing Command."); exit(2);}
+            default: {ERRl("Invalid Drawing Command:"<<cmd<<"\n"); exit(2);}
         }
     if (++count==200) break;
     }
@@ -589,6 +615,7 @@ void StreamEvents(){
 }
 
 int main(int argc, char *argv[]){
+    MSGl("\n\n         * * * * * Starting Proteus and The Slipstream * * * * *\n");
     InitializePortalSystem(argc, argv);
     StreamEvents();
     return (0);

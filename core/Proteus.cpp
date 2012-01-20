@@ -38,12 +38,12 @@ infon* infon::isntLast(){ // 0=this is the last one. >0 = pointer to predecessor
 }
 
 int agent::loadInfon(char* filename, infon** inf, bool normIt){
-    std::cout<<"Loading:'"<<filename<<"'\n";
+    std::cout<<"Loading:'"<<filename<<"'...";
     std::fstream InfonIn(filename);
     if(InfonIn.fail()){std::cout<<"Error: The file "<<filename<<" was not found.\n"; return 1;}
     QParser T(InfonIn);
     *inf=T.parse();
-    if (*inf) {std::cout<<"Loaded:["<<printInfon(*inf)<<"]\n";}
+    if (*inf) {std::cout<<"done.\n";}
     else {std::cout<<"Error:"<<T.buf<<"\n"; return 1;}
     if(normIt) {alts.clear(); normalize(*inf);}
     return 0;
@@ -58,7 +58,7 @@ int agent::StartTerm(infon* varIn, infon** varOut) {
     do {
       switch(varInFlags&tType){
         case tUnknown: *varOut=0; return -1;
-        case tUInt: case tString: return 0;
+        case tNum: case tString: return 0;
         case tList: if(StartTerm(*varOut, &tmp)==0) {
           *varOut=tmp;
           return 0;
@@ -97,7 +97,7 @@ int agent::getNextTerm(infon** p) {
 //    normalize(parent);
           switch(parent->pFlag&tType){
             case tUnknown: (*p)=0; return -1;
-            case tUInt: case tString: throw("Item in list concat is not a list.");
+            case tNum: case tString: throw("Item in list concat is not a list.");
             case tList: if(!StartTerm(parent, p)) return 0;
             }
         } while (1);
@@ -114,7 +114,6 @@ int agent::getNextTerm(infon** p) {
             infNode *j=parent->wrkList, *k, *IDp;  // Merge Identity Lists
             if(j) do {
                 k=new infNode; k->item=new infon; k->idFlags=j->idFlags;
-                std::cout<<"getNextTerm()\n";
                 deepCopy (j->item, k->item);
                 appendID(&(*p)->wrkList, k);
                 j=j->next;
@@ -193,7 +192,8 @@ void deTagWrkList(infon* i){ // After a tag is derefed, move any c1Left wrkList 
 
 void agent::deepCopy(infon* from, infon* to, infon* args, PtrMap* ptrs, int flags){
     UInt fm=from->wFlag&mFindMode; infon* tmp;
-    to->pFlag=(from->pFlag&0x0fffffff)/*|(to->pFlag&0xff000000)*/; to->wFlag=from->wFlag; to->type=from->type;
+    to->pFlag=(from->pFlag&0x0fffffff)/*|(to->pFlag&0xff000000)*/; to->wFlag=from->wFlag;
+    if(to->type==0) to->type=from->type; // TODO: We should merge types, not just copy over.
 
     if(((from->pFlag>>goSize)&tType)==tList || ((from->pFlag>>goSize)&fConcat)){to->size=copyList(from->size, flags); if(to->size)to->size->top=to;}
     else to->size=from->size;
@@ -209,9 +209,9 @@ void agent::deepCopy(infon* from, infon* to, infon* args, PtrMap* ptrs, int flag
         if ((to->prev) && (tmp=to->prev->spec1) && (tmp->wFlag&mIsHeadOfGetLast) && (tmp=tmp->next)) to->spec1=tmp;
         else to->spec1=new infon;
         (*ptrMap)[from]=to;
-  std::cout<<"   deepCopy/GetLast(from:"<<from<<", to:"<<to<<")>\n";      deepCopy (from->spec1, to->spec1, 0, ptrMap, flags); std::cout<<"   <  ";  // In Old List Copy this was copyTo, not DeepCopy!!!!!!!!!!!!!
+        deepCopy (from->spec1, to->spec1, 0, ptrMap, flags);  // In Old List Copy this was copyTo, not DeepCopy!!!!!!!!!!!!!
         if(ptrs==0) delete ptrMap;
-        if (flags && from->wFlag&mAssoc) { std::cout<<"Initializing ASSOC\n";
+        if (flags && from->wFlag&mAssoc) {// std::cout<<"Initializing ASSOC\n";
             from->wFlag&= ~(mAssoc+mFindMode); from->wFlag|=iAssocNxt; from->pFlag|=(fUnknown+(fUnknown<<goSize));}
     } else if((UInt)(from->spec1)<=20) to->spec1=from->spec1; // TODO B4: Is this needed?
     else if(fm<(UInt)asFunc){ // Get next item in repeated indexing
@@ -223,17 +223,17 @@ void agent::deepCopy(infon* from, infon* to, infon* args, PtrMap* ptrs, int flag
                 to->spec1->size=(infon*)((UInt)to->prev->spec1->size - (UInt)nextNode->size); // We've moved, so size is less.
             }
         }}
-    else {to->spec1=new infon; std::cout<<"   deepCopy/loadSpec1(from:"<<from<<", to:"<<to<<")>\n"; deepCopy((args)?args:from->spec1,to->spec1);  std::cout<<"   <  "; }
+    else {to->spec1=new infon; deepCopy((args)?args:from->spec1,to->spec1);}
 
     if ((from->wFlag&mFindMode)==iAssocNxt)
-        {to->spec2=from; std::cout<<"TO->SPEC2=FROM\n";}  // Breadcrumbs to later find next associated item.
+        {to->spec2=from;}  // Breadcrumbs to later find next associated item.
     else if(!from->spec2) to->spec2=0;
-    else {to->spec2=new infon;std::cout<<"   deepCopy/loadSpec2(from:"<<from<<", to:"<<to<<")>\n"; deepCopy(from->spec2, to->spec2,0,0,flags);  std::cout<<"   <  "; }
+    else {to->spec2=new infon; deepCopy(from->spec2, to->spec2,0,0,flags);}
 
     infNode *p=from->wrkList, *q, *IDp;  // Merge Identity Lists
     if(p) do {
         q=new infNode; q->item=new infon; q->idFlags=p->idFlags;
-        if((p->item->pFlag&mFindMode)==iNone) {q->item=new infon; q->idFlags=p->idFlags; std::cout<<"   deepCopy/mergeIdentLists(from:"<<from<<", to:"<<to<<")>\n"; deepCopy (p->item, q->item, 0, ptrs);  std::cout<<"   <  "; }
+        if((p->item->pFlag&mFindMode)==iNone) {q->item=new infon; q->idFlags=p->idFlags; deepCopy (p->item, q->item, 0, ptrs);}
         else {q->item=p->item;}
         appendID(&to->wrkList, q);  // TODO B4: Change this to prepend or adjust somehow.
         p=p->next;
@@ -251,7 +251,7 @@ std::cout << "CLOSING: " << printInfon(lastItem) << "\n";
         recover(itemAfterLast);
     }
     lastItem->next=itemAfterLast; itemAfterLast->prev=lastItem; lastItem->pFlag|=(isBottom+isLast);
-    // remove any tentative flag then set parent's size
+    // The lines below remove any tentative flag then set parent's size
     do{
         itemAfterLast->pFlag &=~ isTentative;
         itemAfterLast=itemAfterLast->next;
@@ -261,10 +261,10 @@ std::cout << "CLOSING: " << printInfon(lastItem) << "\n";
     itemAfterLast->pFlag &=~(fUnknown<<goSize);
 }
 
-const int simpleUnknownUint=((fUnknown+tUInt)<<goSize) + fUnknown+tUInt+asNone;
+const int simpleUnknownUint=((fUnknown+tNum)<<goSize) + fUnknown+tNum+asNone;
 char isPosLorEorGtoSize(UInt pos, infon* item){
     if(item->pFlag&(fUnknown<<goSize)) return '?';
-    if(((item->pFlag>>goSize)&tType)!=tUInt) throw "Size as non integer is probably not useful, so not allowed.";
+    if(((item->pFlag>>goSize)&tType)!=tNum) throw "Size as non integer is probably not useful, so not allowed.";
     if(item->pFlag&(fConcat<<goSize)){
     infon* size=item->size;
         //if ((size->pFlag&mRepMode)!=asNone) normalize(size);
@@ -286,9 +286,9 @@ void agent::processVirtual(infon* v){
     if(posArea=='G'){std::cout << "EXTRA ITEM ALERT!\n"; closeListAtItem(v); return;}
     UInt tmpFlags=v->pFlag&0xff000000;  // TODO B4: move this flag stuff into deepCopy. Clean the following block.
     if (spec){
-        if((spec->wFlag&mFindMode)==iAssocNxt) { std::cout<<"\n########processVirtual(SHALLOW):"<<printInfon(spec)<<"\n";
-            copyTo(spec, v); v->pFlag=((fUnknown+tUInt)<<goSize)+fUnknown; v->spec1=spec->spec2;}
-        else {std::cout<<"\n########processVirtual():"<<printInfon(spec)<<"\n";deepCopy(spec, v,0,0,1); }
+        if((spec->wFlag&mFindMode)==iAssocNxt) {
+            copyTo(spec, v); v->pFlag=((fUnknown+tNum)<<goSize)+fUnknown; v->spec1=spec->spec2;}
+        else {deepCopy(spec, v,0,0,1); }
         if(posArea=='?' && v->spec1) posArea= 'N';
     }
     v->pFlag|=tmpFlags;  // TODO B4: move this flag stuff into deepCopy.
@@ -297,7 +297,7 @@ void agent::processVirtual(infon* v){
         else if(posArea!='E') throw "List was too short";}
     if (posArea=='E') {v->pFlag|=isBottom+isLast; return;}
     infon* tmp= new infon;  tmp->size=(infon*)(vSize+1); tmp->spec2=spec;
-    tmp->pFlag|=fUnknown+isBottom+isVirtual+(tUInt<<goSize); tmp->wFlag|=iNone;
+    tmp->pFlag|=fUnknown+isBottom+isVirtual+(tNum<<goSize); tmp->wFlag|=iNone;
     tmp->top=tmp->next=v->next; v->next=tmp; tmp->prev=v; tmp->next->prev=tmp; tmp->spec1=args;
     v->pFlag&=~isBottom;
     if (posArea=='?'){ v->pFlag|=isTentative;}
@@ -384,13 +384,13 @@ int agent::compute(infon* i){
     infon* p=i->value; int vAcc, sAcc, count=0;
     if(p) do{
         normalize(p); // TODO: appending inline rather than here would allow streaming.
-        if((p->pFlag&((tType<<goSize)+tType))==((tUInt<<goSize)+tUInt)){
+        if((p->pFlag&((tType<<goSize)+tType))==((tNum<<goSize)+tNum)){
             if (p->pFlag&(fUnknown<<goSize)) return 0;
             if (p->pFlag&fConcat) compute(p->size);
-            if ((p->pFlag&(tType<<goSize))!=(tUInt<<goSize)) return 0;
+            if ((p->pFlag&(tType<<goSize))!=(tNum<<goSize)) return 0;
             if (p->pFlag&fUnknown) return 0;
             if ((p->pFlag&tType)==tList) compute(p->value);
-            if ((p->pFlag&tType)!=tUInt) return 0;
+            if ((p->pFlag&tType)!=tNum) return 0;
             int val=(p->pFlag&fInvert)?-(UInt)p->value:(UInt)p->value;
             if(p->pFlag&(fInvert<<goSize)){
                 if (++count==1){sAcc=(UInt)p->size; vAcc=val;}
@@ -403,7 +403,7 @@ int agent::compute(infon* i){
         p=p->next;
     } while (p!=i->value);
     i->value=(infon*)vAcc; i->size=(infon*)sAcc;
-    i->pFlag=(i->pFlag&0xFF00FF00)+(tUInt<<goSize)+tUInt;
+    i->pFlag=(i->pFlag&0xFF00FF00)+(tNum<<goSize)+tNum;
     return 1;
 }
 
@@ -472,7 +472,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                 ItemsType=item->pFlag&tType;
             }
             if(CIsType==tUnknown) {
-                ci->pFlag|=((item->pFlag&tType)+(tUInt<<goSize)+sizeIndef); isIndef=1;
+                ci->pFlag|=((item->pFlag&tType)+(tNum<<goSize)+sizeIndef); isIndef=1;
                 ci->size=item->size;if (!(item->pFlag&(fUnknown<<goSize))) ci->pFlag&=~(fUnknown<<goSize);
                 CIsType=ci->pFlag&tType;
             } else isIndef=0;
@@ -480,10 +480,10 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             if (matchType && (CIsType!= ItemsType))
                 {result=BypassDeadEnd; std::cout << "Non-matching types\n";}
             else switch(CIsType+4*ItemsType){
-                case tUnknown+4*tUnknown: case tUInt+4*tUnknown: case tString+4*tUnknown:
+                case tUnknown+4*tUnknown: case tNum+4*tUnknown: case tString+4*tUnknown:
                 case tList+4*tList:
                 case tString+4*tString:
-                case tUInt+4*tUInt:
+                case tNum+4*tNum:
                     result=DoNext;
                     if (!isIndef && ci->pFlag&sizeIndef && ((CIsType+4*ItemsType)== tString+4*tString)){ // When alts are evaluated (e.g., aaron, aron) use this secton.
                         if(infonSizeCmp(ci,item)<0) {result=BypassDeadEnd; break;}
@@ -509,7 +509,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                         // MERGE VALUES
                         if(!(item->pFlag&fUnknown)){
 
-                            if ((CIsType+4*ItemsType)== tUInt+4*tUInt){
+                            if ((CIsType+4*ItemsType)== tNum+4*tNum){
                                 if(ci->pFlag&fUnknown) {ci->value=item->value; flagMask|=0xff;}
                                 else if (ci->value!=item->value){SetBypassDeadEnd(); std::cout<<"Values contradict\n"; break;}
                             }
@@ -545,13 +545,13 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                         }
                     }
                 break;
-                case tUInt+4*tString: result=DoNext; break;
-                case tString+4*tUInt: result=DoNext;break;
+                case tNum+4*tString: result=DoNext; break;
+                case tString+4*tNum: result=DoNext;break;
                 case tString+4*tList: InitList(item);  result=DoNext; break;
-                case tUInt+4*tList:   InitList(item); addIDs(ci,item->value,asAlt); result=DoNext;break; // This should probably be insertID not addIDs. Check it out.
+                case tNum+4*tList:   InitList(item); addIDs(ci,item->value,asAlt); result=DoNext;break; // This should probably be insertID not addIDs. Check it out.
                 case tList+4*tUnknown:
                 case tList+4*tString:
-                case tList+4*tUInt:
+                case tList+4*tNum:
                     if(ci->value){addIDs(ci->value, item, asAlt);}
                     else{copyTo(item, ci);}
                     result=DoNext;
@@ -611,13 +611,13 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                    if(newID) {CI->wFlag|=mAsProxie; CI->value=newID; newID->pFlag|=isNormed; CI->wFlag&=~mFindMode; newID=0;}//  {copyTo(newID, CI); CI->next=newID->next; CI->prev=newID->prev; CI->pFlag=newID->pFlag;  CI->wFlag=newID->wFlag; newID=0;}
                     doShortNorm=true;
                     break;
-                case iTagDef: {//std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
+                case iTagDef: {std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
                     std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
                     if (tagPtr==tag2Ptr.end()) {tag2Ptr[*CI->type]=CI->wrkList->item; CI->wrkList=0;}
                     else{throw("A tag is being redefined, which isn't allowed");}
                     CI->wrkList=0; CI->wFlag=0;
                     break;}
-                case iTagUse: {//OUT("Recalling: "<<(char*)CI->type->S)
+                case iTagUse: {OUT("Recalling: "<<(char*)CI->type->S)
                     std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
                     if (tagPtr!=tag2Ptr.end()) {UInt tmpFlags=CI->pFlag&0xff000000; deepCopy(tagPtr->second,CI); CI->pFlag|=tmpFlags; deTagWrkList(CI);} // TODO B4: move this flag stuff into deepCopy.
                     else{OUT("Bad tag:'"<<(char*)(CI->type->S)<<"'\n");throw("A tag was used but never defined");}
@@ -679,7 +679,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
         switch (doWorkList(CI, CIfol)) {
         case DoNextIf: if(++cn.bufCnt>=ListBuffCutoff){nxtLvl=getFollower(&CIfol,getTop(CI))+1; pushCIsFollower; break;}
         case DoNext:
-            if((CI->pFlag&(fConcat+tType))==(fConcat+tUInt)){
+            if((CI->pFlag&(fConcat+tType))==(fConcat+tNum)){
                 compute(CI); if(CIfol && !(CI->pFlag&isLast)){pushCIsFollower;}
             }else if(!((CI->pFlag&asDesc)&&!override)&&((CI->value&&((CI->pFlag&tType)==tList))||(CI->pFlag&fConcat)) && !(CI->value->pFlag&isNormed)){
                 ItmQ.push(Qitem(CI->value,cn.firstID,((cn.IDStatus==1)&!(CI->pFlag&fConcat))?2:cn.IDStatus,cn.level+1)); // push CI->value

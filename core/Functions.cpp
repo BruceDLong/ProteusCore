@@ -38,7 +38,7 @@ void setString(infon* CI, stng *s){
     UInt tmpFlags=CI->pFlag&0xff000000;
     CI->size=(infon*) s->L;
     CI->value=(infon*)s->S;
-    CI->pFlag=tmpFlags + (tUInt<<goSize)+tString;
+    CI->pFlag=tmpFlags + (tNum<<goSize)+tString;
     CI->wFlag=iNone;
 }
 
@@ -64,15 +64,15 @@ void setIntVal(infon* CI, int i){
     CI->size=CI->spec2->size;
     CI->value=(infon*) abs(i);
     if (i<0)tmpFlags|=fInvert;
-    CI->pFlag=tmpFlags + (tUInt<<goSize)+tUInt;
+    CI->pFlag=tmpFlags + (tNum<<goSize)+tNum;
     CI->wFlag=iNone;
 }
 
-void setFloatVal(infon* CI, fix16_t i){
+void setRealVal(infon* CI, fix16_t i){
     UInt tmpFlags=CI->pFlag&0xff000000;
     CI->size=CI->spec2->size;
     CI->value=(infon*) i;
-    CI->pFlag=tmpFlags + (tUInt<<goSize)+tUInt+tReal;
+    CI->pFlag=tmpFlags + (tNum<<goSize)+tNum+tReal;
     CI->wFlag=iNone;
 }
 
@@ -80,20 +80,27 @@ void setIntSize(infon* CI, int i){
     UInt tmpFlags=CI->pFlag&0xff000000;
     CI->size=(infon*) abs(i);
     CI->value=0;
-    CI->pFlag=tmpFlags + (tUInt<<goSize)+tUInt;
+    CI->pFlag=tmpFlags + (tNum<<goSize)+tNum;
     CI->wFlag=iNone;
+}
+
+int getInfonArg(infon* i, infon** infOut, agent* a){
+    i->spec2->top=i;
+    a->normalize(i->spec2);
+    *infOut=i->spec2;
+    return 1;
 }
 
 int autoEval(infon* CI, agent* a){
     int int1, EOT;
     stng funcName=*CI->type;
-   std::cout << "EVAL:"<<funcName.S<<"\n";
+ //  std::cout << "EVAL:"<<funcName.S<<"\n";
     if (strcmp(funcName.S, "sin")==0){
         if (!getRealArg(CI, &int1, a)) {CI->wFlag=iNone; return 0;}
-        setFloatVal(CI, fix16_sin(int1));  // *pi/180
+        setRealVal(CI, fix16_sin(int1));  // *pi/180
     } else if (strcmp(funcName.S, "cos")==0){
         if (!getRealArg(CI, &int1, a)) {CI->wFlag=iNone; return 0;}
-        setFloatVal(CI, fix16_cos(int1));  // *pi/180
+        setRealVal(CI, fix16_cos(int1));  // *pi/180
     } else if (strcmp(funcName.S, "time")==0){
         tm now;
         time_t rawtime;
@@ -106,18 +113,17 @@ int autoEval(infon* CI, agent* a){
         char minorType[100];
         infon* args=CI->spec2;
         args->top=CI;
-cout << "###ImageOf:" << printInfon(args) << "\n";
         a->normalize(args);
-cout << "###Became:" << printInfon(args) << "\n";
         infon* foundMajorType=0;
         infon* foundMinorType=0;
         infon* objectToImage=0;
         UInt argsSize=(UInt)args->size;
-        if ((args->pFlag&tType) != tList) {cout<<"Error: Argument to imageOf is not a list\n"; return 0;}
+        if ((args->pFlag&tType) != tList) {cout<<"Error: Argument to imageOf is not a list\n";  exit (0); return 0;}
         objectToImage=args=args->value;
+      cout << printInfon(objectToImage) << "---[" << args->type << "]\n";
         if(objectToImage->type==0){
             switch(objectToImage->pFlag&tType){
-                case tUInt: strcpy(majorType, "tUInt"); break;
+                case tNum: strcpy(majorType, "tNum"); break;
                 case tString: strcpy(majorType, "tString"); break;
                 case tList: strcpy(majorType, "tList"); break;
                 case tUnknown: strcpy(majorType, "tUnknown"); break;
@@ -125,10 +131,8 @@ cout << "###Became:" << printInfon(args) << "\n";
         } else {memcpy(majorType,objectToImage->type->S, objectToImage->type->L); majorType[objectToImage->type->L]=0;}
         if(argsSize>1){
             args=args->next;
-            if ((args->pFlag&tType) != tString) {
-                std::cout<<"Error: minorType in imageOf is not a string\n";
-                return 0;
-            } else {copyInfonString2charBuf(args, minorType);}
+            if ((args->pFlag&tType) != tString) {cout<<"Error: minorType in imageOf is not a string\n"; exit (0); return 0;}
+            else {copyInfonString2charBuf(args, minorType);}
         }
         args=args->next;
         infon* i=0;
@@ -141,10 +145,7 @@ cout << "###Became:" << printInfon(args) << "\n";
                 break;
             }
         }
-        if (foundMajorType == 0) {
-            std::cout<<"Error: majorType not found in Theme\n";
-            return 0;
-        }
+        if (foundMajorType == 0) {cout<<"Error: majorType not found in Theme\n";  exit (0);  return 0;}
         i=0;
         for (EOT=a->StartTerm(foundMajorType, &i); !EOT; EOT=a->getNextTerm(&i)) {
             if ((i->value->pFlag&tType) != tString) continue;
@@ -154,26 +155,36 @@ cout << "###Became:" << printInfon(args) << "\n";
                 break;
             }
         }
-        if (foundMinorType == 0) {
-            std::cout<<"Error: no associated minorType found in Theme\n";
-            return 0;
-        }
-        UInt tmpFlags=(CI->pFlag&0xff000000);std::cout<<"autoEval()\n"; a->deepCopy(foundMinorType->value->next, CI); CI->pFlag=(CI->pFlag&0x00ffffff)+tmpFlags;
+        if (foundMinorType == 0) {cout<<"Error: no associated minorType found in Theme\n"; exit (0);  return 0;}
+        UInt tmpFlags=(CI->pFlag&0xff000000); a->deepCopy(foundMinorType->value->next, CI); CI->pFlag=(CI->pFlag&0x00ffffff)+tmpFlags;
         CI->spec2=args;
-       // a->normalize(CI);
-
     } else if (strcmp(funcName.S, "loadInfon")==0){
-        stng str1;
+        stng str1; infon* I;
         if (!getStrArg(CI, &str1, a)) return 0;
         str1.S[str1.L]=0;
-        std::fstream fin(str1.S);
-        QParser q(fin);
-        infon* I=q.parse();// std::cout <<"P "; std::cout<<"<"<<printInfon(I)<<"> \n";
-        a->normalize(I); // std::cout << "N ";
-        if (I==0) {std::cout<<"Error: "<<q.buf<<"\n";}
-
+        a->loadInfon(str1.S, &I, 1);
         copyTo(I,CI);
-
+    } else if (strcmp(funcName.S, "infonToText")==0){
+        infon* inf1;
+        getInfonArg(CI, &inf1, a);
+        string s=printInfon(inf1);
+        stng sOut; stngCpy(sOut, s.c_str());
+        setString(CI, &sOut);
+    } else if (strcmp(funcName.S, "textInfon")==0){
+        infon* inf1;
+        getInfonArg(CI, &inf1, a);
+        string s=printPure(inf1->value, inf1->pFlag, 0, 0);
+        stng sOut; stngCpy(sOut, s.c_str());
+        setString(CI, &sOut);
+    } else if (strcmp(funcName.S, "textLine")==0){
+        infon* inf1, *i; string s="";
+        getInfonArg(CI, &inf1, a);
+        for (EOT=a->StartTerm(inf1->value, &i); !EOT; EOT=a->getNextTerm(&i)) {
+            if ((i->pFlag&tType) == tString) s.append((char*)i->value, i->size);
+            else if ((i->pFlag&tType) == tNum) s+=printPure(i->value, i->pFlag, 0, 0);
+        }
+        stng sOut; stngCpy(sOut, s.c_str());
+        setString(CI, &sOut);
     } else if (strcmp(funcName.S, "addOne")==0){
         if (!getIntArg(CI, &int1, a)) return 0;
         setIntVal(CI, int1+1);

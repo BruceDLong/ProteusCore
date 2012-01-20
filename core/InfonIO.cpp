@@ -16,9 +16,9 @@
 #define Indent {for (int x=0;x<indent;++x) s+=" ";}
 std::string printPure (infon* i, UInt f, UInt wSize, infon* CI){
     std::string s;
-    if ((f&(fIncomplete+fUnknown)) && !(f&tUInt)) s+="?";
+    if ((f&(fIncomplete+fUnknown)) && !(f&tNum)) s+="?";
     UInt type=f&tType;
-    if (type==tUInt){
+    if (type==tNum){
         if (f & fUnknown) s+='_';
         else if(f&tReal){char buf[70]; sprintf(buf,"%f", fix16_to_dbl((fix16_t)i)); s.append(buf);}
         else {char buf[70]; itoa((UInt)i, buf); s.append(buf);}
@@ -53,8 +53,8 @@ std::string printInfon(infon* i, infon* CI){
         if (f&(fUnknown<<goSize)) {s+=printPure(i->value, f, i->wSize, CI); if((f&tType)!=tList) s+=",";}
         else if (f&fUnknown) {s+=printPure(i->size, f>>goSize,i->wSize, CI); s+=";";}
         else{
-            if((f&tType)==tUInt) {s+=((f>>goSize)&fInvert)?"/":"*"; s+=printPure(i->size, f>>goSize, 0,CI);}
-             if((f&tType)==tUInt) s+=(f&fInvert)?"-":"+";
+            if((f&tType)==tNum) {s+=((f>>goSize)&fInvert)?"/":"*"; s+=printPure(i->size, f>>goSize, 0,CI);}
+             if((f&tType)==tNum) s+=(f&fInvert)?"-":"+";
             s+=printPure(i->value,f, (UInt)i->size, CI);
         }
     } else {
@@ -160,7 +160,8 @@ const char* QParser::nxtTokN(int n, ...){
 
 void  chk4HardFunc(infon* i){
     if((i->wFlag&mFindMode)==iTagUse)
-        if(isEq(i->type->S,"addOne") || isEq(i->type->S,"loadInfon") || isEq(i->type->S,"imageOf") || isEq(i->type->S,"time") || isEq(i->type->S,"cos") || isEq(i->type->S,"sin"))
+        if(isEq(i->type->S,"addOne") || isEq(i->type->S,"loadInfon") || isEq(i->type->S,"imageOf") || isEq(i->type->S,"textInfon")
+        || isEq(i->type->S,"time") || isEq(i->type->S,"cos") || isEq(i->type->S,"sin") || isEq(i->type->S,"textLine"))
             {i->wFlag&=~iTagUse; i->wFlag|=iHardFunc;}
 }
 
@@ -187,14 +188,14 @@ char errMsg[100];
 UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
     UInt p=0, size=0, stay=1; char rchr, tok; infon *head=0, *prev; infon* j;
     if(nxtTok("(") || nxtTok("{") || nxtTok("[")){
-        if(nTok=='(') {rchr=')'; *pFlag|=(fConcat+tUInt);}
+        if(nTok=='(') {rchr=')'; *pFlag|=(fConcat+tNum);}
         else if(nTok=='['){rchr=']'; *pFlag|=(tList+fUnknown); *wFlag=iGetLast;}
         else {rchr='}'; *pFlag|=tList;}
         RmvWSC(); int foundRet=0; int foundBar=0;
         for(tok=peek(); tok != rchr && stay; tok=peek()){
             if(tok=='<') {foundRet=1; streamGet(); j=ReadInfon();}
             else if(nxtTok("...")){
-                j=new infon(fUnknown+isVirtual+(tUInt<<goSize),iNone,(infon*)(size+1));stay=0;
+                j=new infon(fUnknown+isVirtual+(tNum<<goSize),iNone,(infon*)(size+1));stay=0;
             } else j=ReadInfon();
             if(++size==1){
                 if(!foundRet && !foundBar && stay && nxtTok("|")){
@@ -213,9 +214,9 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
         check(rchr);
         if(nxtTok("~"))  (*wFlag)|=mAssoc;
     } else if (nxtTok("123")) {   // read number
-        *pFlag|=tUInt; size=1;
+        *pFlag|=tNum; size=1;
         if(strchr(buf,'.')) {(*i)=(infon*)fix16_from_dbl(atof(buf)); *pFlag|=tReal;} else *i=(infon*)atoi(buf);
-    } else if (nxtTok("_")){*pFlag|=fUnknown+tUInt;
+    } else if (nxtTok("_")){*pFlag|=fUnknown+tNum;
     } else if (nxtTok("$")){*pFlag|=fUnknown+tString;
     } else if (nxtTok("\"") || nxtTok("'")){   // read string
         getbuf(peek()!=nTok); streamGet();
@@ -252,19 +253,19 @@ infon* QParser::ReadInfon(int noIDs){
         if( nTok=='-' || nTok=='/') fs|=fInvert;
         size=ReadPureInfon(&iSize, &fs, &wFlag, &s2);
         if(op=='+'){
-            iVal=iSize; iSize=(infon*)size; fv=fs; fs=tUInt; // use identity term '1'
-            if (size==0 && (fv==(fUnknown+tUInt) || fv==(fUnknown+tString))) fs=fUnknown+tUInt;
+            iVal=iSize; iSize=(infon*)size; fv=fs; fs=tNum; // use identity term '1'
+            if (size==0 && (fv==(fUnknown+tNum) || fv==(fUnknown+tString))) fs=fUnknown+tNum;
         }else if(op=='*'){
             if((fs&tType)==tString || (fs&tType)==tList) throw("Terms cannot be strings or lists");
             if(nxtTok("+")) op='+'; else if(nxtTok("-")) {op='+'; fv|=fInvert;}
             if (op=='+'){size=ReadPureInfon(&iVal,&fv,&wFlag,&s2);}
-            else {iVal=0; fv=tUInt;}    // use identity summand '0'
+            else {iVal=0; fv=tNum;}    // use identity summand '0'
         } else { // no operator
             if(nxtTok(";")){iVal=0; fv=fUnknown;}
             else {
                 nxtTok(",");
-                iVal=iSize;fv=fs; fs=tUInt; iSize=(infon*)size;
-                if (size==0 && (fv==(fUnknown+tUInt) || fv==(fUnknown+tString))) fs=fUnknown+tUInt; // TODO: code review these two lines
+                iVal=iSize;fv=fs; fs=tNum; iSize=(infon*)size;
+                if (size==0 && (fv==(fUnknown+tNum) || fv==(fUnknown+tString))) fs=fUnknown+tNum; // TODO: code review these two lines
                 else if(((fv&tType)==tList) && iVal && ((iVal->prev)->pFlag)&isVirtual) {fs|=fUnknown;}
             }
         }

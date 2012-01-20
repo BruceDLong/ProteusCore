@@ -4,16 +4,30 @@
      {setBackgndImg 'AbstractBkgnd.png'}
      {dispBackgnd}
     {moveTo 14.0 32.0}
-    {text "Hello World!"} {moveRel 0.0 50.0}
-    {text "Let's Party!"}
+    {inkColor 0.1 1.0 0.1}
+ //   imageOf<:{weather_report={7 6 5}}
+     {text "Hello World!"}
+     {moveRel 0.0 50.0}
+    {text "Let's Party!"}{fillPath}
+
+    {moveTo 250.0 80.0} imageOf<:{54321}
     {fillPath}
+    {inkColor 0.1 1.0 0.9}
+    //{inkLinearGrad 0.0 0.0 100.0 200.0}
+   // {inkRadialGrad 0.0 0.0 100.0 300.0 400.0 100.0}
+   // {inkSetColorPt 0.0 1.0 0.0 0.0 1.0}
+    //{inkSetColorPt 01.0 0.0 0.0 1.0 1.0}
+
+
       //  imageOf<:{"Howdy Brother!" 'text'}
      {moveTo 0.0 0.0} imageOf<:{ {'Howdy Folks, Welcome to Golden!' 'There' 'Friend'} }
-     {moveTo 30.0 80.0} imageOf<:{ {'Howdy Folks, Welcome to Boulder!' 'There' 'Friend'} }
+     {moveTo 50.0 100.0} imageOf<:{ {'Howdy Folks, Welcome to Boulder!' 'There' 'Friend'} }
     //    imageOf<:{'list' 'wide' {'Email'} }
     {fillPath}
-        {inkColor 1.0 0.1 0.1}
-        {lineWidth 10.0}
+        {inkColorAlpha 1.0 0.1 0.1 0.3}
+     //   {scale 10.0 10.0}
+    //    {inkImage 'Wood-Pattern17.png' 14.0 32.0}
+        {lineWidth 40.0}
         {moveTo 14.0 32.0}
         {lineRel 500.0 0.0}
         {strokePath}

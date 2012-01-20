@@ -1,6 +1,21 @@
 <%
 {
-     // eval=#+{{{...} {...}}, @\[{...}]: \[{...} {...}]}
+
+    %HIGH_NUM = _
+    %LOW_NUM = _
+    %NOW_VAL = _
+
+    %weather_report = {HIGH_NUM LOW_NUM NOW_VAL }
+
+    %HOUR = _
+    %MINUTE = _
+    %SECOND = _
+
+    %time = {_ _ _}
+
+    // eval=#+{{{...} {...}}, @\[{...}]: \[{...} {...}]}
+
+/////////////////////////////////////////
 
     %white={255,255,255,255}
     %black={0,0,0,255}
@@ -30,31 +45,33 @@
     %closePath      = 19
 
     %inkColor       = 20
-    %inkGradient    = 21
-    %inkImage       = 22
-    %inkDrawing     = 23  // Pull ink from another surface
-    %inkColorAlpha  = 24
+    %inkColorAlpha  = 21
+    %inkLinearGrad  = 22
+    %inkRadialGrad  = 23
+    %inkImage       = 24
+    %inkDrawing     = 25  // Pull ink from another surface
+    %inkSetColorPt  = 26  // Set a colorstop for a gradient
 
-    %lineWidth      = 25
-    %lineStyle      = 26
-    %fontFace       = 27
-    %fontSize       = 28
+    %lineWidth      = 40
+    %lineStyle      = 41
+    %fontFace       = 42
+    %fontSize       = 43
 
-    %drawToScrnN    = 30
-    %drawToWindowN  = 31
-    %drawToMemory   = 32
-    %drawToPDF      = 33
-    %drawToPS       = 34
-    %drawToSVG      = 35
-    %drawToPNG      = 36
+    %drawToScrnN    = 50
+    %drawToWindowN  = 51
+    %drawToMemory   = 52
+    %drawToPDF      = 53
+    %drawToPS       = 54
+    %drawToSVG      = 55
+    %drawToPNG      = 56
 
-    %shiftTo        = 40
-    %scale          = 41
-    %rotate         = 42
+    %shiftTo        = 60
+    %scale          = 61
+    %rotate         = 62
 
-    %loadImage      = 50
-    %setBackgndImg  = 51
-    %dispBackgnd    = 52
+    %loadImage      = 70
+    %setBackgndImg  = 71
+    %dispBackgnd    = 72
 
     %drawItem       = 100
 

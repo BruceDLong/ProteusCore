@@ -68,8 +68,8 @@
     %drawToPNG      = 56
 
     %shiftTo        = 60
-    %scale          = 61
-    %rotate         = 62
+    %scaleTo        = 61
+    %rotateTo       = 62
 
     %loadImage      = 70
     %setBackgndImg  = 71

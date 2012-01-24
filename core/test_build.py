@@ -95,7 +95,7 @@ def test_engine():
 
     ('1', "Test internal find-&-write", r'{4 5 _ 7} =: [_ _ 6]', '<{*1+4 *1+5 *1+6 *1+7 }>'),
     ('1', "Test external find-&-write", r'{4 5 _ 7} =: ([???]=6)', '<{*1+4 *1+5 *1+6 *1+7 }>'),
-    ('2', "Test tagged find-&-write", r'{%testTag=([???]=6)}', '{; }', r'{4 5 _ 7} =: testTag', '<{*1+4 *1+5 *1+6 *1+7 }>')
+    ('2', "Test tagged find-&-write", r'{%setTo6=([???]=6)}', '{; }', r'{4 5 _ 7} =: setTo6', '<{*1+4 *1+5 *1+6 *1+7 }>')
 
     # TEST: [...] :=: ([...]=123) // Find-&-Write to the results of a function
     # TEST: tag =: {8 7 6 5 4 3}

@@ -210,7 +210,7 @@ enum dTools{rectangle=1, curvedRect, circle, lineTo, lineRel, moveTo, moveRel, c
             inkColor=20, inkColorAlpha, inkLinearGrad, inkRadialGrad, inkImage, inkDrawing, inkSetColorPt,
             lineWidth=40, lineStyle, fontFace, fontSize,
             drawToScrnN=50, drawToWindowN, drawToMemory, drawToPDF, drawToPS, drawToSVG, drawToPNG,
-            shiftTo=60, scale, rotate,
+            shiftTo=60, scaleTo, rotateTo,
             loadImage=70, setBackgndImg, dispBackgnd,
             drawItem=100
 };
@@ -273,8 +273,8 @@ DEB("\n-----------------\n")
             case drawToPNG:  break;
 
             case shiftTo: Z2 cairo_translate(cr, a,b); break;
-            case scale: Z2 cairo_scale(cr, a,b); break;
-            case rotate: Z2 cairo_rotate(cr, a); break;
+            case scaleTo: Z2 cairo_scale(cr, a,b); break;
+            case rotateTo: Z2 cairo_rotate(cr, a); break;
 
             case loadImage: DEB("background:") S1 utilSurface=IMG_Load(Sa); SDL_BlitSurface(utilSurface,NULL, portal->surface,NULL); break;
             case setBackgndImg: S1

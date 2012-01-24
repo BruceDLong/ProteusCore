@@ -2,7 +2,7 @@
 {
 %my2ndItem=[_ _]
 %everyOther={[_ _]|...}
-%testTag=([???]=6)
+%setTo6=([???]=6)
 %color=#{*_+_ *_+_ *_+_}
 %size=#*_+_
 

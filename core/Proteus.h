@@ -139,9 +139,10 @@ inline void getInt(infon* inf, int* num, int* sign) {     \
   *sign=f&fInvert;}
 
 inline fix16_t getReal(infon* inf) {
-    if((inf->pFlag&tType)==tNum && !(inf->pFlag&fUnknown)) {
-        if(inf->pFlag&tReal) return (fix16_t)inf->value;
-        else return fix16_from_int((int)inf->value);
+    UInt f=inf->pFlag;
+    if((f&tType)==tNum && !(f&fUnknown)) {
+        if(f&tReal) return ((f&fInvert)? (-(fix16_t)inf->value): (fix16_t)inf->value);
+        else return fix16_from_int((f&fInvert)?(-(int)inf->value):((int)inf->value));
     } else return 0;
 }
 

@@ -83,7 +83,6 @@ std::string printInfon(infon* i, infon* CI){
 #define ChkNEOF {if(stream.eof() || stream.fail()) throw "Unexpected End of file";}
 #define getbuf(c) {ChkNEOF; for(p=0;(c);buf[p++]=streamGet()){if (p>=bufmax) throw "String Overflow";} buf[p]=0;}
 #define check(ch) {RmvWSC(); ChkNEOF; tok=streamGet(); if(tok != ch) {std::cout<<"Expected "<<ch<<"\n"; throw "Unexpected character";}}
-#define isEq(L,R) (L && R && strcmp(L,R)==0)
 
 char QParser::streamGet(){char ch=stream.get(); textParsed+=ch; return ch;}
 char QParser::peek(){if (stream.fail()) throw "Unexpected end of file";  return stream.peek();}
@@ -158,11 +157,9 @@ const char* QParser::nxtTokN(int n, ...){
 }
 #define nxtTok(tok) nxtTokN(1,tok)
 
+bool IsHardFunc(char* tag);
 void  chk4HardFunc(infon* i){
-    if((i->wFlag&mFindMode)==iTagUse)
-        if(isEq(i->type->S,"addOne") || isEq(i->type->S,"loadInfon") || isEq(i->type->S,"imageOf") || isEq(i->type->S,"textInfon")
-        || isEq(i->type->S,"time") || isEq(i->type->S,"cos") || isEq(i->type->S,"sin") || isEq(i->type->S,"textLine"))
-            {i->wFlag&=~iTagUse; i->wFlag|=iHardFunc;}
+    if((i->wFlag&mFindMode)==iTagUse && IsHardFunc(i->type->S)){i->wFlag&=~iTagUse; i->wFlag|=iHardFunc;}
 }
 
 infon* grok(infon* item, UInt tagCode, int* code){
@@ -189,7 +186,7 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
     UInt p=0, size=0, stay=1; char rchr, tok; infon *head=0, *prev; infon* j;
     if(nxtTok("(") || nxtTok("{") || nxtTok("[")){
         if(nTok=='(') {rchr=')'; *pFlag|=(fConcat+tNum);}
-        else if(nTok=='['){rchr=']'; *pFlag|=(tList+fUnknown); *wFlag=iGetLast;}
+        else if(nTok=='['){rchr=']'; *pFlag|=tList; *wFlag=iGetLast;}
         else {rchr='}'; *pFlag|=tList;}
         RmvWSC(); int foundRet=0; int foundBar=0;
         for(tok=peek(); tok != rchr && stay; tok=peek()){
@@ -213,12 +210,12 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
         }
         check(rchr);
         if(nxtTok("~"))  (*wFlag)|=mAssoc;
-    } else if (nxtTok("123")) {   // read number
+    } else if (nxtTok("123")) {  // read number
         *pFlag|=tNum; size=1;
         if(strchr(buf,'.')) {(*i)=(infon*)fix16_from_dbl(atof(buf)); *pFlag|=tReal;} else *i=(infon*)atoi(buf);
     } else if (nxtTok("_")){*pFlag|=fUnknown+tNum;
     } else if (nxtTok("$")){*pFlag|=fUnknown+tString;
-    } else if (nxtTok("\"") || nxtTok("'")){   // read string
+    } else if (nxtTok("\"") || nxtTok("'")){  // read string
         getbuf(peek()!=nTok); streamGet();
         *pFlag+=tString; *i=(((*pFlag)&fUnknown)? 0 : (infon*)new char[p]); memcpy(*i,buf,p);
         size=p;
@@ -265,8 +262,8 @@ infon* QParser::ReadInfon(int noIDs){
             else {
                 nxtTok(",");
                 iVal=iSize;fv=fs; fs=tNum; iSize=(infon*)size;
-                if (size==0 && (fv==(fUnknown+tNum) || fv==(fUnknown+tString))) fs=fUnknown+tNum; // TODO: code review these two lines
-                else if(((fv&tType)==tList) && iVal && ((iVal->prev)->pFlag)&isVirtual) {fs|=fUnknown;}
+                if (size==0 && (fv==(fUnknown+tNum) || fv==(fUnknown+tString))) fs=fUnknown+tNum; // set size's flags for _ and $
+                else if(((fv&tType)==tList) && iVal && ((iVal->prev)->pFlag)&isVirtual) {fs|=fUnknown;} // set size's flags for {...}
             }
         }
     }
@@ -276,9 +273,9 @@ infon* QParser::ReadInfon(int noIDs){
     if ((i->value&& ((fv&tType)==tList))||(fv&fConcat))i->value->top=i;
     if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~(mFindMode+mAssoc); i->wFlag|=mIsHeadOfGetLast; i=new infon(0,wFlag,0,0,0,i); i->spec1->top2=i;}
     for(char c=Peek(); !(noIDs&1) && (c==':' || c=='='); c=Peek()){
+        infon *R, *toSet=0, *toRef=0; int code=0;
         cTok=nxtTokN(2,"::",":");
         eTok=nxtTokN(2,"==","=");
-        infon *R, *toSet=0, *toRef=0; int code=0;
         if(isEq(cTok,":") && (eTok==0)){
             if(peek()=='>') {streamPut(1); break;}
             toRef=i; i=ReadInfon(0); toSet=grok(i,c1Left,&code);
@@ -302,7 +299,7 @@ infon* QParser::ReadInfon(int noIDs){
             } else {toSet=i; R=ReadInfon(1);}
             if(isEq(eTok,"==")) {code|=mMatchType;}
             if(isEq(cTok2,":")){toRef=grok(R,c1Right,&code);}
-            if(isEq(cTok2,"::")){toRef=grok(R,c2Right,&code);} // REPAIR HERE
+            else if(isEq(cTok2,"::")){toRef=grok(R,c2Right,&code);}
             else toRef=R;
         }
         if(toSet==0) throw ":= operator requires [....] on the left side";

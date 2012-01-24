@@ -147,6 +147,36 @@ gpt2: //if (((((*p)->pFlag&mFlags1)>>8)&rType)==rList)
   return 0;
 }
 
+//////////// Routines for copying infon data to C formats:
+int agent::gIntNxt(infon** ItmPtr){
+    UInt num,sign;
+    getInt(*ItmPtr,&num,&sign);
+    getNextTerm(ItmPtr);
+    return (sign)?-num:num;
+}
+
+fix16_t agent::gRealNxt(infon** ItmPtr){
+    fix16_t ret=getReal(*ItmPtr);
+    getNextTerm(ItmPtr);
+    return ret;
+}
+
+char* agent::gStrNxt(infon** ItmPtr, char*txtBuff){
+    if(((*ItmPtr)->pFlag&tType)==tString && !((*ItmPtr)->pFlag&fUnknown)) {
+        memcpy(txtBuff, (*ItmPtr)->value, (UInt)(*ItmPtr)->size);
+        txtBuff[(UInt)((*ItmPtr)->size)]=0;
+    }
+    getNextTerm(ItmPtr);
+    return txtBuff;
+}
+
+infon* agent::gListNxt(infon** ItmPtr){
+    infon* ret=*ItmPtr;
+    getNextTerm(ItmPtr);
+    return ret;
+}
+
+///////////// Routines for copying, appending, etc.
 void agent::append(infon* i, infon* list){ // appends an item to the end of a list
     i->next=i->top=list->value; i->prev=i->next->prev; i->next->prev=i;
     i->prev->pFlag^=isBottom; i->pFlag|=isBottom;
@@ -235,7 +265,7 @@ void agent::deepCopy(infon* from, infon* to, infon* args, PtrMap* ptrs, int flag
         q=new infNode; q->item=new infon; q->idFlags=p->idFlags;
         if((p->item->pFlag&mFindMode)==iNone) {q->item=new infon; q->idFlags=p->idFlags; deepCopy (p->item, q->item, 0, ptrs);}
         else {q->item=p->item;}
-        appendID(&to->wrkList, q);  // TODO B4: Change this to prepend or adjust somehow.
+        prependID(&to->wrkList, q);
         p=p->next;
     } while (p!=from->wrkList);
 }
@@ -578,7 +608,7 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
         override=0;
         while ((CIFindMode=(CI->wFlag&mFindMode))){
             newID=0;
-            if(CI->pFlag&toExec) override=1;  // TODO B4: refactor override
+            if(CI->pFlag&toExec) override=1;
             if(CI->pFlag&asDesc) {if(override) override=0; else break;}
             switch(CI->wFlag&mSeed){
                 case sUseAsFirst: cn.firstID=CI->spec2; cn.IDStatus=1; CI->wFlag&=~mSeed; break;
@@ -586,11 +616,11 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
             }
             switch(CIFindMode){
                 case iToWorld: copyTo(world, CI); break;
-                case iToCtxt:   copyTo(&context, CI); break; // TODO B4: make this work.
+                case iToCtxt:   copyTo(&context, CI); break; // TODO: Search agent::context
                 case iToArgs: case iToVars:
                     for (newID=CI->top; newID && !(newID->top->wFlag&mIsHeadOfGetLast); newID=newID->top){}
                     if(newID && CIFindMode==iToVars) newID=newID->next;
-                    if(newID) {CI->wFlag|=mAsProxie; CI->value=newID; newID->pFlag|=isNormed; CI->wFlag&=~mFindMode; newID=0;}// if(newID) {copyTo(newID, CI); newID=0;}
+                    if(newID) {CI->wFlag|=mAsProxie; CI->value=newID; newID->pFlag|=isNormed; CI->wFlag&=~mFindMode; newID=0;}
                     doShortNorm=true;
                     break;
                 case iAssocNxt:
@@ -608,22 +638,22 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                         if (newID==0) std::cout<<"Zero TOP in "<< printInfon(CI)<<'\n';
                         if(!(newID->pFlag&isFirst)) {newID=0; std::cout<<"Top but not First in "<< printInfon(CI)<<'\n';}
                     }
-                   if(newID) {CI->wFlag|=mAsProxie; CI->value=newID; newID->pFlag|=isNormed; CI->wFlag&=~mFindMode; newID=0;}//  {copyTo(newID, CI); CI->next=newID->next; CI->prev=newID->prev; CI->pFlag=newID->pFlag;  CI->wFlag=newID->wFlag; newID=0;}
+                   if(newID) {CI->wFlag|=mAsProxie; CI->value=newID; newID->pFlag|=isNormed; CI->wFlag&=~mFindMode; newID=0;}
                     doShortNorm=true;
                     break;
-                case iTagDef: {std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
+                case iTagDef: {//std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
                     std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
                     if (tagPtr==tag2Ptr.end()) {tag2Ptr[*CI->type]=CI->wrkList->item; CI->wrkList=0;}
                     else{throw("A tag is being redefined, which isn't allowed");}
                     CI->wrkList=0; CI->wFlag=0;
                     break;}
-                case iTagUse: {OUT("Recalling: "<<(char*)CI->type->S)
+                case iTagUse: {//OUT("Recalling: "<<(char*)CI->type->S)
                     std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
                     if (tagPtr!=tag2Ptr.end()) {UInt tmpFlags=CI->pFlag&0xff000000; deepCopy(tagPtr->second,CI); CI->pFlag|=tmpFlags; deTagWrkList(CI);} // TODO B4: move this flag stuff into deepCopy.
                     else{OUT("Bad tag:'"<<(char*)(CI->type->S)<<"'\n");throw("A tag was used but never defined");}
                     break;}
                 case iGetFirst:      StartTerm (CI, &newID); break;
-                case iGetMiddle:  break; // TODO B4: make this work;
+                case iGetMiddle:  break; // TODO: iGetMiddle
                 case iGetLast:
                     if ((CI->spec1->pFlag)&(fInvert<<goSize)){ // TODO: This block is a hack to make simple backward references work. Fix for full back-parsing.
                         newID=CI;
@@ -647,8 +677,8 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                     }
                     CI->pFlag|=fUnknown;
                     break;
-                case iGetSize:     break; // TODO: make this work;
-                case iGetType:     break; // TODO: make this work;
+                case iGetSize:     break; // TODO: iGetSize
+                case iGetType:     break; // TODO: iGetType
                 case iHardFunc: autoEval(CI, this); cn.firstID=CI->spec2; break;
                 case iNone: default: throw "Invalid Find Mode";
             }

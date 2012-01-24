@@ -9,7 +9,7 @@ std::fstream log;
 using namespace std;
 
 
-// maybe wrat this whole in a IFDEF clause?
+// maybe wrap this whole in a IFDEF clause?
 
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -59,7 +59,7 @@ void rl_finalize() {
   std::cout << "History " << HIST_FILE << " written with exit code " << a << std::endl;
 }
 
-// up-to-here maybe wrat this whole in a IFDEF clause?
+// up-to-here maybe wrap this whole in a IFDEF clause?
 
 char getCH(){
     char ch;
@@ -81,13 +81,15 @@ std::string readln(std::string prompt){
 static void reportFault(int Signal){cout<<"\nSegmentation Fault.\n"; fflush(stdout); abort();}
 
 infon *topInfon, *Entry;
+int AutoEval(infon* CI, agent* a);
+bool IsHardFunc(char* tag);
 
 int main(int argc, char **argv){
         rl_init(); // with IFDEF readline?
     signal(SIGSEGV, reportFault);
 
     // Load World
-    agent a;
+    agent a(0, IsHardFunc, AutoEval);
     std::cout << "Loading world\n";
     std::fstream InfonInW("world.pr");
     QParser q(InfonInW);

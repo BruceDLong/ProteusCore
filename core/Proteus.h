@@ -73,20 +73,27 @@ typedef std::queue<Qitem> infQ;
 typedef std::map<infon*, infon*> PtrMap;
 
 struct agent {
-    agent(infon* World=0){world=World;};
+    agent(infon* World=0, bool (*isHF)(char*)=0, int (*eval)(infon*, agent*)=0){world=World; isHardFunc=isHF; autoEval=eval;};
     int StartTerm(infon* varIn, infon** varOut);
     int LastTerm(infon* varIn, infon** varOut);
     int getNextTerm(infon** p);
     int getPrevTerm(infon** p);
     int getNextNormal(infon** p);
+    int gIntNxt(infon** ItmPtr);
+    fix16_t gRealNxt(infon** ItmPtr);
+    char* gStrNxt(infon** ItmPtr, char*txtBuff);
+    infon* gListNxt(infon** ItmPtr);
     void append(infon* i, infon* list);
     int compute(infon* i);
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
     infon* normalize(infon* i, infon* firstID=0, bool doShortNorm=false);
     infon *world, context;
+    void* utilField; // Field for application specific use.
     void deepCopy(infon* from, infon* to, infon* args=0, PtrMap* ptrs=0, int flags=0);
     int loadInfon(char* filename, infon** inf, bool normIt=true);
     private:
+        bool (*isHardFunc)(char*);
+        int (*autoEval)(infon*, agent*);
         std::map<stng,infon*> tag2Ptr;
         std::map<infon*,stng> ptr2Tag;
         std::map<dblPtr,UInt> alts;
@@ -96,9 +103,6 @@ struct agent {
         int getFollower(infon** lval, infon* i);
         void addIDs(infon* Lvals, infon* Rvals, int asAlt=0);
 };
-
-// From Functions.cpp
-int autoEval(infon* CI, agent* a);
 
 // From InfonIO.cpp
 std::string printInfon(infon* i, infon* CI=0);
@@ -127,13 +131,19 @@ struct QParser{
 //extern std::fstream log;
 #define OUT(msg) {std::cout<< msg;}
 #define Debug(msg) /*{std::cout<< msg << "\n";}*/
-#define getInt(inf, num, sign) {/*normalize(inf);  */           \
-  UInt f=inf->pFlag;                           \
-  if((f&tType)==tNum && !(f&fUnknown)) num=(UInt)inf->value; else num=0;     \
-  sign=f&fInvert;}
+#define isEq(L,R) (L && R && strcmp(L,R)==0)
 
-inline fix16_t getReal(infon* inf) {       \
-  if((inf->pFlag&tType)==tNum && !(inf->pFlag&fUnknown)) return (fix16_t)inf->value; else return 0;}
+inline void getInt(infon* inf, int* num, int* sign) {     \
+  UInt f=inf->pFlag;                           \
+  if((f&tType)==tNum && !(f&fUnknown)) (*num)=(UInt)inf->value; else (*num)=0;     \
+  *sign=f&fInvert;}
+
+inline fix16_t getReal(infon* inf) {
+    if((inf->pFlag&tType)==tNum && !(inf->pFlag&fUnknown)) {
+        if(inf->pFlag&tReal) return (fix16_t)inf->value;
+        else return fix16_from_int((int)inf->value);
+    } else return 0;
+}
 
 inline void getStng(infon* i, stng* str) {
     if((i->pFlag&tType)==tString && !(i->pFlag&fUnknown)) {
@@ -141,6 +151,7 @@ inline void getStng(infon* i, stng* str) {
     }
 }
 
+#define prependID(list, node){IDp=(*list); if(IDp){node->next=IDp->next; IDp->next=node;} else {(*list)=node; node->next=node;}}
 #define appendID(list, node) {IDp=(*list); (*list)=node; if(IDp){(*list)->next=IDp->next; IDp->next=(*list);} else (*list)->next=(*list);}
 #define insertID(list, itm, flag) appendID(list, new infNode(itm,flag));
 

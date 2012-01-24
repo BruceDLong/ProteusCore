@@ -23,9 +23,13 @@
 #define copyTo(from, to) {if(from!=to){to->size=(from)->size; to->value=(from)->value; cpFlags((from),to,0x00ffffff);}}
 
 #define copyInfonString2charBuf(inf, buf) {memcpy(buf, (char*)inf->value, (UInt)inf->size); buf[(UInt)inf->size]=0;}
-infon* Theme;
 
 using namespace std;
+
+bool IsHardFunc(char* tag){
+        return(isEq(tag,"addOne") || isEq(tag,"loadInfon") || isEq(tag,"imageOf") || isEq(tag,"textInfon")
+            || isEq(tag,"time") || isEq(tag,"cos") || isEq(tag,"sin") || isEq(tag,"textLine"));
+}
 
 int getStrArg(infon* i, stng* str, agent* a){
     i->spec2->top=i;
@@ -46,7 +50,7 @@ int getIntArg(infon* i, int* Int1, agent* a){
     int sign;
     i->spec2->top=i;
     a->normalize(i->spec2);
-    getInt(i->spec2, *Int1, sign);
+    getInt(i->spec2, Int1, &sign);
     if(sign) *Int1 = -*Int1;
     return 1;
 }
@@ -91,7 +95,7 @@ int getInfonArg(infon* i, infon** infOut, agent* a){
     return 1;
 }
 
-int autoEval(infon* CI, agent* a){
+int AutoEval(infon* CI, agent* a){
     int int1, EOT;
     stng funcName=*CI->type;
  //  std::cout << "EVAL:"<<funcName.S<<"\n";
@@ -136,8 +140,10 @@ int autoEval(infon* CI, agent* a){
         }
         args=args->next;
         infon* i=0;
+        infon* theme=(infon*)a->utilField;
+        if (theme == 0) {cout<<"Error: Theme is not defined\n";  exit (0);  return 0;}
         char tagBuf[100];
-        for (EOT=a->StartTerm(Theme, &i); !EOT; EOT=a->getNextTerm(&i)) {
+        for (EOT=a->StartTerm(theme, &i); !EOT; EOT=a->getNextTerm(&i)) {
             if ((i->value->pFlag&tType) != tString) continue;
             copyInfonString2charBuf(i->value, tagBuf);
             if (strcmp(tagBuf, majorType) == 0) {
@@ -180,7 +186,7 @@ int autoEval(infon* CI, agent* a){
         infon* inf1, *i; string s="";
         getInfonArg(CI, &inf1, a);
         for (EOT=a->StartTerm(inf1->value, &i); !EOT; EOT=a->getNextTerm(&i)) {
-            if ((i->pFlag&tType) == tString) s.append((char*)i->value, i->size);
+            if ((i->pFlag&tType) == tString) s.append((char*)i->value, (UInt)i->size);
             else if ((i->pFlag&tType) == tNum) s+=printPure(i->value, i->pFlag, 0, 0);
         }
         stng sOut; stngCpy(sOut, s.c_str());

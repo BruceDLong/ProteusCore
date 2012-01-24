@@ -21,13 +21,15 @@ void readln(std::string &str){
 static void reportFault(int Signal){OUT("Segmentation Fault."); fflush(stdout); abort();}
 
 infon* topInfon;
+int AutoEval(infon* CI, agent* a);
+bool IsHardFunc(char* tag);
 
 int main(int argc, char **argv)
 {
 signal(SIGSEGV, reportFault);
 std::string desc, world, query, line; world=""; query="";
 int mode;
-agent a;
+agent a(0, IsHardFunc, AutoEval);
 do{
     std::cin >> mode;
     if(mode==5) return 0;

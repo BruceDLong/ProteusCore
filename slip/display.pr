@@ -5,7 +5,7 @@
      {dispBackgnd}
     {moveTo 14.0 32.0}
     {inkColor 0.1 1.0 0.1}
- //   imageOf<:{weather_report={7 6 5}}
+//    imageOf<:{weather_report={7 6 5}}
      {text "Hello World!"}
      {moveRel 0.0 50.0}
     {text "Let's Party!"}{fillPath}

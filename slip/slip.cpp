@@ -29,16 +29,16 @@ static int doneYet=0, numEvents=0, numPortals=0;
 
 using namespace std;
 
-#define DEB(msg) // {std::cout<< msg;}
-#define DEBl(msg)// {std::cout<< msg << "\n";}
+#define DEB(msg)  {std::cout<< msg;}
+#define DEBl(msg) {std::cout<< msg << "\n";}
 #define MSG(msg)  {cout<< msg;}
 #define MSGl(msg) {cout<< msg << "\n";}
 #define ERR(msg)  {cout<< msg;}
 #define ERRl(msg) {cout<< msg << "\n";}
 
-#define gINT gInt()
-#define gZto1 fix16_to_dbl(gReal())
-#define gSTR gStr()
+#define gINT theAgent.gIntNxt(&ItemPtr)
+#define gZto1 fix16_to_dbl(theAgent.gRealNxt(&ItemPtr))
+#define gSTR theAgent.gStrNxt(&ItemPtr, txtBuff)
 
 #define Z1 {a=gZto1;  DEB(a)}
 #define Z2 {a=gZto1; b=gZto1; DEB(a<<", "<<b)}
@@ -53,16 +53,24 @@ using namespace std;
 #define I6 {Ia=gINT; Ib=gINT; Ic=gINT;  Id=gINT; Ie=gINT; If=gINT;}
 #define I7 {Ia=gINT; Ib=gINT; Ic=gINT;  Id=gINT; Ie=gINT; If=gINT; Ih=gINT;}
 #define I8 {Ia=gINT; Ib=gINT; Ic=gINT;  Id=gINT; Ie=gINT; If=gINT; Ih=gINT; II=gINT;}
-#define S1 {Sa=gSTR; DEB(Sa)}
+#define S1 {Sa=gSTR;}
 
-infon* ItmPtr=0;
 infon* debugInfon=0; // Assign this to an infon to assist in debugging.
-agent theAgent;
-int EOT_d2,j,sign;
-char textBuff[1024];
-extern infon *Theme;
-extern infon *World;
-char* worldFile="world.pr";
+
+int AutoEval(infon* CI, agent* a);
+bool IsHardFunc(char* tag);
+agent theAgent(0, IsHardFunc, AutoEval);
+
+struct User {
+    string name;
+    string defaultTheme;
+    string password;
+    string languages;
+    string preferredLanguage;
+    infon* location;
+    infon* myStuff;
+  //  ThemePrefs* myThemePreferences;
+};
 
 struct InfonPortal; //forward
 struct InfonViewPort {
@@ -70,7 +78,7 @@ struct InfonViewPort {
     SDL_Renderer *renderer;
     bool isMinimized;
     int posX, posY; // location in parent window.
-    double scale; // POLISH: Make views scalable?
+    double scale; // MAYBE: Make views scalable?
     InfonPortal *parentPortal;
     InfonViewPort *next;
 };
@@ -90,34 +98,7 @@ struct InfonPortal {
 
 InfonPortal *portals[MAX_PORTALS];
 
-
-int gInt(){
-    getInt(ItmPtr,j,sign);
-    theAgent.getNextTerm(&ItmPtr);
-    return (sign)?-j:j;
-}
-
-fix16_t gReal(){
-    fix16_t ret=getReal(ItmPtr);
-    theAgent.getNextTerm(&ItmPtr);
-    return ret;
-}
-
-char* gStr() {
-    if((ItmPtr->pFlag&tType)==tString && !(ItmPtr->pFlag&fUnknown)) {
-        memcpy(textBuff, ItmPtr->value, (uint)ItmPtr->size);
-        textBuff[(uint)(ItmPtr->size)]=0;
-    }
-    theAgent.getNextTerm(&ItmPtr);
-    return textBuff;
-}
-
-infon* gList(){
-    infon* ret=ItmPtr;
-    theAgent.getNextTerm(&ItmPtr);
-    return ret;
-}
-
+/*
 int getArrayi(int* array){
     int size=gInt();
     for (int i=0; i<size; ++i){
@@ -133,7 +114,7 @@ int getArrayz(double* array){ // gets an array of 0..1 values (Zero)
     }
     return size;
 }
-
+*/
 static inline uint32_t map_value(uint32_t val, uint32_t max, uint32_t tomax){
     return((uint32_t)((double)val * (double)tomax/(double)max));
 }
@@ -238,21 +219,21 @@ void DrawProteusDescription(InfonPortal* portal, infon* ProteusDesc){
     cairo_surface_t* surface=portal->cairoSurf;
     if (surface==0 || ProteusDesc==0 || ProteusDesc->size==0) ERRl("Missing description.");
     //DEBl("DISPLAY:["<<printInfon(ProteusDesc));
-    int count=0;
-    infon *i, *OldItmPtr, *subItem;
+    int count=0; int EOT_d2; char txtBuff[1024];
+    infon *i, *ItemPtr, *OldItmPtr, *subItem;
     cairo_t *cr = portal->cr;
     SDL_Surface* utilSurface;
 DEB("\n-----------------\n")
     int size, size2; double a,b,c,d,e,f; int Ia,Ib,Ic,Id,Ie,If,Ih,II; char  *Sa, *Sb;
     for(int EOL=theAgent.StartTerm(ProteusDesc, &i); !EOL; EOL=theAgent.getNextTerm(&i)){
         DEBl(count<<":[" << printInfon(i).c_str() << "]");
-        EOT_d2=theAgent.StartTerm(i, &ItmPtr);
+        int EOT_d2=theAgent.StartTerm(i, &ItemPtr);
         int cmd=gINT;
         DEB("\n[CMD:"<< cmd << "]");
         switch(cmd){ // TODO: Pango, Audio, etc.
             case rectangle:DEB("rectangle:") Z4 cairo_rectangle (cr, a,b,c,d);     break;
             case curvedRect:DEB("curvedRect:")  Z5 roundedRectangle(cr, a,b,c,d,e);break;
-            case circle:  break;
+            case circle:  Z3 cairo_arc (cr, a,b,c,0.0,2.0*M_PI); break;
             case lineTo: DEB("lineTo:")  Z2   cairo_line_to(cr, a,b);              break;
             case lineRel: DEB("lineRel:") Z2   cairo_rel_line_to(cr, a,b);         break;
             case moveTo: DEB("moveTo:") Z2 cairo_move_to(cr, a,b);                 break;
@@ -316,9 +297,9 @@ DEB("\n-----------------\n")
                 cairo_restore(cr);
                 } break;
             case drawItem: DEB(">");
-                subItem=gList();
+                subItem=theAgent.gListNxt(&ItemPtr);
          //       cairo_new_sub_path(cr); //cairo_push_group(cr);
-                OldItmPtr=ItmPtr; DrawProteusDescription(portal, subItem); ItmPtr=OldItmPtr;
+                OldItmPtr=ItemPtr; DrawProteusDescription(portal, subItem); ItemPtr=OldItmPtr;
            //      cairo_close_path(cr); //cairo_pop_group_to_source (cr);
                 DEB("<"); break;
 
@@ -428,7 +409,7 @@ void AddViewToPortal(InfonPortal* portal, char* title, int x, int y, int w, int 
     portal->viewPorts=VP;
 }
 
-bool CreateTurbulancePortal(char* title, int x, int y, int w, int h, char* userName, char* themeFilename, char* stuffName){
+bool CreateTurbulancePortal(char* title, int x, int y, int w, int h, char* userName, char* theme, char* stuffName){
     if(numPortals >= MAX_PORTALS) return 1;
     char winTitle[1024] = windowTitle; // POLISH: Add Viewport ID to title
     if (numPortals>0){SDL_snprintf(winTitle, strlen(title), "%s %d", title, numPortals+1);}
@@ -439,7 +420,7 @@ bool CreateTurbulancePortal(char* title, int x, int y, int w, int h, char* userN
     AddViewToPortal(portal, title, x,y,w,h);
     ResizeTurbulancePortal(portal, w, h);
 
-    // TODO: Load theme here.  Detach Theme from Functions.cpp:draw()
+    if(theAgent.loadInfon(theme, (infon**)&theAgent.utilField, false)) exit(1);
     if(theAgent.loadInfon(stuffName, &portal->topView)) exit(1);
 
     portals[numPortals++]=portal;
@@ -475,15 +456,15 @@ static int SimThread(void *nothing){ // TODO: Make SimThread funtional
 void InitializePortalSystem(int argc, char** argv){
     srand(time(NULL));
     numPortals=0;
-    char* userName="Demo_user"; char* theme="theme.pr"; char* portalContent="display.pr";
-    for (int i=1; i<argc;) { // POLISH: Handle command line arguments
-        int consumed = 0; //CommonArg(*SDL_state, i); // Handle common arguments
+    char* worldFile="world.pr"; char* username="Demo_user"; char* password=""; char* theme="theme.pr"; char* portalContent="display.pr";
+    for (int i=1; i<argc;) {
+        int consumed = 0;
         if (consumed == 0) {
             consumed = -1;
-            if (SDL_strcasecmp(argv[i], "--world") == 0) if (argv[i + 1]) {worldFile=argv[i]; consumed = 2;}
-            if (SDL_strcasecmp(argv[i], "--theme") == 0) if (argv[i + 1]) {/*argv[i+1] is filename; consumed = 2; */ }
-            if (SDL_strcasecmp(argv[i], "--user") == 0) if (argv[i + 1]) {/*argv[i+1] is username; consumed = 2; */ }
-            if (SDL_strcasecmp(argv[i], "--pass") == 0) if (argv[i + 1]) {/*argv[i+1] is password; consumed = 2; */ }
+            if (SDL_strcasecmp(argv[i], "--world") == 0) if (argv[i + 1]) {worldFile=argv[i+1]; consumed = 2;}
+            if (SDL_strcasecmp(argv[i], "--theme") == 0) if (argv[i + 1]) {theme=argv[i+1]; consumed = 2;}
+            if (SDL_strcasecmp(argv[i], "--user") == 0) if (argv[i + 1]) {username=argv[i+1]; consumed = 2;}
+            if (SDL_strcasecmp(argv[i], "--pass") == 0) if (argv[i + 1]) {password=argv[i+1]; consumed = 2;}
             else if (SDL_isdigit(*argv[i])) {secondsToRun = SDL_atoi(argv[i]); consumed = 1;}
         }
         if (consumed < 0) {
@@ -495,11 +476,11 @@ void InitializePortalSystem(int argc, char** argv){
     if (SDL_VideoInit(NULL) < 0) {MSGl("Couldn't initialize Video Driver: "<<SDL_GetError()); exit(2);}
     if (SDL_AudioInit(NULL) < 0) {MSGl("Couldn't initialize Audio Driver: "<<SDL_GetError()); exit(2);}
  //   if (SDL_TimerInit() < 0) {MSGl("Couldn't initialize Timer Driver: "<<SDL_GetError()); exit(2);}
+    //MAYBE: if (DebugMode) PrintConfiguration from common.c Set debugmode via command-line argument
 
-    //POLISH: if (DebugMode) PrintConfiguration from common.c Set debugmode via command-line argument
     if(theAgent.loadInfon(worldFile, &theAgent.world)) exit(1);
-    if(theAgent.loadInfon(theme, &Theme, false)) exit(1);
-    CreateTurbulancePortal(windowTitle, 100,1300,1024,768, userName, theme, portalContent);
+    // TODO: Find user in world, verify password, find theme prefs and stuff list. if (theme!="") override user's theme
+    CreateTurbulancePortal(windowTitle, 100,1300,1024,768, username, theme, portalContent);
 
     SDL_EnableKeyRepeat(300, 130);
     SDL_EnableUNICODE(1);

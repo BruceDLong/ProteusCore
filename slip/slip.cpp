@@ -206,7 +206,7 @@ void roundedRectangle(cairo_t *cr, double x, double y, double w, double h, doubl
 }
 
 enum dTools{rectangle=1, curvedRect, circle, lineTo, lineRel, moveTo, moveRel, curveTo, curveRel, arcClockWise, arcCtrClockW, text,
-            strokePath=16, fillPath, paintSurface, closePath,
+            strokePreserve=14, fillPreserve, strokePath=16, fillPath, paintSurface, closePath,
             inkColor=20, inkColorAlpha, inkLinearGrad, inkRadialGrad, inkImage, inkDrawing, inkSetColorPt,
             lineWidth=40, lineStyle, fontFace, fontSize,
             drawToScrnN=50, drawToWindowN, drawToMemory, drawToPDF, drawToPS, drawToSVG, drawToPNG,
@@ -244,6 +244,8 @@ DEB("\n-----------------\n")
             case arcCtrClockW:Z5 cairo_arc_negative(cr, a,b,c,d,e); break;
             case text: DEB("text:") S1  renderText(cr, Sa);         break;
 
+            case strokePreserve: cairo_stroke_preserve(cr); break;
+            case fillPreserve: cairo_fill_preserve(cr); break;
             case strokePath:   cairo_stroke(cr); DEB("strokePath")  break;
             case fillPath:     cairo_fill(cr); DEB("fillPath")      break;
             case paintSurface: cairo_paint(cr);      break;

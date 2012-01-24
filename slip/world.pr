@@ -39,6 +39,8 @@
     %arcCtrClockW   = 11
     %text           = 12
 
+    %strokePreserve = 14
+    %fillPreserve   = 15
     %strokePath     = 16
     %fillPath       = 17
     %paintSurface   = 18

@@ -85,10 +85,21 @@ def test_engine():
     ('1', "Test internal associations", r'{ {5, 7, 3, 8} ({0} {+(%\\\\:[_]~ %\\\:[_]~) | ...})}', r'<{{*1+5 *1+7 *1+3 *1+8 } ({*1+0 } {*1+5 *1+12 *1+15 *1+23 } ) }>'),
     ('1', "Test sequential func argument passing", r'{ {5, 7, 3, 8} {addOne<:(%\\\:[_]~) | ...}}', '<{{*1+5 *1+7 *1+3 *1+8 } { | *1+6 *1+8 *1+4 *1+9 } }>'),
 
-    ('1', "Test simple filtering", r'{[_ _]|...} ::= {8 7 6 5 4 3}', '<{*1+7 *1+5 *1+3 }>'),
+    ('1', "Test simple select", r'[_ _] := {8 7 6 5 4 3}', '*1+7'),
+    ('2', "Test tag-based select", r'{%testTag=[_ _]}', '<{; }>', 'testTag := {8 7 6 5 4 3}', '*1+7'),
 
-    ('1', "Test internal find-&-Write", r'{4 5 _ 7} =: [_ _ 6]', '<{*1+4 *1+5 *1+6 *1+7 }>'),
-    ('1', "Test external find-&-Write", r'{4 5 _ 7} =: ([???]=6)', '<{*1+4 *1+5 *1+6 *1+7 }>')
+    ('1', "Test simple filtering", r'{[_ _]|...} ::= {8 7 6 5 4 3}', '<{*1+7 *1+5 *1+3 }>'),
+    ('2', "Test tag-based filtering", r'{%testTag={[_ _]|...}}', '<{; }>', 'testTag := {8 7 6 5 4 3}', '<{*1+7 *1+5 *1+3 }>'),
+    # TEST: filtering with a tag as descriptor: {[_ TAG]|...} ::= {8 7 6 5 4 3}
+    # TEST: filtering with two+ tags describing the same thing
+
+    ('1', "Test internal find-&-write", r'{4 5 _ 7} =: [_ _ 6]', '<{*1+4 *1+5 *1+6 *1+7 }>'),
+    ('1', "Test external find-&-write", r'{4 5 _ 7} =: ([???]=6)', '<{*1+4 *1+5 *1+6 *1+7 }>'),
+    ('2', "Test tagged find-&-write", r'{%testTag=([???]=6)}', '{; }', r'{4 5 _ 7} =: testTag', '<{*1+4 *1+5 *1+6 *1+7 }>')
+
+    # TEST: [...] :=: ([...]=123) // Find-&-Write to the results of a function
+    # TEST: tag =: {8 7 6 5 4 3}
+    # TEST:
    ]
 
    for t in testsLst:

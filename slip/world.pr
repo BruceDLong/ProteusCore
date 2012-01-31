@@ -1,5 +1,135 @@
+//MODEL:  2fd4e1c6 7a2cNotA RealHash Code739 1b93eb12
+// Proteus: 0.8
+// Language: us
+// Compiler: Bruce Long
+
 <%
 {
+%aMOUNT = _
+%X=amount  %Y=amount  %Z=amount
+%LOCAL={}
+%SUPER={}
+%cLUSTER={}
+%TIME={_}
+%LOCATION={x y z}
+%START={}
+%END={}
+%TEMPORAL_RANGE={start={time}, end={time}}
+%MASS={amount}
+
+%PHYS_OBJ = {temporal_range {{mass location orientation configuration appearance size shape ...} |...} }
+%QUANTUM_OBJ = {temporal_range {charge spin mass location}}
+%QUARK_MODE = {'up' 'down' 'charm' 'strange' 'top' 'bottom'}[...]  // oneOf these
+
+%FERMION = {quantum_obj ...}
+%BOSON = {quantum_obj ...}
+
+%QUARK = {fermion quark_mode}
+%LEPTON = {fermion ...}
+
+%ELECTRON = {lepton ...}
+%MUON = {lepton ...}
+
+%NEUTRON = {quark::={quark_mode=up} *2+{quark::={quark_mode=down}|...}}  // 1 up-quark and 2 down-quarks
+%PROTON = {quark::={quark_mode=down} *2+{quark::={quark_mode=up}|...}}   // 1 down-quark and 2 up-quarks
+
+%NUCLEUS = {{neutron|...} {proton|...}}
+%aTOM = {nucleus {electron|...}}
+
+%MOLECULE = {{atom|...} ...}
+
+%cELL = {cell_nucleus cytoplasm membrane}
+%TISSUE = {{cell|...} ...}
+
+%ORGAN = {{tissue|...} ...}
+
+%BODY = {{organ|...} ...}
+
+%MIND = {world_model self_model {sense|...} {body_control|...} motive_register model_processor}
+
+%PERSON = {body mind motivations}
+%vERTABRATE = {Animal spinal_column limbic_system ...}
+%MAMMAL = {vertabrate mammary_glands ...}
+%HUMAN = {Mammal ...}
+// REFERENCE TO LIFE DATABASE
+
+%SENSE_BASED_AFFECTOR = {}
+%aRT_WORK      = {sense_based_state_affector =: (sense=vision)}
+%MUSIC_PIECE   = {sense_based_state_affector =: (sense=audition)}
+%aROMA_THERAPY = {sense_based_state_affector =: (sense=smell)}
+%MASSAGE       = {sense_based_state_affector =: (sense=touch)}
+%cULINARY_WORK = {sense_based_state_affector =: (sense=taste)}
+
+%MALE = {}
+%FEMALE = {}
+%MASCULINE = {}
+%FEMININE = {}
+
+// REFERENCE TO HUMAN NAMES
+
+%GOVERNMENT = {bureaucracy legal_system enforcement_system ...}
+%NATION = {government citizenry {business|...} {NGO|...} {land_area|...} ...}
+%cONTINENT = {{biome|...} ...}
+%OCEAN = {}
+%BIOME = {}
+%PLANET = {phys_obj core surface atmosphere ...}
+%STAR = {phys_obj {hydrogen|...} {helium|...} ...}
+%STAR_SYSTEM = {{star|...} {planet|...}}
+%GALAXY = {phys_obj {star_system|...}}
+%GALACTIC_SUPERCLUSTER = {%phys_obj {Galaxy|...} }
+%UNIVERSE = {Galactic_Supercluster|...}
+
+%cPU = {}
+%GPU = {}
+
+%cOMPUTER={}
+%LAPTOP={}
+%TABLET={}
+%PHONE={}
+%IOS = {}
+%iPad={}
+%aNDROID = {}
+
+%Mac = {}
+%Linux = {}
+%windows = {}
+
+%MP3 = {}
+%wORD_DOC = {}
+
+%TCP_IP_STREAM = {}
+
+%FILESYSTEM = {}
+
+%THEME = {}
+// Reference to theme repositories
+
+/////////////////////////////
+//%milky_way = galaxy := (type=spiral)
+//universe={
+
+   // Galactic_Supercluster=:(phys_obj=(location=:{0.0 0.0 0.0})))
+    // model-and-wrap a super-cluster database listing known super clusters
+//}
+
+
+
+//earth = planet // one of the milky_way's planets
+
+//continents
+//major nations
+//major cities
+
+//major people
+
+// references to people in this context
+// users
+// user's friends
+// user's music, video
+// user's books, documents
+// user's devices
+
+    %desktop={?|...};
 
     %HIGH_NUM = _
     %LOW_NUM = _
@@ -11,7 +141,11 @@
     %MINUTE = _
     %SECOND = _
 
-    %time = {_ _ _}
+    %clocktime = {_ _ _}
+
+    %TITLE = $
+
+    %TODO = {title ?}
 
     // eval=#+{{{...} {...}}, @\[{...}]: \[{...} {...}]}
 

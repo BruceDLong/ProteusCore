@@ -89,17 +89,22 @@ def test_engine():
     ('2', "Test tag-based select", r'{%testTag=[_ _]}', '<{; }>', 'testTag := {8 7 6 5 4 3}', '*1+7'),
 
     ('1', "Test simple filtering", r'{[_ _]|...} ::= {8 7 6 5 4 3}', '<{*1+7 *1+5 *1+3 }>'),
-    ('2', "Test tag-based filtering", r'{%testTag={[_ _]|...}}', '<{; }>', 'testTag := {8 7 6 5 4 3}', '<{*1+7 *1+5 *1+3 }>'),
-    # TEST: filtering with a tag as descriptor: {[_ TAG]|...} ::= {8 7 6 5 4 3}
-    # TEST: filtering with two+ tags describing the same thing
+    ('2', "Test tag-based filtering", r'{%testTag={[_ _]|...}}', '<{; }>', 'testTag ::= {8 7 6 5 4 3}', '<{*1+7 *1+5 *1+3 }>'), #***
 
     ('1', "Test internal find-&-write", r'{4 5 _ 7} =: [_ _ 6]', '<{*1+4 *1+5 *1+6 *1+7 }>'),
     ('1', "Test external find-&-write", r'{4 5 _ 7} =: ([???]=6)', '<{*1+4 *1+5 *1+6 *1+7 }>'),
-    ('2', "Test tagged find-&-write", r'{%setTo6=([???]=6)}', '{; }', r'{4 5 _ 7} =: setTo6', '<{*1+4 *1+5 *1+6 *1+7 }>')
+#***  ('2', "Test tagged find-&-write", r'{%setTo6=([???]=6)}', '{; }', r'{4 5 _ 7} =: setTo6', '<{*1+4 *1+5 *1+6 *1+7 }>')
 
-    # TEST: [...] :=: ([...]=123) // Find-&-Write to the results of a function
-    # TEST: tag =: {8 7 6 5 4 3}
-    # TEST:
+#***  ('2', "Find nth item based on tag", r'{%testTag=[{?|...} <TAG>]}', '<{; }>', 'testTag := {8 7 6 5 4 3}', '*1+7'),
+#***  (find all of <tag>): filtering with a tag as descriptor: {[_ TAG]|...} ::= {8 7 6 5 4 3}
+
+    # TEST: Find an item based on 2+ tags (big red bike)
+    # TEST: Complex Repeats // These work but have no test.
+
+    # TEST: [5 _ <sum-of-those-two>] :=: ([_ _]=6)   ==> 11
+    # TEST: Like the previous but tag :=: tag
+    # TEST:        xxx =:: yyy
+    # TEST:        xxx =:: tag
    ]
 
    for t in testsLst:

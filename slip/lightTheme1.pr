@@ -1,5 +1,52 @@
 <% {
 
+  {'desktop',
+    {'default'
+      [ ?
+       {5.0 42.0 12.0 25.0 56.0} // ({0.0} {+(+40.0 (%\\\\:[_]~)) | ...})  // Y-values
+
+       { drawItem (
+            {{setBackgndImg 'wallpaper.png'} {dispBackgnd}}
+            {
+                {fontFace 'times bold 12'}
+                {inkColorAlpha 0.5 0.5 0.8 0.3}
+                {lineWidth 3}
+                {moveTo 0 50}
+                {lineRel 200 0}
+                {curveRel 100.0 100 -70.8 -50.4 0.1 400}
+                {lineRel -200 0}
+                {lineRel 0 400}
+                {fillPath}
+                {moveTo 0 70}
+                {inkColorAlpha 0.8 1.0 0.2 0.7}
+            }
+            { {drawItem {{moveRel 20.0 0.0 }   imageOf <: {%A:[?]~}  {moveRel -20.0 20.0} }} |...} //(%V:[_]~)
+            {
+                {fillPath}
+            }
+        )
+       }
+      ]
+    }
+
+    }
+
+/////////////// To do list
+{'todo'
+    {'default'
+        [ ?
+            {drawItem {
+                {fontFace 'times bold italic 11'}
+                {text %A:[$]} {moveRel 0 20}
+                {fontFace 'sans normal 10'}
+                imageOf <: {(%A:[$ ?])}
+              }
+            }
+        ]
+    }
+
+}
+
 /////////////// tString theme
 {'tString'
     {'default'
@@ -11,24 +58,6 @@
        ]
     }
 
-    {'wide'
-      [ ?
-        {drawItem {
-          //  {shiftTo 50.0, 40.0}
-            {scaleTo 0.5 0.5}
-            //{rotate 0.4}
-            {inkColorAlpha 0.1 0.1 1.0 0.8}
-            {curvedRect 25.0 30.0 800.0 500.0 60.0}
-         //   {fillPath}
-            {inkColorAlpha 0.1 0.5 0.1 0.9}
-         //   {shiftTo 50.0, 90.0}
-        //    {scaleTo 5.0 5.0}
-            {text %A:[$]}
-         //   {fillPath}
-          }
-        }
-       ]
-    }
 
 }
 
@@ -52,7 +81,7 @@
        {5.0 42.0 12.0 25.0 56.0} // ({0.0} {+(+40.0 (%\\\\:[_]~)) | ...})  // Y-values
 
        { drawItem
-        { {drawItem {{moveRel 50.0 40.0 }   imageOf <: {%A:[?]~}   }} |...} //(%V:[_]~)
+        { {drawItem {{moveRel 20.0 0.0 }   imageOf <: {%A:[?]~}  {moveRel -20.0 20.0} }} |...} //(%V:[_]~)
        }
       ]
     }
@@ -103,24 +132,6 @@
     }
 
 
-    {'wide',
-      [ ?
-        {drawItem {
-            {shiftTo 200.0, 20.0}
-            {scaleTo 0.5 0.5}
-            //{rotate 0.4}
-            {inkColorAlpha 0.1 0.3 1.0 0.8}
-            {curvedRect 20.0 20.0 650.0 500.0 60.0}
-            {fillPath}
-            {inkColorAlpha 0.11 1.0 0.11 1.0}
-            {shiftTo 300.0, 75.0}
-            {scaleTo 5.0 5.0}
-            {text %A:[$]}
-            {fillPath}
-          }
-        }
-       ]
-    }
   }
 
 ////////////////////////////////////////////////
@@ -129,13 +140,16 @@
     {'default'
       [ ?
         {drawItem {
-            {text textLine<:{{"Today: High=" %A:[{_|...} HIGH_NUM] "   Low=" %A:[_ _] } }}
-          }
+            {text textLine<:{{"Temperature: " %A:[*2+{_|...} NOW_VAL]  }}  } {moveRel 10 20}
+            {fontFace 'times normal 11'}
+            {text textLine<:{{"  High: " %A:[_] "   Low: " %A:[_ _] }}  } {moveRel -10 20}
+            }
         }
        ]
     }
 
-}
+    }
 
 
 } %>
+

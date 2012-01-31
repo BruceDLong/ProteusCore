@@ -118,13 +118,14 @@ void QParser::RmvWSC (){ // Remove whitespace and comments.
 
 
 const char* altTok(std::string tok){
+    return 0;
     // later this should load from a dictionary file for different languages.
     if (tok=="=") return "is";
     if (tok==": =") return "'s";
     if (tok=="= :") return "of";
     if (tok=="%C") return "the";
     if (tok=="%W") return "thee";
-    if (tok=="%A") return "%Arg";
+   // if (tok=="%A") return "%Arg";
     if (tok=="%V") return "%Var";
 
     return 0;
@@ -235,11 +236,12 @@ infon* QParser::ReadInfon(int noIDs){
             stngApnd((*tags),buf,strlen(buf)+1);
     }else if( nxtTok("%")){ // TODO: Don't allow these outside of := or :
         pFlag|=fUnknown;
+        // TODO: %Wind, %Cars, %ART, %Veins are mis-read here.
         if (nxtTok("W")){std::cout<<"WORLD"<<"\n"; wFlag|=iToWorld; }
         else if (nxtTok("C")){wFlag|=iToCtxt;}
         else if (nxtTok("A")){wFlag|=iToArgs;}
         else if (nxtTok("V")){wFlag|=iToVars;}
-        else if(nxtTok("ABC")){wFlag|=iTagDef; tags=new stng; stngApnd((*tags),buf,strlen(buf)+1);}
+        else if(nxtTok("ABC")){wFlag|=iTagDef; tags=new stng; stngApnd((*tags),buf,strlen(buf)+1); caseDown(tags);}
         else if (nTok=='\\' || nTok=='^'){
             for(s1=0; (nTok=streamGet())=='\\';) {s1=(infon*)((UInt)s1+1); ChkNEOF;}
             if (nTok=='^') wFlag|=iToPath; else {wFlag|=iToPathH; streamPut(1);}

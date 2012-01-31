@@ -1,0 +1,17 @@
+<%
+{
+    {moveTo 14.0 32.0}
+    {inkColor 0.1 1.0 0.1}
+    imageOf<:{desktop={
+        weather_report={82 75 79}
+        "Inbox: 18" "Online" {'David' 'Bruce' 'Mom'} "-----------" " " "Messages" {"Bruce - Onward!" "Dad - See you soon" "Call - 303-876-5432"}
+        // music_collection={}
+        // books={}
+        // documents={}
+        }
+    }
+     //{text "Hello World!"}
+ {fillPath}
+
+}
+%>

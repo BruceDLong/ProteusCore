@@ -95,6 +95,37 @@ int getInfonArg(infon* i, infon** infOut, agent* a){
     return 1;
 }
 
+const int MAX_SYSCMD_BUFFER=2*1024;
+int LoadFromSystemCmd(agent* a, infon* type, string cmd){
+    FILE *stream; string line; int mode=0; int count=0;
+    char buffer[MAX_SYSCMD_BUFFER];
+    if((type->pFlag&tType)==tString){ mode=1;}
+    else if((type->pFlag&tType)==tNum){mode=2;}
+    else if((type->pFlag&tType)==tList){mode=3;}
+    infon* head=new infon((tNum<<goSize)+tList,0);
+    stream = popen(cmd.c_str(), "r");
+    while ( fgets(buffer, MAX_SYSCMD_BUFFER, stream) != NULL ){
+        infon* i=new infon;
+        i->pFlag&=~((fUnknown<<goSize)+fUnknown);
+        ++count;
+        a->deepCopy(type, i);
+        if(mode==1){
+            i->size=(infon*)strlen(buffer);
+            i->value=(infon*)malloc((UInt)i->size+1);
+            strcpy((char*)i->value, buffer);
+        } else if(mode==2){
+            i->size=(infon*)1;
+            i->value=(infon*)atoi(buffer);
+        } else if(mode==3){ //////////// MAKE THIS WORK
+        }
+        if(head->value){i->next=head->value; i->prev=head->value->prev; i->top=head->value; head->value->prev=i; i->prev->next=i;}
+        else {head->value=i->next=i->prev=i; i->top=head; i->pFlag|=isFirst+isTop;}
+    }
+    pclose(stream);
+    head->size=(infon*)count;
+    return 0;
+}
+
 int AutoEval(infon* CI, agent* a){
     int int1, EOT;
     stng funcName=*CI->type;
@@ -124,12 +155,12 @@ int AutoEval(infon* CI, agent* a){
         UInt argsSize=(UInt)args->size;
         if ((args->pFlag&tType) != tList) {cout<<"Error: Argument to imageOf is not a list\n";  exit (0); return 0;}
         objectToImage=args=args->value;
-      cout << printInfon(objectToImage) << "---[" << args->type << "]\n";
+ //     cout << printInfon(objectToImage) << "---[" << args->type << "]\n";
         if(objectToImage->type==0){
             switch(objectToImage->pFlag&tType){
-                case tNum: strcpy(majorType, "tNum"); break;
-                case tString: strcpy(majorType, "tString"); break;
-                case tList: strcpy(majorType, "tList"); break;
+                case tNum: strcpy(majorType, "tNum");         break;
+                case tString: strcpy(majorType, "tString");   break;
+                case tList: strcpy(majorType, "tList");       break;
                 case tUnknown: strcpy(majorType, "tUnknown"); break;
             }
         } else {memcpy(majorType,objectToImage->type->S, objectToImage->type->L); majorType[objectToImage->type->L]=0;}
@@ -151,6 +182,7 @@ int AutoEval(infon* CI, agent* a){
                 break;
             }
         }
+        cout << "majorType="<<tagBuf<<"\n";
         if (foundMajorType == 0) {cout<<"Error: majorType not found in Theme\n";  exit (0);  return 0;}
         i=0;
         for (EOT=a->StartTerm(foundMajorType, &i); !EOT; EOT=a->getNextTerm(&i)) {
@@ -161,7 +193,7 @@ int AutoEval(infon* CI, agent* a){
                 break;
             }
         }
-        if (foundMinorType == 0) {cout<<"Error: no associated minorType found in Theme\n"; exit (0);  return 0;}
+        if (foundMinorType == 0) {cout<<"Error: no associated minorType ("<<tagBuf<<") found in Theme\n"; exit (0);  return 0;}
         UInt tmpFlags=(CI->pFlag&0xff000000); a->deepCopy(foundMinorType->value->next, CI); CI->pFlag=(CI->pFlag&0x00ffffff)+tmpFlags;
         CI->spec2=args;
     } else if (strcmp(funcName.S, "loadInfon")==0){

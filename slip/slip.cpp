@@ -29,8 +29,8 @@ static int doneYet=0, numEvents=0, numPortals=0;
 
 using namespace std;
 
-#define DEB(msg)  {std::cout<< msg;}
-#define DEBl(msg) {std::cout<< msg << "\n";}
+#define DEB(msg)  //{std::cout<< msg;}
+#define DEBl(msg) //{std::cout<< msg << "\n";}
 #define MSG(msg)  {cout<< msg;}
 #define MSGl(msg) {cout<< msg << "\n";}
 #define ERR(msg)  {cout<< msg;}
@@ -68,9 +68,20 @@ struct User {
     string languages;
     string preferredLanguage;
     infon* location;
-    infon* myStuff;
+    string myStuff;
   //  ThemePrefs* myThemePreferences;
 };
+
+bool loadUserRecord(User* user, char* username, char* password){
+    if (strcmp(username, "bruce")==0){
+        user->name="bruce"; user->defaultTheme="darkTheme1.pr"; user->password="erty"; user->preferredLanguage="en"; user->myStuff="brucesStuff.pr";
+    } else if (strcmp(username, "xander")==0){
+        user->name="xander"; user->defaultTheme="lightTheme1.pr"; user->password="erty"; user->preferredLanguage="en"; user->myStuff="xandersStuff.pr";
+    } else return 1;
+    if (user->password.compare(password)==0){
+        return 0;
+    } else return 1;
+}
 
 struct InfonPortal; //forward
 struct InfonViewPort {
@@ -91,7 +102,8 @@ struct InfonPortal {
     cairo_t *cr;
     SDL_Surface *SDL_background;
     cairo_surface_t *cairo_background;
-    infon *theme, *user, *topView;
+    infon *theme, *topView;
+    User *user;
     bool needsToBeDrawn, viewsNeedRefactoring, isLocked;
     InfonViewPort *viewPorts;
 };
@@ -155,11 +167,13 @@ SDL_Texture *LoadTexture(SDL_Renderer *renderer, char *file, SDL_bool transparen
     return texture;
 }
 
+string fontDescription="Sans Bold 12";
+
 void renderText(cairo_t *cr, char* text){
     PangoLayout *layout=pango_cairo_create_layout(cr);
     pango_layout_set_text(layout, text, -1);
 
-    PangoFontDescription *desc = pango_font_description_from_string("Sans Bold 12");
+    PangoFontDescription *desc = pango_font_description_from_string(fontDescription.c_str());
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 
@@ -261,7 +275,7 @@ DEB("\n-----------------\n")
 
             case lineWidth:DEB("lineWidth:") Z1 cairo_set_line_width (cr, a); break;
             case lineStyle:  break;
-            case fontFace:  break;
+            case fontFace: S1 fontDescription=Sa; break;
             case fontSize:  break;
 
             case drawToScrnN:  break;
@@ -411,7 +425,7 @@ void AddViewToPortal(InfonPortal* portal, char* title, int x, int y, int w, int 
     portal->viewPorts=VP;
 }
 
-bool CreateTurbulancePortal(char* title, int x, int y, int w, int h, char* userName, char* theme, char* stuffName){
+bool CreateTurbulancePortal(char* title, int x, int y, int w, int h, User* user, infon* theme, infon* stuff){
     if(numPortals >= MAX_PORTALS) return 1;
     char winTitle[1024] = windowTitle; // POLISH: Add Viewport ID to title
     if (numPortals>0){SDL_snprintf(winTitle, strlen(title), "%s %d", title, numPortals+1);}
@@ -422,8 +436,10 @@ bool CreateTurbulancePortal(char* title, int x, int y, int w, int h, char* userN
     AddViewToPortal(portal, title, x,y,w,h);
     ResizeTurbulancePortal(portal, w, h);
 
-    if(theAgent.loadInfon(theme, (infon**)&theAgent.utilField, false)) exit(1);
-    if(theAgent.loadInfon(stuffName, &portal->topView)) exit(1);
+ //   if(theAgent.loadInfon(theme.c_str(), (infon**)&theAgent.utilField, false)) exit(1);
+ //   if(theAgent.loadInfon(stuffName, &portal->topView)) exit(1);
+    portal->topView=stuff;
+    portal->theme=theme;
 
     portals[numPortals++]=portal;
 }
@@ -455,10 +471,12 @@ static int SimThread(void *nothing){ // TODO: Make SimThread funtional
   return 0;
 }
 
+
+
 void InitializePortalSystem(int argc, char** argv){
     srand(time(NULL));
     numPortals=0;
-    char* worldFile="world.pr"; char* username="Demo_user"; char* password=""; char* theme="theme.pr"; char* portalContent="display.pr";
+    char* worldFile="world.pr"; char* username="Demo_user"; char* password="erty"; string theme; char* portalContent="";
     for (int i=1; i<argc;) {
         int consumed = 0;
         if (consumed == 0) {
@@ -481,8 +499,14 @@ void InitializePortalSystem(int argc, char** argv){
     //MAYBE: if (DebugMode) PrintConfiguration from common.c Set debugmode via command-line argument
 
     if(theAgent.loadInfon(worldFile, &theAgent.world)) exit(1);
-    // TODO: Find user in world, verify password, find theme prefs and stuff list. if (theme!="") override user's theme
-    CreateTurbulancePortal(windowTitle, 100,1300,1024,768, username, theme, portalContent);
+    User* portalUser=new User;
+    if(loadUserRecord(portalUser, username, password)) {MSGl("\nUser could not be authenticated. Exiting..."); exit(5);}
+    if (theme=="") theme=portalUser->defaultTheme;
+    infon *themeInfon, *stuffInfon;
+    if(theAgent.loadInfon(theme.c_str(), &themeInfon, 0)) exit(1);
+    theAgent.utilField=themeInfon;
+    if(theAgent.loadInfon(portalUser->myStuff.c_str(), &stuffInfon, 1)) exit(1);
+    CreateTurbulancePortal(windowTitle, 100,1300,1024,768, portalUser, themeInfon, stuffInfon);
 
     SDL_EnableKeyRepeat(300, 130);
     SDL_EnableUNICODE(1);
@@ -555,7 +579,9 @@ void StreamEvents(){
                             } else {SDL_SetWindowFullscreen(window, SDL_TRUE);}
                     }
                     break;
-                case SDLK_d: if (IS_CTRL) {CreateTurbulancePortal(windowTitle, 100,1300,1024,768, "userName", "theme.pr", "display.pr");} break;       // New Portal
+                case SDLK_d: if (IS_CTRL) {
+                    CreateTurbulancePortal(windowTitle, 100,1300,1024,768, portalView->parentPortal->user,
+                        portalView->parentPortal->theme, portalView->parentPortal->topView);} break;       // New Portal
                 case SDLK_RETURN: break;
                 case SDLK_ESCAPE: doneYet=true; break;
                 }

@@ -1,0 +1,23 @@
+2
+test finding an item by it's type
+<%
+{
+    %HIGH_NUM = _
+    %LOW_NUM = _
+    %NOW_VAL = _
+
+    %weather_report = {HIGH_NUM LOW_NUM NOW_VAL }
+}
+%>
+
+<%
+[
+    weather_report
+     %A:[*2+{_|...} _] 
+] <:  {7 6 5}
+
+%>
+
+5
+done
+!

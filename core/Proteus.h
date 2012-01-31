@@ -23,6 +23,7 @@ struct stng {char* S; int L; stng(char* s=0, int l=0):S(s),L(l){};};
 #define stngCpy(s,ch) {s.L=strlen(ch); s.S=new char[s.L+1]; memcpy(s.S,ch,s.L+1);}
 #define lstngCpy(s,ch,len) {s.L=len; s.S=new char[s.L+1]; memcpy(s.S,ch,s.L); s.S[s.L]=0;}
 #define stngApnd(s,ch,len) {int l=s.L+len;char*tmp=new char[l+1];memcpy(tmp,s.S,s.L);memcpy(tmp+s.L,ch,len);delete s.S;s.S=tmp;s.L=l;tmp[l]=0;}
+inline void caseDown(stng* s) {for(int i=0;i<s->L;++i) if(isupper(s->S[i])) s->S[i]=tolower(s->S[i]);}
 inline bool operator< (const stng& a, const stng& b)   {if(a.L==b.L) return (memcmp(a.S,b.S,a.L)< 0); else return a.L<b.L;}
 inline bool operator> (const stng& a, const stng& b)   {if(a.L==b.L) return (memcmp(a.S,b.S,a.L)> 0); else return a.L>b.L;}
 inline bool operator==(const stng& a, const stng& b)   {if(a.L==b.L) return (memcmp(a.S,b.S,a.L)==0); else return false;}
@@ -90,7 +91,7 @@ struct agent {
     infon *world, context;
     void* utilField; // Field for application specific use.
     void deepCopy(infon* from, infon* to, infon* args=0, PtrMap* ptrs=0, int flags=0);
-    int loadInfon(char* filename, infon** inf, bool normIt=true);
+    int loadInfon(const char* filename, infon** inf, bool normIt=true);
     private:
         bool (*isHardFunc)(char*);
         int (*autoEval)(infon*, agent*);

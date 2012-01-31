@@ -17,7 +17,8 @@ typedef std::map<dblPtr,UInt>::iterator altIter;
 #define getTop(item) (((item->pFlag&isTop)||item->top==0)? item->top : item->top->top)
 #define fetchLastItem(lval, item) {for(lval=item;(lval->pFlag&tType)==tList;lval=lval->value->prev);}
 #define fetchFirstItem(lval, item) {for(lval=item;(lval->pFlag&tType)==tList;lval=lval->value){};}
-#define cpFlags(from, to, mask) {to->pFlag=(to->pFlag& ~(mask))+((from)->pFlag&mask); to->wFlag=from->wFlag;}
+#define cpType(from, to) {if(to->type==0) to->type=from->type;}
+#define cpFlags(from, to, mask) {to->pFlag=(to->pFlag& ~(mask))+((from)->pFlag&mask); to->wFlag=from->wFlag; cpType(from,to);}
 #define copyTo(from, to) {if(from!=to){to->size=(from)->size; to->value=(from)->value; cpFlags((from),to,0x00ffffff);}}
 #define pushCIsFollower {int lvl=cn.level-nxtLvl; if(lvl>0) ItmQ.push(Qitem(CIfol,0,0,lvl,cn.bufCnt));}
 #define AddSizeAlternate(Lval, Rval, Pred, Size, Last) { infon *copy, *copy2, *LvalFol;    \
@@ -37,7 +38,7 @@ infon* infon::isntLast(){ // 0=this is the last one. >0 = pointer to predecessor
     return 0;
 }
 
-int agent::loadInfon(char* filename, infon** inf, bool normIt){
+int agent::loadInfon(const char* filename, infon** inf, bool normIt){
     std::cout<<"Loading:'"<<filename<<"'...";
     std::fstream InfonIn(filename);
     if(InfonIn.fail()){std::cout<<"Error: The file "<<filename<<" was not found.\n"; return 1;}
@@ -45,7 +46,12 @@ int agent::loadInfon(char* filename, infon** inf, bool normIt){
     *inf=T.parse();
     if (*inf) {std::cout<<"done.\n";}
     else {std::cout<<"Error:"<<T.buf<<"\n"; return 1;}
-    if(normIt) {alts.clear(); normalize(*inf);}
+    if(normIt) {
+        alts.clear();
+        try{
+            normalize(*inf); // cout << "Normalizd\n";
+        } catch (char const* errMsg){std::cout<<errMsg<<"\n";}
+    }
     return 0;
 }
 
@@ -444,7 +450,7 @@ void resolve(infon* i, infon* theOne){ std::cout<<"RESOLVING";
             closeListAtItem(theOne); std::cout<<"-CLOSED\n";
             return;
         } else {
-            i->size=theOne->size; i->value=theOne->value; i->pFlag&=~hasAlts;
+            i->size=theOne->size; i->value=theOne->value; i->pFlag&=~hasAlts; cpType(theOne,i);
             if((theOne->pFlag&tType)==tList) {infon* itm=i->value; for (UInt p=(UInt)i->size; p; --p) {itm->pFlag&=~isTentative; itm=itm->next;}}
             prev=i; i=i->pred; theOne=theOne->pred;
         }
@@ -507,9 +513,10 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                 CIsType=ci->pFlag&tType;
             } else isIndef=0;
             if (item->pFlag&fConcat) std::cout << "WARNING: Trying to merge a concatenation.\n";
-            if (matchType && (CIsType!= ItemsType))
-                {result=BypassDeadEnd; std::cout << "Non-matching types\n";}
-            else switch(CIsType+4*ItemsType){
+            if (matchType) {
+                if (CIsType!= ItemsType){result=BypassDeadEnd; std::cout << "Non-matching base types\n";}
+                else if(ci->type && (item->type==0 || !(ci->type==item->type))){result=BypassDeadEnd; std::cout << "Non-matching model types\n";}
+            }else switch(CIsType+4*ItemsType){
                 case tUnknown+4*tUnknown: case tNum+4*tUnknown: case tString+4*tUnknown:
                 case tList+4*tList:
                 case tString+4*tString:
@@ -555,18 +562,18 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                                 else if (memcmp(ci->value, item->value,  (UInt)ci->size)!=0) {SetBypassDeadEnd(); break;}
                             }
                         }
-                        if(flagMask) cpFlags(item,ci,(flagMask+0xff00));
+                        if(flagMask) {cpFlags(item,ci,(flagMask+0xff00));}
                     }
                     isIndef=0;
                     if(CIfol){
                         if(infonSizeCmp(ci,item)==0 || ((CIsType+4*ItemsType)!= tString+4*tString)){
-                            getFollower(&IDfol, item);
-                            if(IDfol) addIDs(CIfol, IDfol, asAlt);
+                            int level=getFollower(&IDfol, item);
+                            if(IDfol){if(level==0) addIDs(CIfol, IDfol, asAlt); else result=BypassDeadEnd;}
                             else  if( ((CIsType+4*ItemsType)!= tList+4*tList)) {// temporaty hack
                                 if ((tmp=ci->isntLast()) && (tmp->next->pFlag&isTentative)) {
                                     SetBypassDeadEnd();
                                 }
-                            if((tmp=getMasterList(ci) )){closeListAtItem(tmp); result=BypassDeadEnd; }
+                                if((tmp=getMasterList(ci) )){closeListAtItem(tmp); result=BypassDeadEnd; }
                             }
                         } else if(((CIsType+4*ItemsType)== tString+4*tString) && infonSizeCmp(ci,item)<0){
                             cSize=(UInt)ci->size;
@@ -641,16 +648,18 @@ infon* agent::normalize(infon* i, infon* firstID, bool doShortNorm){
                    if(newID) {CI->wFlag|=mAsProxie; CI->value=newID; newID->pFlag|=isNormed; CI->wFlag&=~mFindMode; newID=0;}
                     doShortNorm=true;
                     break;
-                case iTagDef: {//std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
+                case iTagDef: {
+                    caseDown(CI->type); //std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
                     std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
                     if (tagPtr==tag2Ptr.end()) {tag2Ptr[*CI->type]=CI->wrkList->item; CI->wrkList=0;}
                     else{throw("A tag is being redefined, which isn't allowed");}
                     CI->wrkList=0; CI->wFlag=0;
                     break;}
-                case iTagUse: {//OUT("Recalling: "<<(char*)CI->type->S)
+                case iTagUse: {
+                    caseDown(CI->type); //OUT("Recalling: "<<(char*)CI->type->S)
                     std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
                     if (tagPtr!=tag2Ptr.end()) {UInt tmpFlags=CI->pFlag&0xff000000; deepCopy(tagPtr->second,CI); CI->pFlag|=tmpFlags; deTagWrkList(CI);} // TODO B4: move this flag stuff into deepCopy.
-                    else{OUT("Bad tag:'"<<(char*)(CI->type->S)<<"'\n");throw("A tag was used but never defined");}
+                    else{OUT("\nBad tag:'"<<(char*)(CI->type->S)<<"'\n");throw("A tag was used but never defined");}
                     break;}
                 case iGetFirst:      StartTerm (CI, &newID); break;
                 case iGetMiddle:  break; // TODO: iGetMiddle

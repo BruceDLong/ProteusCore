@@ -68,7 +68,7 @@ if (mode==2){
     std::cout<<"Norming query...";
     topInfon=queryinf;
     a.normalize(queryinf); std::cout<<"Normed\n";
-    std::cout<<printInfon(queryinf);
+    std::cout<<printInfon(queryinf)<<"\n";
 }
  }while (mode!=5 && ! std::cin.eof());
 

@@ -1,0 +1,41 @@
+<%
+// User: Bruce
+{
+%FRIENDS = {person}
+
+%BRUCE = {PERSON MALE HUMAN}
+%STUFF = {FRIENDS MUSIC VIDEOS BOOKS DOCUMENTS POSSESSIONS ...}
+
+BRUCE = {
+    STUFF = {
+        FRIENDS = {
+        }
+
+        MUSIC = {
+
+        }
+
+        BOOKS = {
+
+        }
+
+        DOCUMENTS = {
+
+        }
+
+    }
+    NAME = "Bruce David Long"
+    LANGUAGE = 'en'
+    DEFAULT_THEME = 'DarkTheme1.pr'
+    PARENTS = { HOLLIS_LONG DORIS_LONG}
+    PASSWORD = "Glowy"
+    }
+
+
+}
+%>
+const char *texts[3] = {
+    "This is some english text",
+    "هذه هي بعض النصوص العربي",
+    "這是一些中文",
+};

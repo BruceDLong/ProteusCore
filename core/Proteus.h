@@ -68,11 +68,6 @@ struct infon {
     stng* type;
 };
 
-struct Qitem{infon* item; infon* firstID; UInt IDStatus; UInt level; int bufCnt;
-     Qitem(infon* i=0,infon* f=0,UInt s=0,UInt l=0, int BufCnt=0):item(i),firstID(f),IDStatus(s),level(l),bufCnt(BufCnt){};};
-typedef std::queue<Qitem> infQ;
-typedef std::map<infon*, infon*> PtrMap;
-
 enum fetchOps{
     opRequest,      // Use this to init a fetch. returns a dataStruct with inputs, locals, return slots, error state, etc.
     opTry,          // after calling onRequest, call this. It gets as much done as it can then returns status.
@@ -85,6 +80,11 @@ enum fetchOps{
 struct fetchData{void* data; void* callback; UInt state1, state2, refcount;};//; void* subscriberList, *subscriptionsList};
 struct fetchData_NodesNormalForm{fetchData* fetchVars; infon *i, *CIfol, *firstID; int IDStatus; int level, bufCnt, override, whatNext;};
 struct normData{fetchData* fetchVars; infon* item; infon* firstID; UInt IDStatus; UInt level; int bufCnt; infon* CI;};
+
+struct Qitem{fetchData* fetchVars; infon *item, *CI, *CIfol; infon* firstID; UInt IDStatus; UInt level; int bufCnt; int override, doShortNorm, nxtLvl, whatNext;
+     Qitem(infon* i=0,infon* f=0,UInt s=0,UInt l=0, int BufCnt=0):item(i),firstID(f),IDStatus(s),level(l),bufCnt(BufCnt){};};
+typedef std::queue<Qitem> infQ;
+typedef std::map<infon*, infon*> PtrMap;
 
 struct agent {
     agent(infon* World=0, bool (*isHF)(char*)=0, int (*eval)(infon*, agent*)=0){world=World; isHardFunc=isHF; autoEval=eval;};
@@ -100,7 +100,7 @@ struct agent {
     void append(infon* i, infon* list);
     int compute(infon* i);
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
-    void preNormalize(infon* CI, int &override, Qitem &cn, int &doShortNorm);
+    void preNormalize(infon* CI, Qitem *cn);
     infon* normalize(infon* i, infon* firstID=0);
    infon* Normalize(infon* i, infon* firstID=0);
     infon *world, context;
@@ -108,7 +108,7 @@ struct agent {
     void deepCopy(infon* from, infon* to, infon* args=0, PtrMap* ptrs=0, int flags=0);
     int loadInfon(const char* filename, infon** inf, bool normIt=true);
 
-    int fetch_NodesNormalForm(int operation, fetchData_NodesNormalForm* data);
+    int fetch_NodesNormalForm(int operation, Qitem &cn);
     int fetch_NormalForm(int operation, normData *data);
     private:
         bool (*isHardFunc)(char*);

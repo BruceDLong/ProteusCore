@@ -20,7 +20,6 @@ typedef std::map<dblPtr,UInt>::iterator altIter;
 #define cpType(from, to) {if(to->type==0) to->type=from->type;}
 #define cpFlags(from, to, mask) {to->pFlag=(to->pFlag& ~(mask))+((from)->pFlag&mask); to->wFlag=from->wFlag; cpType(from,to);}
 #define copyTo(from, to) {if(from!=to){to->size=(from)->size; to->value=(from)->value; cpFlags((from),to,0x00ffffff);}}
-#define pushCIsFollower {int lvl=cn.level-nxtLvl; if(lvl>0) ItmQ.push(Qitem(CIfol,0,0,lvl,cn.bufCnt));}
 #define AddSizeAlternate(Lval, Rval, Pred, Size, Last) { infon *copy, *copy2, *LvalFol;    \
         copy=new infon(Lval->pFlag,Lval->wFlag,(infon*)(Size),Lval->value,0,Lval->spec1,Lval->spec2,Lval->next); \
         copy->prev=Lval->prev; copy->top=Lval->top;copy->pred=Pred; \
@@ -605,14 +604,14 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
     return result;
 }
 
-void agent::preNormalize(infon* CI, int &override, Qitem &cn, int &doShortNorm){
+void agent::preNormalize(infon* CI, Qitem *cn){
     infon *newID; int CIFindMode;
     while ((CIFindMode=(CI->wFlag&mFindMode))){
         newID=0;
-        if(CI->pFlag&toExec) override=1;
-        if(CI->pFlag&asDesc) {if(override) override=0; else break;}
+        if(CI->pFlag&toExec) cn->override=1;
+        if(CI->pFlag&asDesc) {if(cn->override) cn->override=0; else break;}
         switch(CI->wFlag&mSeed){
-            case sUseAsFirst: cn.firstID=CI->spec2; cn.IDStatus=1; CI->wFlag&=~mSeed; break;
+            case sUseAsFirst: cn->firstID=CI->spec2; cn->IDStatus=1; CI->wFlag&=~mSeed; break;
             case sUseAsList: CI->spec1->pFlag|=toExec;  newID=CI->spec1;
         }
         switch(CIFindMode){
@@ -622,7 +621,7 @@ void agent::preNormalize(infon* CI, int &override, Qitem &cn, int &doShortNorm){
                 for (newID=CI->top; newID && !(newID->top->wFlag&mIsHeadOfGetLast); newID=newID->top){}
                 if(newID && CIFindMode==iToVars) newID=newID->next;
                 if(newID) {CI->wFlag|=mAsProxie; CI->value=newID; newID->pFlag|=isNormed; CI->wFlag&=~mFindMode; newID=0;}
-                doShortNorm=true;
+                cn->doShortNorm=true;
                 break;
             case iAssocNxt:
                 newID=CI->spec2->spec2;
@@ -640,7 +639,7 @@ void agent::preNormalize(infon* CI, int &override, Qitem &cn, int &doShortNorm){
                     if(!(newID->pFlag&isFirst)) {newID=0; std::cout<<"Top but not First in "<< printInfon(CI)<<'\n';}
                 }
                 if(newID) {CI->wFlag|=mAsProxie; CI->value=newID; newID->pFlag|=isNormed; CI->wFlag&=~mFindMode; newID=0;}
-                doShortNorm=true;
+                cn->doShortNorm=true;
             } break;
             case iTagDef: {
                 caseDown(CI->type); //std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
@@ -664,7 +663,7 @@ void agent::preNormalize(infon* CI, int &override, Qitem &cn, int &doShortNorm){
                     {insertID(&CI->wrkList, newID,0); if(CI->pFlag&fUnknown) {CI->size=newID->size;} cpFlags(newID, CI,0x00ffffff);}
                     CI->pFlag|=fUnknown;
                 } else{
-                    normalize(CI->spec1, cn.firstID);
+                    normalize(CI->spec1, cn->firstID);
                     if( ! CI->spec1->isntLast ()) CI->pFlag|=(isBottom+isLast);
                     if(CI->spec1->pFlag&hasAlts) {  // migrate alternates from spec1 to CI... Later, build this into LastTerm.
                         infNode *wrkNode=CI->spec1->wrkList; infon* item=0;
@@ -682,7 +681,7 @@ void agent::preNormalize(infon* CI, int &override, Qitem &cn, int &doShortNorm){
                 break;
             case iGetSize:     break; // TODO: iGetSize
             case iGetType:     break; // TODO: iGetType
-            case iHardFunc: autoEval(CI, this); cn.firstID=CI->spec2; break;
+            case iHardFunc: autoEval(CI, this); cn->firstID=CI->spec2; break;
             case iNone: default: throw "Invalid Find Mode";
         }
         if(newID){
@@ -705,65 +704,72 @@ void agent::preNormalize(infon* CI, int &override, Qitem &cn, int &doShortNorm){
     }
 }
 
-infon* agent::normalize(infon* i, infon* firstID){
-    int nxtLvl, override; infon *CI, *CIfol;
+#define pushCIsFollower {int lvl=cn.level-cn.nxtLvl; if(lvl>0) ItmQ.push(Qitem(cn.CIfol,0,0,lvl,cn.bufCnt));}
+
+infon* agent::Normalize(infon* i, infon* firstID){
+    infon *CI;
     if (i==0) return 0;
     infQ ItmQ; ItmQ.push(Qitem(i,firstID,(firstID)?1:0,0));
     while (!ItmQ.empty()){
-        int doShortNorm=0; Qitem cn=ItmQ.front(); ItmQ.pop(); CI=cn.item;
-        preNormalize(CI, override, cn, doShortNorm);
-        if (doShortNorm) return 0;
+        Qitem cn=ItmQ.front(); ItmQ.pop(); CI=cn.item; cn.doShortNorm=0;
+        preNormalize(CI, &cn);
+        if (cn.doShortNorm) return 0;
         if((CI->wFlag&mFindMode)==0 && cn.IDStatus==2)
             {cn.IDStatus=0; insertID(&CI->wrkList,cn.firstID,0);}
         if((CI->pFlag&tType)==tList){InitList(CI);}
-        nxtLvl=getFollower(&CIfol, CI);
-        if((CI->pFlag&asDesc) && !override) {pushCIsFollower; continue;}
-        switch (doWorkList(CI, CIfol)) {
-        case DoNextIf: if(++cn.bufCnt>=ListBuffCutoff){nxtLvl=getFollower(&CIfol,getTop(CI))+1; pushCIsFollower; break;}
+        cn.nxtLvl=getFollower(&cn.CIfol, CI);
+        if((CI->pFlag&asDesc) && !cn.override) cn.whatNext=DoNext;//{pushCIsFollower; continue;}
+        else cn.whatNext=doWorkList(CI, cn.CIfol);
+        switch (cn.whatNext) {
+        case DoNextIf: if(++cn.bufCnt>=ListBuffCutoff){cn.nxtLvl=getFollower(&cn.CIfol,getTop(CI))+1; pushCIsFollower; break;}
         case DoNext:
             if((CI->pFlag&(fConcat+tType))==(fConcat+tNum)){
-                compute(CI); if(CIfol && !(CI->pFlag&isLast)){pushCIsFollower;}
-            }else if(!((CI->pFlag&asDesc)&&!override)&&((CI->value&&((CI->pFlag&tType)==tList))||(CI->pFlag&fConcat)) && !(CI->value->pFlag&isNormed)){
+                compute(CI); if(cn.CIfol && !(CI->pFlag&isLast)){pushCIsFollower;}
+            }else if(!((CI->pFlag&asDesc)&&!cn.override)&&((CI->value&&((CI->pFlag&tType)==tList))||(CI->pFlag&fConcat)) && !(CI->value->pFlag&isNormed)){
                 ItmQ.push(Qitem(CI->value,cn.firstID,((cn.IDStatus==1)&!(CI->pFlag&fConcat))?2:cn.IDStatus,cn.level+1)); // push CI->value
-            }else if (CIfol){pushCIsFollower;}
+            }else if (cn.CIfol){pushCIsFollower;}
             break;
-        case BypassDeadEnd: {nxtLvl=getFollower(&CIfol,getTop(CI))+1; pushCIsFollower;} break;
+        case BypassDeadEnd: {cn.nxtLvl=getFollower(&cn.CIfol,getTop(CI))+1; pushCIsFollower;} break;
         case DoNothing: break;
         }
     }
     return (i->pFlag&isNormed)?i:0;
 };
 
-
-fetchData* initFetch(void *data){
-
-    return 0;
+fetchData* initFetch(fetchData *data){
+    fetchData* FVar=0;
+/*    if(!data){
+        FVar=new fetchData;
+        FVar->state1=FVar->state2=0;
+    }
+    FVar->refcount++;*/
+    return FVar;
 }
 
-void releaseFetch(void *data){
+void releaseFetch(fetchData *data){
+ //   data->refcount--;
+  //  if(data->refcount==0) delete(data);
 }
 
-#define prepCIsFollower {int lvl=cn->level-nxtLvl; if(lvl>0){cn->i=CI=cn->CIfol; cn->CIfol=CIfol=0; cn->firstID=0; cn->IDStatus=0;}}
-
-int agent::fetch_NodesNormalForm(int operation, fetchData_NodesNormalForm* data){
+int agent::fetch_NodesNormalForm(int operation, Qitem &cn){
     switch(operation){
-    case opRequest: data->fetchVars=initFetch(data);
+    case opRequest: cn.fetchVars=initFetch((fetchData*)&cn); break;
     case opTry:{
-            int doShortNorm=0, override=0; infon* CI=data->i;
-      /*      preNormalize(CI, override, data, doShortNorm);
-            if (doShortNorm) return 0;
-            if((CI->wFlag&mFindMode)==0 && data.IDStatus==2)
-                {data.IDStatus=0; insertID(&CI->wrkList,data.firstID,0);}
-            if((CI->pFlag&tType)==tList){InitList(CI);}
-            nxtLvl=getFollower(&data->CIfol, CI);
-            if((CI->pFlag&asDesc) && !override) {data->whatNext = DoNext;}
-            else data->whatNext = doWorkList(CI, data->CIfol);*/
+        cn.CI=cn.item; cn.doShortNorm=0;
+        preNormalize(cn.CI, &cn);
+        if (cn.doShortNorm) return 0;
+        if((cn.CI->wFlag&mFindMode)==0 && cn.IDStatus==2)
+            {cn.IDStatus=0; insertID(&cn.CI->wrkList,cn.firstID,0);}
+        if((cn.CI->pFlag&tType)==tList){InitList(cn.CI);}
+        cn.nxtLvl=getFollower(&cn.CIfol, cn.CI);
+        if((cn.CI->pFlag&asDesc) && !cn.override) {cn.whatNext=DoNext;}
+        else cn.whatNext=doWorkList(cn.CI, cn.CIfol);
         } break;
     case opTakeHint:
     case opPing:
     case opRefcount:
     case opHearError:
-    case opThanks: releaseFetch(data);
+    case opThanks: releaseFetch((fetchData*)&cn);
     default:;
     }
     return 0;
@@ -771,27 +777,28 @@ int agent::fetch_NodesNormalForm(int operation, fetchData_NodesNormalForm* data)
 
 int agent::fetch_NormalForm(int operation, normData *data){
     switch(operation){
-    case opRequest: {data->fetchVars=initFetch(data); data->level=0;}
+    case opRequest: {data->fetchVars=initFetch((fetchData*)data); data->level=0; /* check for item==0 */ break;}
     case opTry:{
-        infon* CI, *CIfol; int nxtLvl;
-        fetchData_NodesNormalForm *cn=new fetchData_NodesNormalForm;
-        cn->i=CI=data->item; cn->CIfol=CIfol=0; cn->firstID=data->firstID; cn->IDStatus=((data->firstID)?1:0); cn->bufCnt=0;
-        while (cn->i){
+        infon *CI;
+        if (data->item==0) return 0;
+        infQ ItmQ; ItmQ.push(Qitem(data->item,data->firstID,(data->firstID)?1:0,0));
+        while (!ItmQ.empty()){
+            Qitem cn=ItmQ.front(); ItmQ.pop(); CI=cn.item;
             fetch_NodesNormalForm(opRequest, cn);
             fetch_NodesNormalForm(opTry, cn);
             //wait?
             fetch_NodesNormalForm(opThanks, cn);
-            switch(cn->whatNext){
-            case DoNextIf: if(++cn->bufCnt>=ListBuffCutoff){nxtLvl=getFollower(&CIfol,getTop(CI))+1; prepCIsFollower; break;}
+            switch (cn.whatNext) {
+            case DoNextIf: if(++cn.bufCnt>=ListBuffCutoff){cn.nxtLvl=getFollower(&cn.CIfol,getTop(CI))+1; pushCIsFollower; break;}
             case DoNext:
                 if((CI->pFlag&(fConcat+tType))==(fConcat+tNum)){
-                    compute(CI); if(CIfol && !(CI->pFlag&isLast)){prepCIsFollower;}
-                }else if(!((CI->pFlag&asDesc)&&!cn->override)&&((CI->value&&((CI->pFlag&tType)==tList))||(CI->pFlag&fConcat)) && !(CI->value->pFlag&isNormed)){
-                    cn->i=CI->value; cn->IDStatus=(((cn->IDStatus==1)&!(CI->pFlag&fConcat))?2:cn->IDStatus);  ++cn->level;
-                }else if (CIfol){prepCIsFollower;}
+                    compute(CI); if(cn.CIfol && !(CI->pFlag&isLast)){pushCIsFollower;}
+                }else if(!((CI->pFlag&asDesc)&&!cn.override)&&((CI->value&&((CI->pFlag&tType)==tList))||(CI->pFlag&fConcat)) && !(CI->value->pFlag&isNormed)){
+                    ItmQ.push(Qitem(CI->value,cn.firstID,((cn.IDStatus==1)&!(CI->pFlag&fConcat))?2:cn.IDStatus,cn.level+1)); // push CI->value
+                }else if (cn.CIfol){pushCIsFollower;}
                 break;
-            case BypassDeadEnd: {nxtLvl=getFollower(&CIfol,getTop(CI))+1; prepCIsFollower;} break;
-            case DoNothing: cn->i=0; break;
+            case BypassDeadEnd: {cn.nxtLvl=getFollower(&cn.CIfol,getTop(CI))+1; pushCIsFollower;} break;
+            case DoNothing: break;
             }
         }
     } break;
@@ -799,13 +806,13 @@ int agent::fetch_NormalForm(int operation, normData *data){
     case opPing:
     case opRefcount:
     case opHearError:
-    case opThanks: releaseFetch(data);
+    case opThanks: releaseFetch((fetchData*)data);
     default:;
     }
     return 0;
 }
 
-infon* agent::Normalize(infon* i, infon* firstID){
+infon* agent::normalize(infon* i, infon* firstID){
     normData *data=new normData;
     data->item=i; data->firstID=firstID;
     fetch_NormalForm(opRequest, data);
@@ -815,3 +822,4 @@ infon* agent::Normalize(infon* i, infon* firstID){
     delete(data);
     return (i->pFlag&isNormed)?i:0;
 }
+

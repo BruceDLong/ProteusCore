@@ -3,15 +3,15 @@
     imageOf<:{desktop={
 
 
-        weather_report={78 67 75}
+  //      weather_report={78 67 75}
         "Inbox: 5" "Online" {'Rebecca' 'Xander' 'Dad'} "Birthdays:" {"Art Long" "JR"}
         "Schedule" {"8:00 - Flight to CA" "5:30 Art's Party" "8:25 Call to JR"} "" ""
 
-        todo={ "Slipstream / Turbulence" {
+        task_list={ "Slipstream / Turbulence" {
                     "Repair full-screen mode"
                     "PDF, booklet themes"
                     "Speech theme"
-                    todo={"Finish build system" {"Android", "iPhone", "iPad", "Windows", "XBox" "Kindle"}}
+                    task_list={"Finish build system" {"Android", "iPhone", "iPad", "Windows", "XBox" "Kindle"}}
                     "File attributes"
                     "Tag attributes"
              }
@@ -23,7 +23,7 @@
             "Store Users' data in World.pr"
             "#include-like functioality"
             "'System call' data sources"
-            todo={
+            task_list={
         }
 */
 

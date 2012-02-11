@@ -104,6 +104,21 @@
 %THEME = {}
 // Reference to theme repositories
 
+///// EDUCATIONAL:
+    // Knowing about the past
+        // NATURAL DEVELOPMENT: Big-bang, geology, biogenesis
+        // Controllers, coordinators, enabelers
+            // Civilizations development: philosophy, discovery (math dev, science dev), exploration
+    // Living in the present
+        // self and human developemt
+            // Pre-conventional, conventional, post conventional
+        // geography
+        // how things work
+    // Creating our Future
+        // Preconventional tools
+        // Engineering
+        // Skills, goals,
+        // Postconventional tools: making music/art/dance/cook/scents/massage
 /////////////////////////////
 //%milky_way = galaxy := (type=spiral)
 //universe={
@@ -145,7 +160,7 @@
 
     %TITLE = $
 
-    %TODO = {title ?}
+    %TASK_LIST = {title ?}
 
     // eval=#+{{{...} {...}}, @\[{...}]: \[{...} {...}]}
 

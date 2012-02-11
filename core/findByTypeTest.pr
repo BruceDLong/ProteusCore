@@ -13,7 +13,7 @@ test finding an item by it's type
 <%
 [
     weather_report
-     %A:[*2+{_|...} _] 
+     %A:[{_|...} NOW_VAL] 
 ] <:  {7 6 5}
 
 %>

@@ -471,12 +471,10 @@ static int SimThread(void *nothing){ // TODO: Make SimThread funtional
   return 0;
 }
 
-
-
 void InitializePortalSystem(int argc, char** argv){
     srand(time(NULL));
     numPortals=0;
-    char* worldFile="world.pr"; char* username="Demo_user"; char* password="erty"; string theme; char* portalContent="";
+    char* worldFile="world.pr"; char* username="bruce"; char* password="erty"; string theme; char* portalContent="";
     for (int i=1; i<argc;) {
         int consumed = 0;
         if (consumed == 0) {

@@ -73,6 +73,19 @@ struct Qitem{infon* item; infon* firstID; UInt IDStatus; UInt level; int bufCnt;
 typedef std::queue<Qitem> infQ;
 typedef std::map<infon*, infon*> PtrMap;
 
+enum fetchOps{
+    opRequest,      // Use this to init a fetch. returns a dataStruct with inputs, locals, return slots, error state, etc.
+    opTry,          // after calling onRequest, call this. It gets as much done as it can then returns status.
+    opTakeHint,     // wether you are this fetch's parent, child or friend, use this to give it data. Then call opTry again.
+    opPing,         // returns 1 if all is still OK.
+    opRefcount,     // add argument to refcount (can be negative). Returns new refcount. If it is 0, data will be released.
+    opHearError,    // A child (or friend) may call this to report an error.
+    opThanks        // When done, call this. It will dec Refcount. This can be used to cancel or "timeout" a request.
+    };
+struct fetchData{void* data; void* callback; UInt state1, state2, refcount;};//; void* subscriberList, *subscriptionsList};
+struct fetchData_NodesNormalForm{fetchData* fetchVars; infon *i, *CIfol, *firstID; int IDStatus; int level, bufCnt, override, whatNext;};
+struct normData{fetchData* fetchVars; infon* item; infon* firstID; UInt IDStatus; UInt level; int bufCnt; infon* CI;};
+
 struct agent {
     agent(infon* World=0, bool (*isHF)(char*)=0, int (*eval)(infon*, agent*)=0){world=World; isHardFunc=isHF; autoEval=eval;};
     int StartTerm(infon* varIn, infon** varOut);
@@ -87,11 +100,16 @@ struct agent {
     void append(infon* i, infon* list);
     int compute(infon* i);
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
-    infon* normalize(infon* i, infon* firstID=0, bool doShortNorm=false);
+    void preNormalize(infon* CI, int &override, Qitem &cn, int &doShortNorm);
+    infon* normalize(infon* i, infon* firstID=0);
+   infon* Normalize(infon* i, infon* firstID=0);
     infon *world, context;
     void* utilField; // Field for application specific use.
     void deepCopy(infon* from, infon* to, infon* args=0, PtrMap* ptrs=0, int flags=0);
     int loadInfon(const char* filename, infon** inf, bool normIt=true);
+
+    int fetch_NodesNormalForm(int operation, fetchData_NodesNormalForm* data);
+    int fetch_NormalForm(int operation, normData *data);
     private:
         bool (*isHardFunc)(char*);
         int (*autoEval)(infon*, agent*);
@@ -153,10 +171,8 @@ inline void getStng(infon* i, stng* str) {
     }
 }
 
-#define prependID(list, node){IDp=(*list); if(IDp){node->next=IDp->next; IDp->next=node;} else {(*list)=node; node->next=node;}}
-#define appendID(list, node) {IDp=(*list); (*list)=node; if(IDp){(*list)->next=IDp->next; IDp->next=(*list);} else (*list)->next=(*list);}
+#define prependID(list, node){infNode *IDp=(*list); if(IDp){node->next=IDp->next; IDp->next=node;} else {(*list)=node; node->next=node;}}
+#define appendID(list, node) {infNode *IDp=(*list); (*list)=node; if(IDp){(*list)->next=IDp->next; IDp->next=(*list);} else (*list)->next=(*list);}
 #define insertID(list, itm, flag) appendID(list, new infNode(itm,flag));
-
-int  getNextTerm(infon** p);  // forward decl
 
 #endif

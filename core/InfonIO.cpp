@@ -225,7 +225,7 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
 }
 
 infon* QParser::ReadInfon(int noIDs){
-    char op=0; UInt size=0; infon*iSize=0,*iVal=0,*s1=0,*s2=0; UInt pFlag=0,wFlag=0,fs=0,fv=0; infNode *IDp=0;
+    char op=0; UInt size=0; infon*iSize=0,*iVal=0,*s1=0,*s2=0; UInt pFlag=0,wFlag=0,fs=0,fv=0;
     stng* tags=0; const char* cTok, *eTok, *cTok2; /*int textEnd=0; int textStart=textParsed.size();*/
     if(nxtTok("@")){pFlag|=toExec;}
     if(nxtTok("#")){pFlag|=asDesc;}

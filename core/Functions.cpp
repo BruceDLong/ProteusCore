@@ -14,12 +14,13 @@
 #include <stdlib.h>
 #include <math.h>
 #include "Proteus.h"
+#include "remiss.h"
 #include <ctime>
 
 #define pi 3.14159
 #define Zto1(gInt) (float)(((float)gInt)  /* / 1024.0*/)
 
-#define cpFlags(from, to, mask) {to->pFlag=(to->pFlag& ~(mask))+((from)->pFlag&mask); to->wFlag=from->wFlag;}
+#define cpFlags(from, to, mask) {to->pFlag=(to->pFlag& ~(mask))+((from)->pFlag&mask); to->wFlag=from->wFlag; {if(to->type==0) to->type=from->type;}}
 #define copyTo(from, to) {if(from!=to){to->size=(from)->size; to->value=(from)->value; cpFlags((from),to,0x00ffffff);}}
 
 #define copyInfonString2charBuf(inf, buf) {memcpy(buf, (char*)inf->value, (UInt)inf->size); buf[(UInt)inf->size]=0;}
@@ -28,7 +29,7 @@ using namespace std;
 
 bool IsHardFunc(char* tag){
         return(isEq(tag,"addOne") || isEq(tag,"loadInfon") || isEq(tag,"imageOf") || isEq(tag,"textInfon")
-            || isEq(tag,"time") || isEq(tag,"cos") || isEq(tag,"sin") || isEq(tag,"textLine"));
+            || isEq(tag,"time") || isEq(tag,"cos") || isEq(tag,"sin") || isEq(tag,"textLine") || isEq(tag,"timestr"));
 }
 
 int getStrArg(infon* i, stng* str, agent* a){
@@ -182,8 +183,8 @@ int AutoEval(infon* CI, agent* a){
                 break;
             }
         }
-        cout << "majorType="<<tagBuf<<"\n";
-        if (foundMajorType == 0) {cout<<"Error: majorType not found in Theme\n";  exit (0);  return 0;}
+ //       cout << "majorType="<<majorType<<"\n";
+        if (foundMajorType == 0) {cout<<"Error: majorType '"<<majorType<<"' not found in Theme\n";  exit (0);  return 0;}
         i=0;
         for (EOT=a->StartTerm(foundMajorType, &i); !EOT; EOT=a->getNextTerm(&i)) {
             if ((i->value->pFlag&tType) != tString) continue;
@@ -193,7 +194,7 @@ int AutoEval(infon* CI, agent* a){
                 break;
             }
         }
-        if (foundMinorType == 0) {cout<<"Error: no associated minorType ("<<tagBuf<<") found in Theme\n"; exit (0);  return 0;}
+        if (foundMinorType == 0) {cout<<"Error: no associated minorType ("<<minorType<<") found in Theme\n"; exit (0);  return 0;}
         UInt tmpFlags=(CI->pFlag&0xff000000); a->deepCopy(foundMinorType->value->next, CI); CI->pFlag=(CI->pFlag&0x00ffffff)+tmpFlags;
         CI->spec2=args;
     } else if (strcmp(funcName.S, "loadInfon")==0){
@@ -202,6 +203,10 @@ int AutoEval(infon* CI, agent* a){
         str1.S[str1.L]=0;
         a->loadInfon(str1.S, &I, 1);
         copyTo(I,CI);
+    } else if (strcmp(funcName.S, "timestr")==0){ cout << "DOING TIME\n";
+        string s="Time:"; char l[30]; itoa(time(0),l); s+=l;
+        stng sOut; stngCpy(sOut, s.c_str());
+        setString(CI, &sOut);
     } else if (strcmp(funcName.S, "infonToText")==0){
         infon* inf1;
         getInfonArg(CI, &inf1, a);
@@ -227,7 +232,7 @@ int AutoEval(infon* CI, agent* a){
         if (!getIntArg(CI, &int1, a)) return 0;
         setIntVal(CI, int1+1);
     } else return 0;
-
+    CI->type=0;
     return 1;
 }
 

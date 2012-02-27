@@ -14,7 +14,7 @@ test finding an item by it's type
 [
     weather_report
      %A:[{_|...} NOW_VAL] 
-] <:  {7 6 5}
+] <:  (weather_report=={7 6 5})
 
 %>
 

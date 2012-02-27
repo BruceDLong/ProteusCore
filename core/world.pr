@@ -6,6 +6,12 @@
 %color=#{*_+_ *_+_ *_+_}
 %size=#*_+_
 
+    %HIGH_NUM = _
+    %LOW_NUM = _
+    %NOW_VAL = _
+
+    %weather_report = {HIGH_NUM LOW_NUM NOW_VAL }
+
 }
 //{1 2 3}
 %>

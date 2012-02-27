@@ -52,7 +52,7 @@ struct assocInfon {infon *VarRef, *nextRef; assocInfon(infon* first=0):VarRef(fi
 
 struct infNode {infon* item; infon* slot; UInt idFlags; infNode* next; infNode(infon* itm=0, UInt f=0):item(itm),idFlags(f){};};
 enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, InitSearchList=2, SetComplete=3, NodeDoneFlag=8, NoMatch=16,isRawFlag=32,
-    skipFollower=64, mMatchType=128};
+    skipFollower=64, mLooseType=128};
 
 struct infon {
     infon(UInt pf=0, UInt wf=0, infon* s=0, infon*v=0,infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0):
@@ -71,7 +71,7 @@ struct infon {
 enum fetchOps{
     opRequest,      // Use this to init a fetch. returns a dataStruct with inputs, locals, return slots, error state, etc.
     opTry,          // after calling onRequest, call this. It gets as much done as it can then returns status.
-    opTakeHint,     // wether you are this fetch's parent, child or friend, use this to give it data. Then call opTry again.
+    opGiveHint,     // wether you are this fetch's parent, child or friend, use this to give it data. It will opTry again.
     opPing,         // returns 1 if all is still OK.
     opRefcount,     // add argument to refcount (can be negative). Returns new refcount. If it is 0, data will be released.
     opHearError,    // A child (or friend) may call this to report an error.
@@ -98,6 +98,7 @@ struct agent {
     char* gStrNxt(infon** ItmPtr, char*txtBuff);
     infon* gListNxt(infon** ItmPtr);
     void append(infon* i, infon* list);
+    int checkTypeMatch(stng* LType, stng* RType);
     int compute(infon* i);
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
     void preNormalize(infon* CI, Qitem *cn);
@@ -120,7 +121,7 @@ struct agent {
         infon* copyList(infon* from, int flags);
         void processVirtual(infon* v);
         int getFollower(infon** lval, infon* i);
-        void addIDs(infon* Lvals, infon* Rvals, int asAlt=0);
+        void addIDs(infon* Lvals, infon* Rvals, UInt flags, int asAlt);
 };
 
 // From InfonIO.cpp

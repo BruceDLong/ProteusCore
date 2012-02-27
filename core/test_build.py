@@ -42,7 +42,7 @@ def test_engine():
 
    ('1', 'typed list merge 1', '*4+{3 _ $ *3+{...}} = *4+{3 4 "hi" {5 6 7}}', '{*1+3 *1+4 "hi" {*1+5 *1+6 *1+7 } }'),
    ('1', 'typed list merge 2', '*3+{...} = {1 2 3}', '{*1+1 *1+2 *1+3 }'),
-   ('1', 'typed list merge 3', '{} = {}', '{}'),  # FAIL: segfault
+   ('1', 'typed list merge 3', '{} = {}', '{}'),
    ('1', 'typed list merge 4', '*_+{...} = {2 3 4}', '{*1+2 *1+3 *1+4}'),  # FAIL: {*1+2 *1+3 *1+4 ...}
    ('1', 'typed list merge 5','{...} = {2 3 4 ...}', '{*1+2 *1+3 *1+4 ...}'),  # FAIL: {*1+2 *1+3 *1+4 4; 5; 6; 7; 8; 9; 10; 11; 12;... ...}
    #            Add tests with zero size / value, value larger than size, later: negative, fractional, expression.
@@ -51,12 +51,12 @@ def test_engine():
    # TESTS OF SIMPLE UN-TYPED MERGE: "=="
 
    # TESTS OF MISC
-   ('1', 'test list/string', '+{*3+$ *4+$}=+"CatDogs"', '<{"Cat" "Dogs" }>'),
+   ('1', 'test list/string', '+{*3+$ *4+$}==+"CatDogs"', '<{"Cat" "Dogs" }>'),
    ('1', 'test anon functions', '[_,456,789,] <: +123', '<*1+789>'),
    ('1', 'Try a bigger function', r'[+_ ({555, 444, [_] := %\\\},)] <: +7000', r'<{*1+555 *1+444 *1+7000 }>'),
    ('1', 'Try reverse func syntax', r'7000:>[_ ({555, 444, [_] := %\\\})]', r'<{*1+555 *1+444 *1+7000 }>'),
-   ('1', 'test rep$', '*4 +{*3+$|...} = +"catHatDogPig"', '<{"cat" "Hat" "Dog" "Pig" }>'),
-   ('1', 'test nested references', r'{1 2 {"hi" "there"} 4 [$ $] := [_ _ {...}] := %\ 6}', '<{*1+1 *1+2 {"hi" "there" } *1+4 "there" *1+6 }>'),
+   ('1', 'test rep$', '*4 +{*3+$|...} == +"catHatDogPig"', '<{"cat" "Hat" "Dog" "Pig" }>'),
+   ('1', 'test nested references', r'{1 2 {"hi" "there"} 4 [$ $] := [_ _ {...}] :== %\ 6}', '<{*1+1 *1+2 {"hi" "there" } *1+4 "there" *1+6 }>'),
    ('1', 'Addition', '+(+3+7)', '<*1+10>'),
    ('1', 'Addition with references', r'{4, 6, ([_] := %\\ [_, _] := %\\ )}', '<{*1+4 *1+6 *1+10 }>'),
    ('1', 'Addition with reverse references', r'{4, 6, (%\\:[_] %\\:[_, _] )}', '<{*1+4 *1+6 *1+10 }>'),
@@ -73,7 +73,7 @@ def test_engine():
    ('1', 'test 1 of repeated indexing (i.e., filtering)', "{{111, '222', '333', 444, {'hi'}, {'a', 'b', 'c'}}:*2+[...]|...}", '<{"222" *1+444 {"a" "b" "c" } }>'), #FAIL
 
     ('1', 'Inner parsing 1', r'{ {*3+$}|...}="CatHatBatDog" ','{{"Cat" } {"Hat" } {"Bat" } {"Dog" } }'),
-    ('1', 'Simple Parsing', r'{*3+$|...}="CatHatBatDog" ','{"Cat" "Hat" "Bat" "Dog" }'),
+    ('1', 'Simple Parsing', r'{*3+$|...}=="CatHatBatDog" ','{"Cat" "Hat" "Bat" "Dog" }'),
 
     ('1', "fromHere indexing string 1", "{111, '222' %^:[_, _, $] 444, '555', 666, {'hi'}}", '<{*1+111 "222" "555" *1+444 "555" *1+666 {"hi" } }>'),
     ('1', "fromHere indexing string 2", "{111, 222, %^:*3+[...] 444, 555, 666, {'hi'}}", '<{*1+111 *1+222 *1+555 *1+444 *1+555 *1+666 {"hi" } }> '),
@@ -169,23 +169,23 @@ def ChkWorld(t):
    print "WORLD TEST:", t[1]
    try:
        child=pexpect.spawn('./ptest',timeout=4);
-       print "W1"
+       #print "W1"
        child.send('2\n')
        child.sendline(t[1])
-       child.send('<%\n');  child.send(t[2]); child.send('\n%>\n'); print "W2a";
-       child.send('<%\n');  child.send(t[4]); child.send('\n%>\n'); print "W2b";
-       child.expect(r'Parsing\s*\[<%\s*'); child.expect_exact(t[2]); child.expect(r'\s*%>\]\s*');  print "W3";
-       child.expect(r'\s*Parsed.\s*'); print  "W4";
-       child.expect_exact('Norming World...');   child.expect(r'\s*Normed\s*'); print "W5";
+       child.send('<%\n');  child.send(t[2]); child.send('\n%>\n'); # print "W2a";
+       child.send('<%\n');  child.send(t[4]); child.send('\n%>\n'); # print "W2b";
+       child.expect(r'Parsing\s*\[<%\s*'); child.expect_exact(t[2]); child.expect(r'\s*%>\]\s*'); # print "W3";
+       child.expect(r'\s*Parsed.\s*'); #print  "W4";
+       child.expect_exact('Norming World...');   child.expect(r'\s*Normed\s*');# print "W5";
 
        print "Looking For ",t[3]
        child.expect_exact(t[3]);
        assert child.after==t[3]
        print "Found: ", child.after;
 
-       child.expect(r'\s*Parsing query\s*\[\s*<%\s*'); child.expect_exact(t[4]); child.expect(r'\s*%>\s*\]\s*');  print "W6";
-       child.expect(r'\s*parsed.\s*<<\['); child.expect(r'.*?'); child.expect(r'\s*\]>>\s*'); print  "W7";
-       child.expect_exact('Norming query...');   child.expect(r'\s*Normed\s*'); print "W8";
+       child.expect(r'\s*Parsing query\s*\[\s*<%\s*'); child.expect_exact(t[4]); child.expect(r'\s*%>\s*\]\s*');  #print "W6";
+       child.expect(r'\s*parsed.\s*<<\['); child.expect(r'.*?'); child.expect(r'\s*\]>>\s*'); #print  "W7";
+       child.expect_exact('Norming query...');   child.expect(r'\s*Normed\s*'); #print "W8";
 
        print "Looking for:",t[5]
        child.expect_exact(t[5])

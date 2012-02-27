@@ -270,7 +270,7 @@ infon* QParser::ReadInfon(int noIDs){
         }
     }
     infon* i=new infon((fs<<goSize)+fv+pFlag, wFlag, iSize,iVal,0,s1,s2); i->wSize=size; i->type=tags;
-    if(i->pFlag&fConcat && i->size==(infon*)1){infon* ret=i->value; delete(i); return ret;} // BUT we lose i's idents and some flags (desc, ...)
+    if(i->pFlag&fConcat && i->size==(infon*)1){infon* ret=i->value; delete(i); ret->top=ret->next=ret->prev=0; return ret;} // BUT we lose i's idents and some flags (desc, ...)
     if ((i->size && ((fs&tType)==tList))||(fs&fConcat)) i->size->top=i;
     if ((i->value&& ((fv&tType)==tList))||(fv&fConcat))i->value->top=i;
     if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~(mFindMode+mAssoc); i->wFlag|=mIsHeadOfGetLast; i=new infon(0,wFlag,0,0,0,i); i->spec1->top2=i;}
@@ -299,7 +299,7 @@ infon* QParser::ReadInfon(int noIDs){
                 // Add a new head to the spec list.
                 toSet=grok(i,c2Left,&code); code=InitSearchList; R=ReadInfon(4);
             } else {toSet=i; R=ReadInfon(1);}
-            if(isEq(eTok,"==")) {code|=mMatchType;}
+            if(isEq(eTok,"==")) {code|=mLooseType;}
             if(isEq(cTok2,":")){toRef=grok(R,c1Right,&code);}
             else if(isEq(cTok2,"::")){toRef=grok(R,c2Right,&code);}
             else toRef=R;
@@ -310,7 +310,8 @@ infon* QParser::ReadInfon(int noIDs){
     }
     if(!(noIDs&2)){  // load function "calls"
         if(nxtTok(":>" )) {infon* j=ReadInfon(1); j->wFlag|=sUseAsFirst; j->spec2=i; i=j; chk4HardFunc(i);}
-        else if(nxtTok("<:")) {i->wFlag|=sUseAsFirst; i->spec2=ReadInfon(1);  chk4HardFunc(i);}
+        else if(nxtTok("<:")) {i->wFlag|=sUseAsFirst;
+            i->spec2=ReadInfon(1);  chk4HardFunc(i);}
         else if(nxtTok("!>")) {}
         else if(nxtTok("<!")){}
     }

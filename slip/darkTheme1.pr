@@ -58,7 +58,6 @@
        ]
     }
 
-
 }
 
 ///////////////  tNum theme
@@ -75,7 +74,7 @@
 }
 
 ///////////////  tList theme
-  {'tList',
+ {'tList',
     {'simple',
       [ ?
        {5.0 42.0 12.0 25.0 56.0} // ({0.0} {+(+40.0 (%\\\\:[_]~)) | ...})  // Y-values
@@ -140,7 +139,8 @@
     {'default'
       [ ?
         {drawItem {
-            {text textLine<:{{"Today: Temp=" %A:[*2+{_|...} NOW_VAL]  }}  } {moveRel 10 20}
+            {text timestr<:1} {moveRel 0 20}
+            {text textLine<:{{"Today: Temp=" %A:[{_|...} NOW_VAL]  }}  } {moveRel 10 20}
             {fontFace 'sans normal 11'}
             {text textLine<:{{"  High=" %A:[_] "   Low=" %A:[_ _] }}  } {moveRel -10 20}
             }

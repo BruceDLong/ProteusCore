@@ -102,7 +102,7 @@ struct InfonPortal {
     cairo_t *cr;
     SDL_Surface *SDL_background;
     cairo_surface_t *cairo_background;
-    infon *theme, *topView;
+    infon *theme, *stuff, *crntFrame;
     User *user;
     bool needsToBeDrawn, viewsNeedRefactoring, isLocked;
     InfonViewPort *viewPorts;
@@ -177,10 +177,10 @@ void renderText(cairo_t *cr, char* text){
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 
-    cairo_set_line_width(cr, 0.5);                      // sets the line width, default is 2.0
-    pango_cairo_update_layout(cr, layout);                  // update the pango layout to reflect any changes
-    pango_cairo_layout_path(cr, layout);                    // draw the pango layout onto the cairo surface
-    g_object_unref(layout);                         // free the layout
+    cairo_set_line_width(cr, 0.5);
+    pango_cairo_update_layout(cr, layout);
+    pango_cairo_layout_path(cr, layout);
+    g_object_unref(layout);
 }
 
 void CreateLinearGradient(cairo_t *cr,double x1, double y1, double x2, double y2, infon* colorStops=0){
@@ -231,7 +231,7 @@ enum dTools{rectangle=1, curvedRect, circle, lineTo, lineRel, moveTo, moveRel, c
 
 void DrawProteusDescription(InfonPortal* portal, infon* ProteusDesc){
     cairo_surface_t* surface=portal->cairoSurf;
-    if (surface==0 || ProteusDesc==0 || ProteusDesc->size==0) ERRl("Missing description.");
+    if (surface==0 || ProteusDesc==0 || ProteusDesc->size==0) ERRl("Missing description."<<ProteusDesc);
     //DEBl("DISPLAY:["<<printInfon(ProteusDesc));
     int count=0; int EOT_d2; char txtBuff[1024];
     infon *i, *ItemPtr, *OldItmPtr, *subItem;
@@ -343,14 +343,13 @@ void CloseTurbulanceViewport(InfonViewPort* viewPort){
         if (portal->viewPorts==0){
             if(portal->cairoSurf) cairo_surface_destroy(portal->cairoSurf);
             if(portal->surface) SDL_FreeSurface(portal->surface);
-            delete(portal->theme); delete(portal->user); delete(portal->topView);
+            delete(portal->theme); delete(portal->user); delete(portal->crntFrame);
 
             // remove self from Portals[]
             for(int p=0; p<numPortals; ++p){if(portals[p]==portal) break;}
             while(++p<numPortals) portals[p-1]=portals[p];
             --numPortals;
             delete(portal);
-            // if there are no more windows, will app close?
         }
 }
 
@@ -436,9 +435,7 @@ bool CreateTurbulancePortal(char* title, int x, int y, int w, int h, User* user,
     AddViewToPortal(portal, title, x,y,w,h);
     ResizeTurbulancePortal(portal, w, h);
 
- //   if(theAgent.loadInfon(theme.c_str(), (infon**)&theAgent.utilField, false)) exit(1);
- //   if(theAgent.loadInfon(stuffName, &portal->topView)) exit(1);
-    portal->topView=stuff;
+    portal->stuff=stuff;
     portal->theme=theme;
 
     portals[numPortals++]=portal;
@@ -458,15 +455,25 @@ int secondsToRun=120; // time until the program exits automatically. 0 = don't e
 void EXIT(char* errmsg){ERRl(errmsg << "\n"); exit(1);}
 void cleanup(void){SDL_Quit();}   //TODO: Add items to cleanup routine
 
-static int SimThread(void *nothing){ // TODO: Make SimThread funtional
-    SDL_Event ev;
-    ev.type = SDL_USEREVENT;  ev.user.code = 0;  ev.user.data1 = 0;  ev.user.data2 = 0;
-    int val, i = 0;
+enum userActions {TURB_UPDATE_SURFACE=1, TURB_ADD_SCREEN, TURB_DEL_SCREEN, TURB_ADD_WINDOW, TURB_DEL_WINDOW};
+
+static int SimThread(void *nothing){
+    SDL_Event ev; InfonPortal* portal; infon* nextFrame;
+    ev.type = SDL_USEREVENT;  ev.user.code = TURB_UPDATE_SURFACE;  ev.user.data1 = 0;  ev.user.data2 = 0;
     while (!doneYet) {
+    //==> LOCK PORTAL ARRAY FOR THE FOLLOWING BLOCK; no new or deleting of portals allowed.
+        for (int i = 0; i < numPortals; ++i) {  // Collect and dispatch frames for portals.
+            portal=portals[i];
+            nextFrame=new infon;
+            theAgent.deepCopy(portal->stuff, nextFrame);
+            theAgent.normalize(nextFrame);
+
+            ev.user.data1 = (void *)i;
+            ev.user.data2 = nextFrame;
+            SDL_PushEvent(&ev);
+            ++numEvents;
+        }
         SDL_Delay(100);
-        ev.user.data1 = (void *)i;
-       // val = FE_PushEvent(&ev); // don't call this in the main thread
-        ++numEvents; ++i;
     }
   return 0;
 }
@@ -503,7 +510,7 @@ void InitializePortalSystem(int argc, char** argv){
     infon *themeInfon, *stuffInfon;
     if(theAgent.loadInfon(theme.c_str(), &themeInfon, 0)) exit(1);
     theAgent.utilField=themeInfon;
-    if(theAgent.loadInfon(portalUser->myStuff.c_str(), &stuffInfon, 1)) exit(1);
+    if(theAgent.loadInfon(portalUser->myStuff.c_str(), &stuffInfon, 0)) exit(1);
     CreateTurbulancePortal(windowTitle, 100,1300,1024,768, portalUser, themeInfon, stuffInfon);
 
     SDL_EnableKeyRepeat(300, 130);
@@ -511,24 +518,24 @@ void InitializePortalSystem(int argc, char** argv){
     atexit(cleanup);
 }
 
-enum userActions {TURB_UPDATE_SURFACE=1, TURB_ADD_SCREEN, TURB_DEL_SCREEN, TURB_ADD_WINDOW, TURB_DEL_WINDOW};
 #define IS_CTRL (ev.key.keysym.mod&KMOD_CTRL)
 
 void StreamEvents(){
     Uint32 frames=0, then=SDL_GetTicks(), now=0, limit = secondsToRun*1000;
-//    SDL_Thread *simulationThread = SDL_CreateThread(SimThread, "Proteus", NULL);
+    SDL_Thread *simulationThread = SDL_CreateThread(SimThread, "Proteus", NULL);
     SDL_Event ev;
     InfonViewPort *portalView=0; SDL_Window *window=0;
     while (secondsToRun && (SDL_GetTicks() < (then+limit)) && !doneYet){
-        --numEvents; ++frames;
+         ++frames;
         while (SDL_PollEvent(&ev)) {
             window = SDL_GetWindowFromID(ev.key.windowID);
             if(window) portalView=(InfonViewPort*)SDL_GetWindowData(window, "portalView");
             switch (ev.type) {
             case SDL_USEREVENT:
+                --numEvents;
                 switch(ev.user.code){
                     case TURB_UPDATE_SURFACE:
-                      portals[(uint)ev.user.data1]->topView=(infon*)ev.user.data2;
+                      portals[(uint)ev.user.data1]->crntFrame=(infon*)ev.user.data2;
                       portals[(uint)ev.user.data1]->needsToBeDrawn=true;
                       break;
                     case TURB_ADD_SCREEN: break;
@@ -541,9 +548,9 @@ void StreamEvents(){
                 switch (ev.window.event) {
                 case SDL_WINDOWEVENT_MOVED: portalView->parentPortal->viewsNeedRefactoring=true; break;
                 case SDL_WINDOWEVENT_RESIZED: portalView->parentPortal->viewsNeedRefactoring=true; break;//ResizeTurbulancePortal(portalView->parentPortal, ev.window.data1, ev.window.data2); break;
-                case SDL_WINDOWEVENT_MINIMIZED: portalView->isMinimized=true;  break;  // stop rendering
+                case SDL_WINDOWEVENT_MINIMIZED: portalView->isMinimized=true;  break;  // Stop rendering
                 case SDL_WINDOWEVENT_MAXIMIZED: break;
-                case SDL_WINDOWEVENT_RESTORED: portalView->isMinimized=false;  break;  // resume rendering
+                case SDL_WINDOWEVENT_RESTORED: portalView->isMinimized=false;  break;  // Resume rendering
                 case SDL_WINDOWEVENT_FOCUS_GAINED:break; // Move window to front position
                 case SDL_WINDOWEVENT_FOCUS_LOST:break;
                 case SDL_WINDOWEVENT_CLOSE:  CloseTurbulanceViewport(portalView); break;
@@ -555,7 +562,7 @@ void StreamEvents(){
                 switch (ev.key.keysym.sym) {
                 case SDLK_PRINTSCREEN: break; // see sdl_common.c
                 case SDLK_c: if (IS_CTRL) {SDL_SetClipboardText("SDL rocks!\nYou know it!");} break;
-                case SDLK_v: if (IS_CTRL) {} break;       // paste. see sdl_common.c
+                case SDLK_v: if (IS_CTRL) {} break;       // Paste. see sdl_common.c
                 case SDLK_g: if (IS_CTRL) {} break;       // Grab Input. see sdl_common.c
                 case SDLK_p: if (IS_CTRL) {} break;       // Create PDF view and render to file
                 case SDLK_k: if (IS_CTRL) {} break;       // Toggle on-screen Keyboard
@@ -579,7 +586,7 @@ void StreamEvents(){
                     break;
                 case SDLK_d: if (IS_CTRL) {
                     CreateTurbulancePortal(windowTitle, 100,1300,1024,768, portalView->parentPortal->user,
-                        portalView->parentPortal->theme, portalView->parentPortal->topView);} break;       // New Portal
+                        portalView->parentPortal->theme, portalView->parentPortal->crntFrame);} break;       // New Portal
                 case SDLK_RETURN: break;
                 case SDLK_ESCAPE: doneYet=true; break;
                 }
@@ -591,14 +598,14 @@ void StreamEvents(){
         if(doneYet) continue;
         for (int i = 0; i < numPortals; ++i) {
             InfonPortal* portal=portals[i];
-            if(!portal->needsToBeDrawn) continue;
+            if(portal->needsToBeDrawn) portal->needsToBeDrawn=false; else continue;
             if(portal->viewsNeedRefactoring && !portal->isLocked) RefactorPortal(portal);
 
             portal->cr = cairo_create(portal->cairoSurf); cairo_set_antialias(portal->cr,CAIRO_ANTIALIAS_GRAY);
-            DrawProteusDescription(portal, portal->topView);
+            DrawProteusDescription(portal, portal->crntFrame);
             cairo_destroy(portal->cr);
             int viewW, viewH;
-            for(InfonViewPort *portView=portal->viewPorts; portView; portView=portView->next){ // for each view
+            for(InfonViewPort *portView=portal->viewPorts; portView; portView=portView->next){ // For each view...
                 if(portView->isMinimized) continue;
                 SDL_Renderer *renderer = portView->renderer;
                 SDL_GetWindowSize(portView->window, &viewW, &viewH);
@@ -618,7 +625,7 @@ void StreamEvents(){
     doneYet=true;
     if ((now = SDL_GetTicks()) > then) printf("\nFrames per second: %2.2f\n", (((double) frames * 1000) / (now - then)));
 
- //   SDL_WaitThread(simulationThread, NULL);
+    SDL_WaitThread(simulationThread, NULL);
 }
 
 int main(int argc, char *argv[]){

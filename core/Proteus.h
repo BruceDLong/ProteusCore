@@ -45,7 +45,8 @@ enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,i
                    iGetSize,iGetType,iAssocNxt,iGetLast,iGetFirst,iGetMiddle};
 enum seeds {mSeed=0x30, sNone=0x00, sUseAsFirst=0x10, sUseAsList=0x20, sUseAsLast=0x30};
 enum wMasks {mFindMode = 0x0f, mIsTopRefNode = 0x1000, mIsHeadOfGetLast=0x2000, mAsProxie=0x4000, mAssoc=0x8000};
-enum colonFlags {c1Left=0x100, c2Left=0x200, c1Right=0x400, c2Right=0x800, };
+enum colonFlags {c1Left=0x100, c2Left=0x200, c1Right=0x400, c2Right=0x800};
+enum normState {mnStates=0x1f0000, nsListInited=0x10000, nsNormBegan=0x20000, nsPreNormed=0x40000, nsWorkListDone=0x80000, nsNormComplete=0x100000, nsBottomNotLast=0x200000};
 
 struct infon;
 struct assocInfon {infon *VarRef, *nextRef; assocInfon(infon* first=0):VarRef(first),nextRef(0){};};
@@ -68,21 +69,11 @@ struct infon {
     stng* type;
 };
 
-enum fetchOps{
-    opRequest,      // Use this to init a fetch. returns a dataStruct with inputs, locals, return slots, error state, etc.
-    opTry,          // after calling onRequest, call this. It gets as much done as it can then returns status.
-    opGiveHint,     // wether you are this fetch's parent, child or friend, use this to give it data. It will opTry again.
-    opPing,         // returns 1 if all is still OK.
-    opRefcount,     // add argument to refcount (can be negative). Returns new refcount. If it is 0, data will be released.
-    opHearError,    // A child (or friend) may call this to report an error.
-    opThanks        // When done, call this. It will dec Refcount. This can be used to cancel or "timeout" a request.
-    };
-struct fetchData{void* data; void* callback; UInt state1, state2, refcount;};//; void* subscriberList, *subscriptionsList};
-struct fetchData_NodesNormalForm{fetchData* fetchVars; infon *i, *CIfol, *firstID; int IDStatus; int level, bufCnt, override, whatNext;};
-struct normData{fetchData* fetchVars; infon* item; infon* firstID; UInt IDStatus; UInt level; int bufCnt; infon* CI;};
+struct fetchData_NodesNormalForm{infon *i, *CIfol, *firstID; int IDStatus; int level, bufCnt, override, whatNext;};
+struct normData{infon* item; infon* firstID;};
 
-struct Qitem{fetchData* fetchVars; infon *item, *CI, *CIfol; infon* firstID; UInt IDStatus; UInt level; int bufCnt; int override, doShortNorm, nxtLvl, whatNext;
-     Qitem(infon* i=0,infon* f=0,UInt s=0,UInt l=0, int BufCnt=0):item(i),firstID(f),IDStatus(s),level(l),bufCnt(BufCnt){};};
+struct Qitem{infon *item, *CI, *CIfol; infon* firstID; UInt IDStatus; UInt level; int bufCnt; int override, doShortNorm, nxtLvl, whatNext;
+     Qitem(infon* i=0,infon* f=0,UInt s=0,UInt l=0, int BufCnt=0):item(i),firstID(f),IDStatus(s),level(l),bufCnt(BufCnt){CI=CIfol=0;};};
 typedef std::queue<Qitem> infQ;
 typedef std::map<infon*, infon*> PtrMap;
 
@@ -109,8 +100,8 @@ struct agent {
     void deepCopy(infon* from, infon* to, infon* args=0, PtrMap* ptrs=0, int flags=0);
     int loadInfon(const char* filename, infon** inf, bool normIt=true);
 
-    int fetch_NodesNormalForm(int operation, Qitem &cn);
-    int fetch_NormalForm(int operation, normData *data);
+    int fetch_NodesNormalForm(Qitem &cn);
+    int fetch_NormalForm(normData *data);
     private:
         bool (*isHardFunc)(char*);
         int (*autoEval)(infon*, agent*);
@@ -174,6 +165,6 @@ inline void getStng(infon* i, stng* str) {
 
 #define prependID(list, node){infNode *IDp=(*list); if(IDp){node->next=IDp->next; IDp->next=node;} else {(*list)=node; node->next=node;}}
 #define appendID(list, node) {infNode *IDp=(*list); (*list)=node; if(IDp){(*list)->next=IDp->next; IDp->next=(*list);} else (*list)->next=(*list);}
-#define insertID(list, itm, flag) appendID(list, new infNode(itm,flag));
+#define insertID(list, itm, flag) {appendID(list, new infNode(itm,flag));}
 
 #endif

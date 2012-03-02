@@ -23,12 +23,12 @@ typedef std::map<dblPtr,UInt>::iterator altIter;
 #define AddSizeAlternate(Lval, Rval, Pred, Size, Last, Flags) { infon *copy, *copy2, *LvalFol;    \
         copy=new infon(Lval->pFlag,Lval->wFlag,(infon*)(Size),Lval->value,0,Lval->spec1,Lval->spec2,Lval->next); \
         copy->prev=Lval->prev; copy->top=Lval->top;copy->pred=Pred; copy->type=Lval->type; \
-        insertID(&Lval->wrkList,copy,ProcessAlternatives|Flags); Lval->wrkList->slot=Last;\
+        insertID(&Lval->wrkList,copy,ProcessAlternatives|Flags); Lval->wrkList->slot=Last; Lval->wFlag&=~nsWorkListDone;\
         getFollower(&LvalFol, Lval);                  \
         if (LvalFol){\
             copy2=new infon(LvalFol->pFlag,LvalFol->wFlag,LvalFol->size,LvalFol->value,0,LvalFol->spec1,LvalFol->spec2,LvalFol->next);\
             copy2->type=LvalFol->type; copy2->pred=copy; \
-            insertID(&copy2->wrkList,Rval,Flags); insertID(&LvalFol->wrkList,copy2,ProcessAlternatives|Flags);}}
+            insertID(&copy2->wrkList,Rval,Flags); insertID(&LvalFol->wrkList,copy2,ProcessAlternatives|Flags); LvalFol->wFlag&=~nsWorkListDone;}}
 
 infon* infon::isntLast(){ // 0=this is the last one. >0 = pointer to predecessor of the next one.
     if (!(pFlag&isLast)) return this;
@@ -90,8 +90,8 @@ int agent::LastTerm(infon* varIn, infon** varOut) {
 int agent::getNextTerm(infon** p) {
   infon *parent, *Gparent=0, *GGparent=0;
   if((*p)->pFlag&isBottom) {
+    parent=((*p)->pFlag&isFirst)?(*p)->top:(*p)->top->top;
     if ((*p)->pFlag&isLast){
-      parent=((*p)->pFlag&isFirst)?(*p)->top:(*p)->top->top;
       if(parent==0){(*p)=(*p)->next; return 1;}
       if(parent->top) Gparent=(parent->pFlag&isFirst)?parent->top:parent->top->top;
       if(Gparent && (Gparent->pFlag&fConcat)) {
@@ -109,11 +109,11 @@ int agent::getNextTerm(infon** p) {
         } while (1);
       }
       return 2;
-    } else {std::cout <<"BOTTOM\n"; return 5;} /*Bottom but not end, make subscription*/
+    } else {infon* slug=new infon; slug->wFlag|=nsBottomNotLast; append(slug, parent); (*p)=slug;} /*Bottom but not end, make slug*/
   }else {
     (*p)=(*p)->next;
-    if ((*p)==0) {return 3; }
-    if ((*p)->pFlag&isLast){     // if isLast && Parent is spec1-of-get-last, get parent, apply any idents
+    if ((*p)==0) {return 3;}
+    if ((*p)->pFlag&isLast){     // If isLast && Parent is spec1-of-get-last, get parent, apply any idents
         parent=getTop((*p));
         if(parent->wFlag&mIsHeadOfGetLast) {
             parent=parent->top2; // This is a different use for 'prev'. It should be OK.
@@ -302,14 +302,15 @@ const int simpleUnknownUint=((fUnknown+tNum)<<goSize) + fUnknown+tNum+asNone;
 char isPosLorEorGtoSize(UInt pos, infon* item){
     if(item->pFlag&(fUnknown<<goSize)) return '?';
     if(((item->pFlag>>goSize)&tType)!=tNum) throw "Size as non integer is probably not useful, so not allowed.";
-    if(item->pFlag&(fConcat<<goSize)){
-    infon* size=item->size;
+    if(item->pFlag&(fConcat<<goSize)){ // TODO: apparently no tests call this block. related to the Range bug.
+        infon* size=item->size;
+        //if ((size->wFlag&mFindMode)!=iNone) normalize(size);
         if ((size->pFlag&simpleUnknownUint)==simpleUnknownUint)
             if(size->next!=size && size->next==size->prev && ((size->next->pFlag&simpleUnknownUint)==simpleUnknownUint)){
-                    if(pos<(UInt)size->value) return 'L';
-                        if(pos>(UInt)size->size) return 'G';
-                    return '?';  // later, if pos is in between two ranges, return 'X'
-                }
+                if(pos<(UInt)size->value) return 'L';
+                    if(pos>(UInt)size->size) return 'G';
+                return '?';  // later, if pos is in between two ranges, return 'X'
+            }
     }
     if(pos<(UInt)item->size) return 'L';  // Less
     if(pos==(UInt)item->size) return 'E';  // Equal
@@ -339,12 +340,13 @@ void agent::processVirtual(infon* v){
     if (posArea=='?'){ v->pFlag|=isTentative;}
 }
 
-void agent::InitList(infon* item) { // TODO: fix: what if this is called twice?
+void agent::InitList(infon* item) {
     infon* tmp;
-    if(item->value && (((tmp=item->value->prev)->pFlag)&isVirtual)){
+    if(!(item->wFlag&nsListInited) && item->value && (((tmp=item->value->prev)->pFlag)&isVirtual)){
+        item->wFlag|=nsListInited;
         tmp->spec2=item->spec2;
-        if(tmp->spec2 && ((tmp->spec2->pFlag&mRepMode)==asFunc))
-                StartTerm(tmp->spec2->spec1, &tmp->spec1);
+    //    if(tmp->spec2 && ((tmp->spec2->pFlag&mRepMode)==asFunc)) // Remove this after testing an argument as a function
+    //            StartTerm(tmp->spec2->spec1, &tmp->spec1);
         processVirtual(tmp); item->pFlag|=tList;
     }
 }
@@ -385,7 +387,7 @@ void agent::addIDs(infon* Lvals, infon* Rvals, UInt flags, int asAlt){
     while(crntAlt){  // Lvals
         for(int i=0; i<altCnt; ++i){ // Rvals
             if (!asAlt && altCnt==1 && crntAlt==Lvals){
-                insertID(&Lvals->wrkList,Rvals,flags); recAlts(Lvals,Rvals);
+                insertID(&Lvals->wrkList,Rvals,flags); Lvals->wFlag&=~nsWorkListDone; recAlts(Lvals,Rvals);
             } else {
                 Rval=RvlLst[i];
                 AddSizeAlternate(crntAlt, Rval, pred, size, (prev)?prev->prev:0, flags);
@@ -478,7 +480,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             tmp=new infon();
             tmp->top2=ci; tmp->value=ci->value->spec1;
             {tmp->size=ci->size; cpFlags(ci,tmp,0xff0000);} tmp->pFlag|=(fLoop+fUnknown+tList);
-            insertID(&tmp->wrkList, item, MergeIdent);  // apending the {3 4 5 6}
+            insertID(&tmp->wrkList, item, MergeIdent);  // appending the {3 4 5 6}
             tmp->value->next = tmp->value->prev = tmp->value;
             tmp->value->pFlag|=(isTop+isBottom+isFirst+isVirtual);
             tmp->value->top=tmp;
@@ -721,12 +723,13 @@ void agent::preNormalize(infon* CI, Qitem *cn){
 
 #define pushCIsFollower {int lvl=cn.level-cn.nxtLvl; if(lvl>0) ItmQ.push(Qitem(cn.CIfol,0,0,lvl,cn.bufCnt));}
 
-infon* agent::normalize(infon* i, infon* firstID){
+infon* agent::Normalize(infon* i, infon* firstID){
     infon *CI;
     if (i==0) return 0;
     infQ ItmQ; ItmQ.push(Qitem(i,firstID,(firstID)?1:0,0));
     while (!ItmQ.empty()){
         Qitem cn=ItmQ.front(); ItmQ.pop(); CI=cn.item; cn.doShortNorm=0;
+        if(CI->wFlag&nsBottomNotLast) return 0;
         preNormalize(CI, &cn);
         if (cn.doShortNorm) return 0;
         if((CI->wFlag&mFindMode)==0 && cn.IDStatus==2)
@@ -751,100 +754,60 @@ infon* agent::normalize(infon* i, infon* firstID){
     return (i->pFlag&isNormed)?i:0;
 };
 
-fetchData* initFetch(fetchData *data){
-    fetchData* FVar=0;
-    if(!data){
-        FVar=new fetchData;
-        FVar->state1=FVar->state2=0;
-    }
-//HERE: add subscriber
-    FVar->refcount++;
-    return FVar;
-}
-
-void releaseFetch(fetchData *data){
- //   data->refcount--;
-  //  if(data->refcount==0) delete(data);
-}
-
-int agent::fetch_NodesNormalForm(int operation, Qitem &cn){
-    switch(operation){
-    case opRequest: cn.fetchVars=initFetch((fetchData*)&cn); break;
-    case opGiveHint:
- /*   case opTry:switch(((fetchData*)(&cn))->state1){
-        case 1: if (not ready to continue) {do exit correctly} else state=2;
-            cn.CI=cn.item; cn.doShortNorm=0;
-            preNormalize(cn.CI, &cn);
-        case 2: if (not ready to continue) {do exit correctly} else state=3;
-            if (cn.doShortNorm) return 0; // CURRENT-TASK: This should mark fetch as done, not merely return.
+int agent::fetch_NodesNormalForm(Qitem &cn){
+        int result=0; cn.CI=cn.item;
+        if(cn.item->wFlag&nsBottomNotLast) return 0;
+        if(!(cn.item->wFlag&nsNormBegan)){cn.CI=cn.item; cn.CIfol=0; cn.doShortNorm=0; cn.item->wFlag|=nsNormBegan;}
+        if(!(cn.CI->wFlag&nsPreNormed)){
+            result=0; preNormalize(cn.CI, &cn); // NOWDO: make preNorm return something
+            if(result>0) return result;
+            cn.CI->wFlag|=nsPreNormed;
+            if (cn.doShortNorm) cn.CI->wFlag|=nsWorkListDone;
             if((cn.CI->wFlag&mFindMode)==0 && cn.IDStatus==2)
                 {cn.IDStatus=0; insertID(&cn.CI->wrkList,cn.firstID,0);}
+        }
 
-        case 3:
-            if((cn.CI->pFlag&tType)==tList){InitList(cn.CI);}
-            cn.nxtLvl=getFollower(&cn.CIfol, cn.CI);
-        case 4:
+        if(!(cn.CI->wFlag&nsWorkListDone)){
+            if(!cn.CIfol) cn.nxtLvl=getFollower(&cn.CIfol, cn.CI);
             if((cn.CI->pFlag&asDesc) && !cn.override) {cn.whatNext=DoNext;}
-            else cn.whatNext=doWorkList(cn.CI, cn.CIfol);
-        } break;
-
-*/
-    case opPing:
-    case opRefcount:
-    case opHearError:
-    case opThanks: releaseFetch((fetchData*)&cn);
-    default:;
-    }
+            else {
+                if((cn.CI->pFlag&tType)==tList){InitList(cn.CI);}
+                cn.whatNext=doWorkList(cn.CI, cn.CIfol);
+            }
+           cn.CI->wFlag|=nsWorkListDone;
+        }
+        // NOWDO: Notify-and-remove subscribers
     return 0;
 }
 
-int agent::fetch_NormalForm(int operation, normData *data){
-    switch(operation){
-    case opRequest: {data->fetchVars=initFetch((fetchData*)data); data->level=0; /* check for item==0 */ break;}
-    case opGiveHint:
-        // a member was filled
-        // the next member was filled
-    case opTry:{
-        infon *CI;
+int agent::fetch_NormalForm(normData *data){
         if (data->item==0) return 0;
         infQ ItmQ; ItmQ.push(Qitem(data->item,data->firstID,(data->firstID)?1:0,0));
         while (!ItmQ.empty()){
-            Qitem cn=ItmQ.front(); ItmQ.pop(); CI=cn.item;
-            fetch_NodesNormalForm(opRequest, cn);
-            fetch_NodesNormalForm(opTry, cn);
+            Qitem cn=ItmQ.front(); ItmQ.pop(); infon* CI=cn.item;
+            fetch_NodesNormalForm(cn);
             //wait?
-            fetch_NodesNormalForm(opThanks, cn);
             switch (cn.whatNext) {
             case DoNextIf: if(++cn.bufCnt>=ListBuffCutoff){cn.nxtLvl=getFollower(&cn.CIfol,getTop(CI))+1; pushCIsFollower; break;}
             case DoNext:
                 if((CI->pFlag&(fConcat+tType))==(fConcat+tNum)){
                     compute(CI); if(cn.CIfol && !(CI->pFlag&isLast)){pushCIsFollower;}
                 }else if(!((CI->pFlag&asDesc)&&!cn.override)&&((CI->value&&((CI->pFlag&tType)==tList))||(CI->pFlag&fConcat)) && !(CI->value->pFlag&isNormed)){
-                    ItmQ.push(Qitem(CI->value,cn.firstID,((cn.IDStatus==1)&!(CI->pFlag&fConcat))?2:cn.IDStatus,cn.level+1)); // push CI->value
+                    ItmQ.push(Qitem(CI->value,cn.firstID,((cn.IDStatus==1)&!(CI->pFlag&fConcat))?2:cn.IDStatus,cn.level+1)); // Push CI->value
                 }else if (cn.CIfol){pushCIsFollower;}
                 break;
             case BypassDeadEnd: {cn.nxtLvl=getFollower(&cn.CIfol,getTop(CI))+1; pushCIsFollower;} break;
             case DoNothing: break;
             }
         }
-    } break;
-    case opPing:
-    case opRefcount:
-    case opHearError:
-    case opThanks: releaseFetch((fetchData*)data);
-    default:;
-    }
     return 0;
 }
 
-infon* agent::Normalize(infon* i, infon* firstID){
-    normData *data=new normData;
-    data->item=i; data->firstID=firstID;
-    fetch_NormalForm(opRequest, data);
-    fetch_NormalForm(opTry, data);
-    //wait?
-    fetch_NormalForm(opThanks, data);
-    delete(data);
+infon* agent::normalize(infon* i, infon* firstID){
+    normData data;
+    data.item=i; data.firstID=firstID;
+    fetch_NormalForm(&data);
+    if(i->wFlag&nsBottomNotLast) std::cout<<"BOTTOM-NOT-LAST\n";
     return (i->pFlag&isNormed)?i:0;
 }
 

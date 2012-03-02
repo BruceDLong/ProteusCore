@@ -478,8 +478,31 @@ static int SimThread(void *nothing){
   return 0;
 }
 
+////////////////////////////////
+int NormalizeAndPresent(normData *data){
+        if (data->item==0) return 0;
+        infQ ItmQ; ItmQ.push(Qitem(data->item,data->firstID,(data->firstID)?1:0,0));
+        while (!ItmQ.empty()){
+            Qitem cn=ItmQ.front(); ItmQ.pop(); infon* CI=cn.item;
+            fetch_NodesNormalForm(cn);
+            //wait?
+            switch (cn.whatNext) {
+            case DoNextIf: if(++cn.bufCnt>=ListBuffCutoff){cn.nxtLvl=getFollower(&cn.CIfol,getTop(CI))+1; pushCIsFollower; break;}
+            case DoNext:
+                if((CI->pFlag&(fConcat+tType))==(fConcat+tNum)){
+                    compute(CI); if(cn.CIfol && !(CI->pFlag&isLast)){pushCIsFollower;}
+                }else if(!((CI->pFlag&asDesc)&&!cn.override)&&((CI->value&&((CI->pFlag&tType)==tList))||(CI->pFlag&fConcat)) && !(CI->value->pFlag&isNormed)){
+                    ItmQ.push(Qitem(CI->value,cn.firstID,((cn.IDStatus==1)&!(CI->pFlag&fConcat))?2:cn.IDStatus,cn.level+1)); // Push CI->value
+                }else if (cn.CIfol){pushCIsFollower;}
+                break;
+            case BypassDeadEnd: {cn.nxtLvl=getFollower(&cn.CIfol,getTop(CI))+1; pushCIsFollower;} break;
+            case DoNothing: break;
+            }
+        }
+    return 0;
+}//////////////////////////////
+
 void InitializePortalSystem(int argc, char** argv){
-    srand(time(NULL));
     numPortals=0;
     char* worldFile="world.pr"; char* username="bruce"; char* password="erty"; string theme; char* portalContent="";
     for (int i=1; i<argc;) {

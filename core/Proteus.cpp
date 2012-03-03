@@ -465,7 +465,6 @@ void resolve(infon* i, infon* theOne){ std::cout<<"RESOLVING";
     std::cout<<"-OPENED:"<<printInfon (i)<<"\n";
 }
 
-enum WorkItemResults {DoNothing, BypassDeadEnd, DoNext, DoNextIf};
 #define SetBypassDeadEnd() {result=BypassDeadEnd; infon* CA=getTop(ci); if (CA) {std::cout<< printInfon(CA) <<'>'; AddSizeAlternate(CA, item, 0, ((UInt)ci->next->size)-1, ci, looseType); }}
 
 int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
@@ -780,34 +779,30 @@ int agent::fetch_NodesNormalForm(Qitem &cn){
     return 0;
 }
 
-int agent::fetch_NormalForm(normData *data){
-        if (data->item==0) return 0;
-        infQ ItmQ; ItmQ.push(Qitem(data->item,data->firstID,(data->firstID)?1:0,0));
+void agent::pushNextInfon(infon* CI, Qitem &cn, infQ &ItmQ){
+    switch (cn.whatNext) {
+    case DoNextIf: if(++cn.bufCnt>=ListBuffCutoff){cn.nxtLvl=getFollower(&cn.CIfol,getTop(CI))+1; pushCIsFollower; break;}
+    case DoNext:
+        if((CI->pFlag&(fConcat+tType))==(fConcat+tNum)){
+            compute(CI); if(cn.CIfol && !(CI->pFlag&isLast)){pushCIsFollower;}
+        }else if(!((CI->pFlag&asDesc)&&!cn.override)&&((CI->value&&((CI->pFlag&tType)==tList))||(CI->pFlag&fConcat)) && !(CI->value->pFlag&isNormed)){
+            ItmQ.push(Qitem(CI->value,cn.firstID,((cn.IDStatus==1)&!(CI->pFlag&fConcat))?2:cn.IDStatus,cn.level+1)); // Push CI->value
+        }else if (cn.CIfol){pushCIsFollower;}
+        break;
+    case BypassDeadEnd: {cn.nxtLvl=getFollower(&cn.CIfol,getTop(CI))+1; pushCIsFollower;} break;
+    case DoNothing: break;
+    }
+}
+
+infon* agent::normalize(infon* i, infon* firstID){
+        if (i==0) return 0;
+        infQ ItmQ; ItmQ.push(Qitem(i,firstID,(firstID)?1:0,0));
         while (!ItmQ.empty()){
             Qitem cn=ItmQ.front(); ItmQ.pop(); infon* CI=cn.item;
             fetch_NodesNormalForm(cn);
             //wait?
-            switch (cn.whatNext) {
-            case DoNextIf: if(++cn.bufCnt>=ListBuffCutoff){cn.nxtLvl=getFollower(&cn.CIfol,getTop(CI))+1; pushCIsFollower; break;}
-            case DoNext:
-                if((CI->pFlag&(fConcat+tType))==(fConcat+tNum)){
-                    compute(CI); if(cn.CIfol && !(CI->pFlag&isLast)){pushCIsFollower;}
-                }else if(!((CI->pFlag&asDesc)&&!cn.override)&&((CI->value&&((CI->pFlag&tType)==tList))||(CI->pFlag&fConcat)) && !(CI->value->pFlag&isNormed)){
-                    ItmQ.push(Qitem(CI->value,cn.firstID,((cn.IDStatus==1)&!(CI->pFlag&fConcat))?2:cn.IDStatus,cn.level+1)); // Push CI->value
-                }else if (cn.CIfol){pushCIsFollower;}
-                break;
-            case BypassDeadEnd: {cn.nxtLvl=getFollower(&cn.CIfol,getTop(CI))+1; pushCIsFollower;} break;
-            case DoNothing: break;
-            }
+            pushNextInfon(CI, cn, ItmQ);
         }
     return 0;
-}
-
-infon* agent::normalize(infon* i, infon* firstID){
-    normData data;
-    data.item=i; data.firstID=firstID;
-    fetch_NormalForm(&data);
-    if(i->wFlag&nsBottomNotLast) std::cout<<"BOTTOM-NOT-LAST\n";
-    return (i->pFlag&isNormed)?i:0;
 }
 

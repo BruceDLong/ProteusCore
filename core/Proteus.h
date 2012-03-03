@@ -101,7 +101,7 @@ struct agent {
     int loadInfon(const char* filename, infon** inf, bool normIt=true);
 
     int fetch_NodesNormalForm(Qitem &cn);
-    int fetch_NormalForm(normData *data);
+    void pushNextInfon(infon* CI, Qitem &cn, infQ &ItmQ);
     private:
         bool (*isHardFunc)(char*);
         int (*autoEval)(infon*, agent*);
@@ -139,6 +139,9 @@ struct QParser{
     std::string textParsed;
     infon* ti; // top infon
 };
+
+enum WorkItemResults {DoNothing, BypassDeadEnd, DoNext, DoNextIf};
+
 //extern std::fstream log;
 #define OUT(msg) {std::cout<< msg;}
 #define Debug(msg) /*{std::cout<< msg << "\n";}*/

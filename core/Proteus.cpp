@@ -9,7 +9,7 @@
 #include "Proteus.h"
 #include "remiss.h"
 
-const int ListBuffCutoff=2;
+const int ListBuffCutoff=4;
 
 typedef std::map<dblPtr,UInt>::iterator altIter;
 
@@ -389,7 +389,6 @@ void agent::AddSizeAlternate(infon* Lval, infon* Rval, infon* Pred, UInt Size, i
 void agent::addIDs(infon* Lvals, infon* Rvals, UInt flags, int asAlt){
     const int maxAlternates=100;
     if(Lvals==Rvals) return;
- std::cout<<"FLAGS"<<flags<<"\n"; flags=(flags&mLooseType);
     if(!(flags&mLooseType)) {insertID(&Lvals->wrkList,Rvals,flags); Lvals->wFlag&=~nsWorkListDone; return;}
     infon* RvlLst[maxAlternates]; infon* crntAlt=Rvals; infon *pred, *Rval, *prev=0; UInt size;
     int altCnt=1; RvlLst[0]=crntAlt;
@@ -478,177 +477,6 @@ void resolve(infon* i, infon* theOne){ //std::cout<<"RESOLVING";
         }
     } if (theOne){theOne->next=prev->value; theOne->pFlag|=isLast+isBottom;}
  //   std::cout<<"-OPENED:"<<printInfon (i)<<"\n";
-}
-
-#define SetBypassDeadEnd() {result=BypassDeadEnd; infon* CA=getTop(ci); if (CA) {AddSizeAlternate(CA, item, 0, ((UInt)ci->next->size)-1, ci, looseType); }}
-
-int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
-    infNode *wrkNode=ci->wrkList; infon *item, *IDfol, *tmp, *theOne=0; Qitem cn;
-    UInt altCount=0, level, cSize, tempRes, isIndef=0, result=DoNothing, f, looseType;
-    if(CIfol && !CIfol->pred) CIfol->pred=ci;
-    if(wrkNode)do{
-        wrkNode=wrkNode->next; item=wrkNode->item;
-        if (wrkNode->idFlags&skipFollower) CIfol=0;
-        switch (wrkNode->idFlags&WorkType){
-        case InitSearchList: // e.g., {[....]|...}::={3 4 5 6}
-            tmp=new infon();
-            tmp->top2=ci; tmp->value=ci->value->spec1;
-            {tmp->size=ci->size; cpFlags(ci,tmp,0xff0000);} tmp->pFlag|=(fLoop+fUnknown+tList);
-            insertID(&tmp->wrkList, item, MergeIdent);  // appending the {3 4 5 6}
-            tmp->value->next = tmp->value->prev = tmp->value;
-            tmp->value->pFlag|=(isTop+isBottom+isFirst+isVirtual);
-            tmp->value->top=tmp;
-            insertID(&tmp->value->wrkList, item->value, MergeIdent);
-            processVirtual (tmp->value); tmp->value->next->size=(infon*)2;
-            result=DoNext;
-            break;
-        case ProcessAlternatives:
-            if (altCount>=1) break; // don't keep looking after found
-            if(wrkNode->idFlags&isRawFlag){
-              tmp=new infon(ci->pFlag,ci->wFlag,ci->size,ci->value,0,ci->spec1,ci->spec2,ci->next);
-              tmp->prev=ci->prev; tmp->top=ci->top; tmp->type=ci->type; tmp->pos=ci->pos;
-              insertID(&tmp->wrkList, item,0);
-              wrkNode->item=item=tmp;
-              wrkNode->idFlags^=isRawFlag;
-            }
-            wrkNode->idFlags|=NodeDoneFlag;
-            cn.doShortNorm=0; cn.override=0;
-            preNormalize(item, &cn);
-            tempRes=doWorkList(item, CIfol,1); if(result<tempRes) result=tempRes;
-            if (tempRes==BypassDeadEnd) {wrkNode->idFlags|=NoMatch; break;}
-            altCount++;  theOne=item;
-            break;
-        case (ProcessAlternatives+NodeDoneFlag):
-            altCount++;  theOne=item; result=DoNext;
-            break;
-        case MergeIdent:
-            wrkNode->idFlags|=SetComplete; IDfol=0;
-            UInt fm=item->wFlag&mFindMode; UInt CIsType=ci->pFlag&tType, ItemsType=item->pFlag&tType;
-            if(!(item->pFlag&isNormed) && (fm!=iNone || (item->wrkList && !(item->pFlag&isNormed)))) {
-                if(item->top==0) {item->top=ci->top;}
-                QitemPtr Qi(new Qitem(item));
-                fetch_NodesNormalForm(Qi);
-      // normalize(item);
-                if (item->wFlag&mAsProxie) {item=item->value;fm=item->wFlag&mFindMode;}
-                ItemsType=item->pFlag&tType;
-            }
-            if(CIsType==tUnknown) {
-                ci->pFlag|=((item->pFlag&tType)+(tNum<<goSize)+sizeIndef); isIndef=1;
-                ci->size=item->size;if (!(item->pFlag&(fUnknown<<goSize))) ci->pFlag&=~(fUnknown<<goSize);
-                CIsType=ci->pFlag&tType;
-            } else isIndef=0;
-            if (item->pFlag&fConcat) std::cout << "WARNING: Trying to merge a concatenation.\n";
-            if (!(looseType=(wrkNode->idFlags&mLooseType))) { // TODO: More rigorously verify and test strict/loose typing system.
-                if (ItemsType && CIsType!=tList && CIsType!=ItemsType){
-                    std::cout << "Non-matching base types for "<<printInfon(ci)<<"("<<ci->type->S<<") and "<<printInfon(item)<<" ("<<item->type->S<<").\n";
-                    SetBypassDeadEnd(); continue;
-                } else if((ci->type && !(ci->wFlag&iHardFunc)) && (item->type && !checkTypeMatch(ci->type,item->type))){
-                    std::cout << "Non-matching model types for "<<printInfon(ci)<<"("<<ci->type->S<<") and "<<printInfon(item)<<" ("<<item->type->S<<").\n";
-                    SetBypassDeadEnd(); continue;
-                }
-            }
-            int infTypes=CIsType+4*ItemsType;
-            switch(infTypes){ // TODO: Make size and value changes atomic. Currently, size may be set then value fails.
-                case tUnknown+4*tUnknown: case tNum+4*tUnknown: case tString+4*tUnknown:
-                case tList+4*tList:
-                case tString+4*tString:
-                case tNum+4*tNum:
-                    result=DoNext;
-                    // TODO: Verify and comment the following 'if' section.
-                    if (!isIndef && ci->pFlag&sizeIndef && (infTypes==tString+4*tString)){ // When alts are evaluated (e.g., aaron, aron) use this secton.
-                        if(infonSizeCmp(ci,item)<0) {SetBypassDeadEnd(); break;}
-                        if (memcmp(ci->value, item->value, (UInt)item->size)!=0)  {SetBypassDeadEnd(); break;}
-                        ci->size=item->size;
-                        if(CIfol){
-                            getFollower(&IDfol, item);
-                            if(IDfol) addIDs(CIfol, IDfol, looseType, asAlt); else {SetBypassDeadEnd(); break;}
-                        }
-                        break;
-                    }
-                    if(ItemsType!=tUnknown){
-                        if (ItemsType==tList) InitList(item);
-                        UInt flagMask=0; infon* oldCiSize=ci->size;
-                        // MERGE SIZES
-                        if(!looseType && !(item->pFlag&(fUnknown<<goSize))){ // If item's size is known, we copy size
-                            if(ci->pFlag&(fUnknown<<goSize)) {ci->size=item->size;  flagMask|=(0xff<<goSize); }
-                            else if (infonSizeCmp(ci,item)!=0 &&  (infTypes!= tList+4*tList) && (infTypes!= tString+4*tString)){
-                                SetBypassDeadEnd(); std::cout<<"Sizes contradict\n"; break;
-                            }
-                        }
-                        // MERGE VALUES
-                        if(!(item->pFlag&fUnknown)){
-
-                            if (infTypes== tNum+4*tNum){
-                                if(ci->pFlag&fUnknown) {ci->value=item->value; flagMask|=0xff;}
-                                else if (ci->value!=item->value){ci->size=oldCiSize; SetBypassDeadEnd(); std::cout<<"Values contradict\n"; break;}
-                                // TODO: Allow for nums with non-matching sizes, as with strings. Clump with: concat, long nums/strings, arithmetic, etc.
-                            }
-
-                            else if (infTypes== tString+4*tString){
-                                if(infonSizeCmp(ci,item)>0) {ci->size=oldCiSize; SetBypassDeadEnd(); break;} // TODO: Someday, allow this.
-                                if(ci->pFlag&fUnknown){ci->value=item->value; ci->pFlag&=~fUnknown;}
-                                else if (memcmp(ci->value, item->value,  (UInt)ci->size)!=0) {ci->size=oldCiSize; SetBypassDeadEnd(); break;}
-                            }
-
-                            else if (infTypes== tList+4*tList){
-                                if(ci->value) {
-                                    if(!(item->value->pFlag&isTentative)) ci->value->pFlag&= ~isTentative; // See note below ("This is used...")
-                                    if(looseType) addIDs(ci->value, item->value, looseType+1, asAlt);
-                                    else{
-                                        insertID(&ci->value->wrkList,item->value,0);
-                                        ci->value->wFlag&=~nsWorkListDone;
-                                    }
-                                } else {ci->value=item->value; cpFlags(item,ci,0xff);if(!(ci->pFlag&(fUnknown<<goSize)) && ci->size==0){IDfol=item;} else item->value->top=ci;}
-                            }
-                        }
-                        if(flagMask) {cpFlags(item,ci,(flagMask+0xff00));}
-                        if(true){
-                            // This is used when we are merging two lists and the 'item' is not tentative but ci is.
-                            // There are likely cases where we want to put something other than 'true' in the condition above.
-                            // We could also make all these changes when the list-heads are merged but what about alternatives?
-                            // Until there is a problem we do it this way:
-                            if(!(item->pFlag&isTentative)) ci->pFlag&= ~isTentative;
-                        }
-                    }
-                    isIndef=0;
-                    if(CIfol){
-                        if(infonSizeCmp(ci,item)==0 || (infTypes!= tString+4*tString)){
-                            level=((IDfol)?0:getFollower(&IDfol, item));
-                            if(IDfol){if(level==0) addIDs(CIfol, IDfol, looseType+2, asAlt); else result=BypassDeadEnd;}
-                            else  if( (infTypes!= tList+4*tList)) {// temporaty hack
-                                if ((tmp=ci->isntLast()) && (tmp->next->pFlag&isTentative)) {
-                                    SetBypassDeadEnd();
-                                }
-                                if((tmp=getMasterList(ci) )){closeListAtItem(tmp); result=BypassDeadEnd; }
-                            }
-                        } else if((infTypes== tString+4*tString) && infonSizeCmp(ci,item)<0){
-                            cSize=(UInt)ci->size;
-                            tmp=new infon(item->pFlag,item->wFlag,(infon*)((UInt)item->size-cSize),(infon*)((UInt)item->value+cSize),0,0,item->next);
-                            addIDs(CIfol, tmp, looseType+3, asAlt);
-                        }
-                    }
-                break;
-                case tNum+4*tString: result=DoNext; break;
-                case tString+4*tNum: result=DoNext;break;
-                case tString+4*tList: InitList(item);  result=DoNext; break;
-                case tNum+4*tList:   InitList(item); addIDs(ci,item->value,looseType+4, asAlt); result=DoNext;break; // This should probably be insertID not addIDs. Check it out.
-                case tList+4*tUnknown:
-                case tList+4*tString:
-                case tList+4*tNum:
-                    if(ci->value){addIDs(ci->value, item, looseType+5, asAlt);}
-                    else{copyTo(item, ci);}
-                    result=DoNext;
-            }
-            break;
-        }
-    }while (wrkNode!=ci->wrkList); else result=(ci->next && (ci->pFlag&isTentative))?DoNextIf:DoNext;
-    if(altCount==1){
-            for (f=1, tmp=getTop(ci); tmp!=0; tmp=getTop(tmp)) // check ancestors for alts
-               if (tmp->pFlag&hasAlts) {f=0; break;}
-            if(f) resolve(ci, theOne);
-    }
-    ci->pFlag|=isNormed; ci->pFlag&=~(sizeIndef);//+isTentative);
-    return result;
 }
 
 void agent::preNormalize(infon* CI, Qitem *cn){
@@ -752,7 +580,200 @@ void agent::preNormalize(infon* CI, Qitem *cn){
     }
 }
 
+#define SetBypassDeadEnd() {result=BypassDeadEnd; infon* CA=getTop(ci); if (CA) {AddSizeAlternate(CA, item, 0, ((UInt)ci->next->size)-1, ci, looseType); }}
+
+int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
+    infNode *wrkNode=ci->wrkList; infon *item, *IDfol, *tmp, *theOne=0; Qitem cn;
+    UInt altCount=0, level, cSize, tempRes, isIndef=0, result=DoNothing, f, looseType, noNewContent=true;
+    if(CIfol && !CIfol->pred) CIfol->pred=ci;
+    if(wrkNode)do{
+        wrkNode=wrkNode->next; item=wrkNode->item;
+        if (wrkNode->idFlags&skipFollower) CIfol=0;
+        switch (wrkNode->idFlags&WorkType){
+        case InitSearchList: // e.g., {[....]|...}::={3 4 5 6}
+            tmp=new infon();
+            tmp->top2=ci; tmp->value=ci->value->spec1;
+            {tmp->size=ci->size; cpFlags(ci,tmp,0xff0000);} tmp->pFlag|=(fLoop+fUnknown+tList);
+            insertID(&tmp->wrkList, item, MergeIdent);  // appending the {3 4 5 6}
+            tmp->value->next = tmp->value->prev = tmp->value;
+            tmp->value->pFlag|=(isTop+isBottom+isFirst+isVirtual);
+            tmp->value->top=tmp;
+            insertID(&tmp->value->wrkList, item->value, MergeIdent);
+            processVirtual (tmp->value); tmp->value->next->size=(infon*)2;
+            result=DoNext; noNewContent=false;
+            break;
+        case ProcessAlternatives:
+            if (altCount>=1) break; // don't keep looking after found
+            if(wrkNode->idFlags&isRawFlag){
+              tmp=new infon(ci->pFlag,ci->wFlag,ci->size,ci->value,0,ci->spec1,ci->spec2,ci->next);
+              tmp->prev=ci->prev; tmp->top=ci->top; tmp->type=ci->type; tmp->pos=ci->pos;
+              insertID(&tmp->wrkList, item,0);
+              wrkNode->item=item=tmp;
+              wrkNode->idFlags^=isRawFlag;
+            }
+            wrkNode->idFlags|=NodeDoneFlag;
+            cn.doShortNorm=0; cn.override=0;
+            preNormalize(item, &cn);
+            tempRes=doWorkList(item, CIfol,1); if(result<tempRes) result=tempRes;
+            if (tempRes==BypassDeadEnd) {wrkNode->idFlags|=NoMatch; break;}
+            altCount++;  theOne=item;  noNewContent=false;
+            break;
+        case (ProcessAlternatives+NodeDoneFlag):
+            altCount++;  theOne=item; result=DoNext; noNewContent=false;
+            break;
+        case MergeIdent:
+            wrkNode->idFlags|=SetComplete; IDfol=0;
+            if(!(item->pFlag&isNormed) && ((item->wFlag&mFindMode)!=iNone || (item->wrkList && !(item->pFlag&isNormed)))) {
+                if(item->top==0) {item->top=ci->top;}
+                QitemPtr Qi(new Qitem(item));
+                fetch_NodesNormalForm(Qi);
+                if(Qi->whatNext!=DoNextBounded) noNewContent=false;
+                if (item->wFlag&mAsProxie) item=item->value;
+            }
+            UInt CIsType=ci->pFlag&tType, ItemsType=item->pFlag&tType;
+            if(CIsType==tUnknown) {
+                ci->pFlag|=((item->pFlag&tType)+(tNum<<goSize)+sizeIndef); isIndef=1;
+                ci->size=item->size;if (!(item->pFlag&(fUnknown<<goSize))) ci->pFlag&=~(fUnknown<<goSize);
+                CIsType=ci->pFlag&tType;
+            } else isIndef=0;
+            if (item->pFlag&fConcat) std::cout << "WARNING: Trying to merge a concatenation.\n";
+            if (!(looseType=(wrkNode->idFlags&mLooseType))) { // TODO: More rigorously verify and test strict/loose typing system.
+                if (ItemsType && CIsType!=tList && CIsType!=ItemsType){
+                    std::cout << "Non-matching base types for "<<printInfon(ci)<<"("<<ci->type->S<<") and "<<printInfon(item)<<" ("<<item->type->S<<").\n";
+                    SetBypassDeadEnd(); continue;
+                } else if((ci->type && !(ci->wFlag&iHardFunc)) && (item->type && !checkTypeMatch(ci->type,item->type))){
+                    std::cout << "Non-matching model types for "<<printInfon(ci)<<"("<<ci->type->S<<") and "<<printInfon(item)<<" ("<<item->type->S<<").\n";
+                    SetBypassDeadEnd(); continue;
+                }
+            }
+            int infTypes=CIsType+4*ItemsType;
+            switch(infTypes){ // TODO: Make size and value changes atomic. Currently, size may be set then value fails.
+                case tUnknown+4*tUnknown: case tNum+4*tUnknown: case tString+4*tUnknown:
+                case tList+4*tList:
+                case tString+4*tString:
+                case tNum+4*tNum:
+                    result=DoNext;
+                    // TODO: Verify and comment the following 'if' section.
+                    if (!isIndef && ci->pFlag&sizeIndef && (infTypes==tString+4*tString)){ // When alts are evaluated (e.g., aaron, aron) use this secton.
+                        if(infonSizeCmp(ci,item)<0) {SetBypassDeadEnd(); break;}
+                        if (memcmp(ci->value, item->value, (UInt)item->size)!=0)  {SetBypassDeadEnd(); break;}
+                        ci->size=item->size;
+                        if(CIfol){
+                            getFollower(&IDfol, item);
+                            if(IDfol) addIDs(CIfol, IDfol, looseType, asAlt); else {SetBypassDeadEnd(); break;}
+                        }
+                        break;
+                    }
+                    if(ItemsType!=tUnknown){
+                        if (ItemsType==tList) InitList(item);
+                        UInt flagMask=0; infon* oldCiSize=ci->size;
+                        // MERGE SIZES
+                        if(!looseType && !(item->pFlag&(fUnknown<<goSize))){ // If item's size is known, we copy size
+                            if(ci->pFlag&(fUnknown<<goSize)) {ci->size=item->size;  flagMask|=(0xff<<goSize); }
+                            else if (infonSizeCmp(ci,item)!=0 &&  (infTypes!= tList+4*tList) && (infTypes!= tString+4*tString)){
+                                SetBypassDeadEnd(); std::cout<<"Sizes contradict\n"; break;
+                            }
+                        }
+                        // MERGE VALUES
+                        if(!(item->pFlag&fUnknown)){
+
+                            if (infTypes== tNum+4*tNum){
+                                if(ci->pFlag&fUnknown) {ci->value=item->value; flagMask|=0xff;}
+                                else if (ci->value!=item->value){ci->size=oldCiSize; SetBypassDeadEnd(); std::cout<<"Values contradict\n"; break;}
+                                // TODO: Allow for nums with non-matching sizes, as with strings. Clump with: concat, long nums/strings, arithmetic, etc.
+                            }
+
+                            else if (infTypes== tString+4*tString){
+                                if(infonSizeCmp(ci,item)>0) {ci->size=oldCiSize; SetBypassDeadEnd(); break;} // TODO: Someday, allow this.
+                                if(ci->pFlag&fUnknown){ci->value=item->value; ci->pFlag&=~fUnknown;}
+                                else if (memcmp(ci->value, item->value,  (UInt)ci->size)!=0) {ci->size=oldCiSize; SetBypassDeadEnd(); break;}
+                            }
+
+                            else if (infTypes== tList+4*tList){
+                                if(ci->value) {
+                                    if(!(item->value->pFlag&isTentative)) ci->value->pFlag&= ~isTentative; // See note below ("This is used...")
+                                    if(looseType) addIDs(ci->value, item->value, looseType, asAlt);
+                                    else{
+                                        insertID(&ci->value->wrkList,item->value,0);
+                                        ci->value->wFlag&=~nsWorkListDone;
+                                    }
+                                } else {ci->value=item->value; cpFlags(item,ci,0xff);if(!(ci->pFlag&(fUnknown<<goSize)) && ci->size==0){IDfol=item;} else item->value->top=ci;}
+                            }
+                        }
+                        if(flagMask) {cpFlags(item,ci,(flagMask+0xff00));}
+                        if(true){
+                            // This is used when we are merging two lists and the 'item' is not tentative but ci is.
+                            // There are likely cases where we want to put something other than 'true' in the condition above.
+                            // We could also make all these changes when the list-heads are merged but what about alternatives?
+                            // Until there is a problem we do it this way:
+                            if(!(item->pFlag&isTentative)) ci->pFlag&= ~isTentative;
+                        }
+                    }
+                    isIndef=0;
+                    if(CIfol){
+                        if(infonSizeCmp(ci,item)==0 || (infTypes!= tString+4*tString)){
+                            level=((IDfol)?0:getFollower(&IDfol, item));
+                            if(IDfol){if(level==0) addIDs(CIfol, IDfol, looseType, asAlt); else result=BypassDeadEnd;}
+                            else  if( (infTypes!= tList+4*tList)) {// temporaty hack
+                                if ((tmp=ci->isntLast()) && (tmp->next->pFlag&isTentative)) {
+                                    SetBypassDeadEnd();
+                                }
+                                if((tmp=getMasterList(ci) )){closeListAtItem(tmp); result=BypassDeadEnd; }
+                            }
+                        } else if((infTypes== tString+4*tString) && infonSizeCmp(ci,item)<0){
+                            cSize=(UInt)ci->size;
+                            tmp=new infon(item->pFlag,item->wFlag,(infon*)((UInt)item->size-cSize),(infon*)((UInt)item->value+cSize),0,0,item->next);
+                            addIDs(CIfol, tmp, looseType, asAlt);
+                        }
+                    }
+                break;
+                case tNum+4*tString: result=DoNext; break;
+                case tString+4*tNum: result=DoNext;break;
+                case tString+4*tList: InitList(item);  result=DoNext; break;
+                case tNum+4*tList:   InitList(item); addIDs(ci,item->value,looseType, asAlt); result=DoNext;break; // This should probably be insertID not addIDs. Check it out.
+                case tList+4*tUnknown:
+                case tList+4*tString:
+                case tList+4*tNum:
+                    if(ci->value){addIDs(ci->value, item, looseType, asAlt);}
+                    else{copyTo(item, ci);}
+                    result=DoNext;
+            }
+            break;
+        }
+    }while (wrkNode!=ci->wrkList); else {result=DoNext;} //result=(ci->next && (ci->pFlag&isTentative))?DoNextBounded:DoNext;
+    if(altCount==1){
+            for (f=1, tmp=getTop(ci); tmp!=0; tmp=getTop(tmp)) // check ancestors for alts
+               if (tmp->pFlag&hasAlts) {f=0; break;}
+            if(f) resolve(ci, theOne);
+    }
+    if(result==DoNext && noNewContent && (ci->pFlag&isTentative)) result=DoNextBounded;
+    ci->pFlag|=isNormed; ci->pFlag&=~(sizeIndef);//+isTentative);
+    return result;
+}
+
 #define pushCIsFollower {int lvl=cn->level-cn->nxtLvl; if(lvl>0) ItmQ.push(QitemPtr(new Qitem(cn->CIfol,0,0,lvl,cn->bufCnt,cn->parent)));}
+
+void agent::pushNextInfon(infon* CI, QitemPtr cn, infQ &ItmQ){
+    switch (cn->whatNext) {
+    case DoNextBounded:
+        if(++cn->bufCnt>=ListBuffCutoff){
+            cn->nxtLvl=getFollower(&cn->CIfol,getTop(CI))+1;
+            for(int c=0;c<cn->nxtLvl; c++) {cn->bufCnt=cn->parent->bufCnt; cn->parent=cn->parent->parent;}
+            pushCIsFollower;
+            break;
+        }
+    case DoNext:
+        if(cn->whatNext==DoNext) cn->bufCnt=0;
+        if((CI->pFlag&(fConcat+tType))==(fConcat+tNum)){
+            compute(CI); if(cn->CIfol && !(CI->pFlag&isLast)){pushCIsFollower;}
+        }else if(!((CI->pFlag&asDesc)&&!cn->override)&&((CI->value&&((CI->pFlag&tType)==tList))||(CI->pFlag&fConcat)) && !(CI->value->pFlag&isNormed)){
+            ItmQ.push(QitemPtr(new Qitem(CI->value,cn->firstID,((cn->IDStatus==1)&!(CI->pFlag&fConcat))?2:cn->IDStatus,cn->level+1,0,cn))); // Push CI->value
+        }else if (cn->CIfol){pushCIsFollower;}
+        break;
+    case BypassDeadEnd: {cn->nxtLvl=getFollower(&cn->CIfol,getTop(CI))+1; pushCIsFollower;} break;
+    case DoNothing: break;
+    }
+}
 
 infon* agent::Normalize(infon* i, infon* firstID){
     infon *CI;
@@ -798,21 +819,6 @@ int agent::fetch_NodesNormalForm(QitemPtr cn){
         }
         // NOWDO: Notify-and-remove subscribers
     return 0;
-}
-
-void agent::pushNextInfon(infon* CI, QitemPtr cn, infQ &ItmQ){
-    switch (cn->whatNext) {
-    case DoNextIf: if(++cn->bufCnt>=ListBuffCutoff){cn->nxtLvl=getFollower(&cn->CIfol,getTop(CI))+1; if(cn->parent) {cn->bufCnt=cn->parent->bufCnt; cn->parent=cn->parent->parent;} pushCIsFollower; break;}
-    case DoNext:
-        if((CI->pFlag&(fConcat+tType))==(fConcat+tNum)){
-            compute(CI); if(cn->CIfol && !(CI->pFlag&isLast)){pushCIsFollower;}
-        }else if(!((CI->pFlag&asDesc)&&!cn->override)&&((CI->value&&((CI->pFlag&tType)==tList))||(CI->pFlag&fConcat)) && !(CI->value->pFlag&isNormed)){
-            ItmQ.push(QitemPtr(new Qitem(CI->value,cn->firstID,((cn->IDStatus==1)&!(CI->pFlag&fConcat))?2:cn->IDStatus,cn->level+1,0,cn))); // Push CI->value
-        }else if (cn->CIfol){pushCIsFollower;}
-        break;
-    case BypassDeadEnd: {cn->nxtLvl=getFollower(&cn->CIfol,getTop(CI))+1; pushCIsFollower;} break;
-    case DoNothing: break;
-    }
 }
 
 infon* agent::normalize(infon* i, infon* firstID){

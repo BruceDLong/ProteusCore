@@ -143,7 +143,7 @@ struct QParser{
     infon* ti; // top infon
 };
 
-enum WorkItemResults {DoNothing, BypassDeadEnd, DoNext, DoNextIf};
+enum WorkItemResults {DoNothing, BypassDeadEnd, DoNext, DoNextBounded};
 
 //extern std::fstream log;
 #define OUT(msg) {std::cout<< msg;}

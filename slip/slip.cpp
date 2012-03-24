@@ -31,8 +31,8 @@ using namespace std;
 
 #define DEB(msg)  //{std::cout<< msg;}
 #define DEBl(msg) //{std::cout<< msg << "\n";}
-#define MSG(msg)  {cout<< msg;}
-#define MSGl(msg) {cout<< msg << "\n";}
+#define MSG(msg)  {cout<< msg << flush;}
+#define MSGl(msg) {cout<< msg << "\n" << flush;}
 #define ERR(msg)  {cout<< msg;}
 #define ERRl(msg) {cout<< msg << "\n";}
 
@@ -459,10 +459,18 @@ enum userActions {TURB_UPDATE_SURFACE=1, TURB_ADD_SCREEN, TURB_DEL_SCREEN, TURB_
 
 infon* NormalizeAndPresent(infon* i, infon* firstID=0){
         if (i==0) return 0;
-        infQ ItmQ; ItmQ.push(Qitem(i,firstID,(firstID)?1:0,0));
+        QitemPtr qp(new Qitem(i,firstID,(firstID)?1:0,0));
+        infQ ItmQ; ItmQ.push(qp);
         while (!ItmQ.empty()){
-            Qitem cn=ItmQ.front(); ItmQ.pop(); infon* CI=cn.item;
+            QitemPtr cn=ItmQ.front(); ItmQ.pop(); infon* CI=cn->item;
             theAgent.fetch_NodesNormalForm(cn);
+
+            if(CI->type){
+                if(strcmp(CI->type->S, "portal")==0){MSGl("PORTAL");}
+                else if(strcmp(CI->type->S, "frame")==0){MSGl("FRAME");}
+                else {MSGl(CI->type->S<<" ["<<CI<<"]"); }
+
+            }else {MSG("*");}
             //wait?
             theAgent.pushNextInfon(CI, cn, ItmQ);
         }
@@ -473,7 +481,6 @@ static int SimThread(void *nothing){
     SDL_Event ev; InfonPortal* portal; infon* nextFrame;
     ev.type = SDL_USEREVENT;  ev.user.code = TURB_UPDATE_SURFACE;  ev.user.data1 = 0;  ev.user.data2 = 0;
     while (!doneYet) {
-    //==> LOCK PORTAL ARRAY FOR THE FOLLOWING BLOCK; no new or deleting of portals allowed.
         for (int i = 0; i < numPortals; ++i) {  // Collect and dispatch frames for portals.
             portal=portals[i];
             nextFrame=new infon;
@@ -521,6 +528,14 @@ void InitializePortalSystem(int argc, char** argv){
     infon *themeInfon, *stuffInfon;
     if(theAgent.loadInfon(theme.c_str(), &themeInfon, 0)) exit(1);
     theAgent.utilField=themeInfon;
+
+infon* PORTAL;
+if(theAgent.loadInfon("portals.pr", &PORTAL, 0)) exit(1);
+debugInfon=PORTAL;
+NormalizeAndPresent(PORTAL);
+MSGl("\nOK\n"<<printInfon(PORTAL));
+exit(2);
+
     if(theAgent.loadInfon(portalUser->myStuff.c_str(), &stuffInfon, 0)) exit(1);
     CreateTurbulancePortal(windowTitle, 100,1300,1024,768, portalUser, themeInfon, stuffInfon);
 

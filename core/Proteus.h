@@ -13,6 +13,7 @@
 #include <iostream>
 #include <string.h>
 #include <stddef.h>
+#include <boost/intrusive_ptr.hpp>
 
 #include "../libfixmath/libfixmath/fixmath.h"
 
@@ -57,9 +58,9 @@ enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, InitSearchList=2, SetCo
 
 struct infon {
     infon(UInt pf=0, UInt wf=0, infon* s=0, infon*v=0,infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0):
-        pFlag(pf), wFlag(wf), size(s), value(v), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {prev=0; top=0; top2=0; type=0;};
+        pFlag(pf), wFlag(wf), size(s), value(v), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {prev=0; top=0; top2=0; type=0; pos=0;};
     infon* isntLast(); // 0=this is the last one. >0 = pointer to predecessor of the next one.
-    UInt pFlag, wFlag;
+    UInt pFlag, wFlag, pos;
     UInt wSize; // get rid if this. disallow strings and lists in "size"
     infon *size;        // The *-term; number of states, chars or items
     infon *value;       // Summand List
@@ -69,12 +70,13 @@ struct infon {
     stng* type;
 };
 
-struct fetchData_NodesNormalForm{infon *i, *CIfol, *firstID; int IDStatus; int level, bufCnt, override, whatNext;};
-struct normData{infon* item; infon* firstID;};
-
-struct Qitem{infon *item, *CI, *CIfol; infon* firstID; UInt IDStatus; UInt level; int bufCnt; int override, doShortNorm, nxtLvl, whatNext;
-     Qitem(infon* i=0,infon* f=0,UInt s=0,UInt l=0, int BufCnt=0):item(i),firstID(f),IDStatus(s),level(l),bufCnt(BufCnt){CI=CIfol=0;};};
-typedef std::queue<Qitem> infQ;
+struct Qitem;
+typedef boost::intrusive_ptr<Qitem> QitemPtr;
+struct Qitem{infon *item, *CI, *CIfol; infon* firstID; UInt IDStatus; UInt level; int refCnt, bufCnt; QitemPtr parent; int override, doShortNorm, nxtLvl, whatNext;
+     Qitem(infon* i=0,infon* f=0,UInt s=0,UInt l=0, int BufCnt=0, QitemPtr Prnt=0):item(i),firstID(f),IDStatus(s),level(l),bufCnt(BufCnt),parent(Prnt){CI=CIfol=0;refCnt=0;};};
+inline void intrusive_ptr_add_ref(Qitem* qp){++qp->refCnt;}
+inline void intrusive_ptr_release(Qitem* qp){if(--qp->refCnt == 0) delete qp;}
+typedef std::queue<QitemPtr> infQ;
 typedef std::map<infon*, infon*> PtrMap;
 
 struct agent {
@@ -100,8 +102,8 @@ struct agent {
     void deepCopy(infon* from, infon* to, infon* args=0, PtrMap* ptrs=0, int flags=0);
     int loadInfon(const char* filename, infon** inf, bool normIt=true);
 
-    int fetch_NodesNormalForm(Qitem &cn);
-    void pushNextInfon(infon* CI, Qitem &cn, infQ &ItmQ);
+    int fetch_NodesNormalForm(QitemPtr cn);
+    void pushNextInfon(infon* CI, QitemPtr cn, infQ &ItmQ);
     private:
         bool (*isHardFunc)(char*);
         int (*autoEval)(infon*, agent*);
@@ -112,6 +114,7 @@ struct agent {
         infon* copyList(infon* from, int flags);
         void processVirtual(infon* v);
         int getFollower(infon** lval, infon* i);
+        void AddSizeAlternate(infon* Lval, infon* Rval, infon* Pred, UInt Size, infon* Last, UInt Flags);
         void addIDs(infon* Lvals, infon* Rvals, UInt flags, int asAlt);
 };
 

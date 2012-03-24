@@ -127,6 +127,9 @@
     // model-and-wrap a super-cluster database listing known super clusters
 //}
 
+%frame = {?|...}
+
+%portal = {frame|...}
 
 
 //earth = planet // one of the milky_way's planets

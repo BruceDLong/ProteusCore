@@ -43,8 +43,8 @@ def test_engine():
    ('1', 'typed list merge 1', '*4+{3 _ $ *3+{...}} = *4+{3 4 "hi" {5 6 7}}', '{*1+3 *1+4 "hi" {*1+5 *1+6 *1+7 } }'),
    ('1', 'typed list merge 2', '*3+{...} = {1 2 3}', '{*1+1 *1+2 *1+3 }'),
    ('1', 'typed list merge 3', '{} = {}', '{}'),
-   ('1', 'typed list merge 4', '*_+{...} = {2 3 4}', '{*1+2 *1+3 *1+4}'),  # FAIL: {*1+2 *1+3 *1+4 ...}
-   ('1', 'typed list merge 5','{...} = {2 3 4 ...}', '{*1+2 *1+3 *1+4 ...}'),  # FAIL: {*1+2 *1+3 *1+4 4; 5; 6; 7; 8; 9; 10; 11; 12;... ...}
+   ('1', 'typed list merge 4', '*_+{...} = {2 3 4}', '{*1+2 *1+3 *1+4 }'),
+   ('1', 'typed list merge 5','{...} = {2 3 4 ...}', '{*1+2 *1+3 *1+4 ...}'),
    #            Add tests with zero size / value, value larger than size, later: negative, fractional, expression.
    #            Add Rainy day tests: Mis-matched types, mis-matched sizes, mis-matched values
 
@@ -63,11 +63,11 @@ def test_engine():
    ('1', 'A two argument function', r'[+{_, _} +{[+_]:=%\\ [+_ +_]:=%\\  [+_]:=%\\} ]<:+{9,4}', '<{*1+9 *1+4 *1+9 }>'),
    ('2', 'define and use a tag', '{%color=#{*_+_ *_+_ *_+_} %size=#*_+_}', '<{; ; }>', 'color', '#{_, _, _, }'),
    ('2', 'Two argument function defined with a tag', r'+{%func={+{_, _} +{%\\:[_] %\\:[_, _]  %\\:[_]}}  }', '<{; }>', 'func<: +{9,4}', '{*1+9 *1+4 *1+9 }'),
-   ('1', 'test rep$', '{*_ +{"A"|...} "AARON"} =  \'AAAARON\' // This is a comment', '<{{"A" "A" } "AARON" }>'),
+   ('1', 'test rep$', '{*_ +{"A"|...} "AARON"} ==  \'AAAARON\' // This is a comment', '<{{"A" "A" } "AARON" }>'),
    ('1', 'test indexing', '*2+[...] := {111, 222, 333, 444}', '<*1+222>'),
-   ('1', 'Indexing, unknown index 1', r'[...]="ARONdacks" := {"AARON" "ARON"} ', '<"ARON">'),
-   ('1', 'Indexing, unknown index 2', r'[...]="AARONdacks" := {"AARON" "ARON"} ', '<"AARON">'),
-   ('1', 'Indexing, unknown index 3', r'{%{"AARON", "ARON"}*_+[...]  "dac"}  =  +"ARONdacks" ', '<{"ARON" "dac" }>'), # This is the 'Extra characters bug'
+   ('1', 'Indexing, unknown index 1', r'[...]="ARONdacks" :== {"AARON" "ARON"} ', '<"ARON">'),
+   ('1', 'Indexing, unknown index 2', r'[...]="AARONdacks" :== {"AARON" "ARON"} ', '<"AARON">'),
+   ('1', 'Indexing, unknown index 3', r'{%{"AARON", "ARON"}*_+[...]  "dac"} ==  +"ARONdacks" ', '<{"ARON" "dac" }>'), # This is the 'Extra characters bug'
  #  ('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \\[?]}]<:{"slothe", "Hello", "bob", 65432}|...}', '<{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } }>'),  #FAIL
 # The above test but with a list in the comprehension yeild.     ALSO, run through this whole thing to make sure it isn't doing things too many times.
    ('1', 'test 1 of repeated indexing (i.e., filtering)', "{{111, '222', '333', 444, {'hi'}, {'a', 'b', 'c'}}:*2+[...]|...}", '<{"222" *1+444 {"a" "b" "c" } }>'), #FAIL

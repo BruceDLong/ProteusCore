@@ -9,7 +9,7 @@
 #include "Proteus.h"
 #include "remiss.h"
 
-const int ListBuffCutoff=20;
+const int ListBuffCutoff=2;
 
 typedef std::map<dblPtr,UInt>::iterator altIter;
 
@@ -20,15 +20,6 @@ typedef std::map<dblPtr,UInt>::iterator altIter;
 #define cpType(from, to) {if(to->type==0) to->type=from->type;}
 #define cpFlags(from, to, mask) {to->pFlag=(to->pFlag& ~(mask))+((from)->pFlag&mask); to->wFlag=from->wFlag; cpType(from,to);}
 #define copyTo(from, to) {if(from!=to){to->size=(from)->size; to->value=(from)->value; cpFlags((from),to,0x00ffffff);}}
-#define AddSizeAlternate(Lval, Rval, Pred, Size, Last, Flags) { infon *copy, *copy2, *LvalFol;    \
-        copy=new infon(Lval->pFlag,Lval->wFlag,(infon*)(Size),Lval->value,0,Lval->spec1,Lval->spec2,Lval->next); \
-        copy->prev=Lval->prev; copy->top=Lval->top;copy->pred=Pred; copy->type=Lval->type; \
-        insertID(&Lval->wrkList,copy,ProcessAlternatives|Flags); Lval->wrkList->slot=Last; Lval->wFlag&=~nsWorkListDone;\
-        getFollower(&LvalFol, Lval);                  \
-        if (LvalFol){\
-            copy2=new infon(LvalFol->pFlag,LvalFol->wFlag,LvalFol->size,LvalFol->value,0,LvalFol->spec1,LvalFol->spec2,LvalFol->next);\
-            copy2->type=LvalFol->type; copy2->pred=copy; \
-            insertID(&copy2->wrkList,Rval,Flags); insertID(&LvalFol->wrkList,copy2,ProcessAlternatives|Flags); LvalFol->wFlag&=~nsWorkListDone;}}
 
 infon* infon::isntLast(){ // 0=this is the last one. >0 = pointer to predecessor of the next one.
     if (!(pFlag&isLast)) return this;
@@ -39,17 +30,17 @@ infon* infon::isntLast(){ // 0=this is the last one. >0 = pointer to predecessor
 }
 
 int agent::loadInfon(const char* filename, infon** inf, bool normIt){
-    std::cout<<"Loading:'"<<filename<<"'...";
+    std::cout<<"Loading:'"<<filename<<"'..."<<std::flush;
     std::fstream InfonIn(filename);
-    if(InfonIn.fail()){std::cout<<"Error: The file "<<filename<<" was not found.\n"; return 1;}
+    if(InfonIn.fail()){std::cout<<"Error: The file "<<filename<<" was not found.\n"<<std::flush; return 1;}
     QParser T(InfonIn);
     *inf=T.parse();
-    if (*inf) {std::cout<<"done.   ";}
-    else {std::cout<<"Error:"<<T.buf<<"   "; return 1;}
+    if (*inf) {std::cout<<"done.   "<<std::flush;}
+    else {std::cout<<"Error:"<<T.buf<<"   "<<std::flush; return 1;}
     if(normIt) {
         alts.clear();
         try{
-            std::cout<<"Normalizing..."; normalize(*inf); std::cout << "Normalized.";
+            std::cout<<"Normalizing..."<<std::flush; normalize(*inf); std::cout << "Normalized."<<std::flush;
         } catch (char const* errMsg){std::cout<<errMsg;}
     }
     std::cout<<"\n";
@@ -194,7 +185,7 @@ infon* agent::copyList(infon* from, int flags){
     if(from==0)return 0;
     do {
         infon* q=new infon;
-        deepCopy(p,q, 0, 0, flags);
+        deepCopy(p,q, 0, 0, flags); q->pos=p->pos;
         if (top==0) follower=top=q;
         q->prev=follower; q->top=top; follower=follower->next=q;
         p=p->next;
@@ -246,7 +237,7 @@ void agent::deepCopy(infon* from, infon* to, infon* args, PtrMap* ptrs, int flag
         if ((to->prev) && (tmp=to->prev->spec1) && (tmp->wFlag&mIsHeadOfGetLast) && (tmp=tmp->next)) to->spec1=tmp;
         else to->spec1=new infon;
         (*ptrMap)[from]=to;
-        deepCopy (from->spec1, to->spec1, 0, ptrMap, flags);  // In Old List Copy this was copyTo, not DeepCopy!!!!!!!!!!!!!
+        deepCopy (from->spec1, to->spec1, 0, ptrMap, flags);
         if(ptrs==0) delete ptrMap;
         if (flags && from->wFlag&mAssoc) {// std::cout<<"Initializing ASSOC\n";
             from->wFlag&= ~(mAssoc+mFindMode); from->wFlag|=iAssocNxt; from->pFlag|=(fUnknown+(fUnknown<<goSize));}
@@ -318,8 +309,8 @@ char isPosLorEorGtoSize(UInt pos, infon* item){
 }
 
 void agent::processVirtual(infon* v){
-    infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT=0; UInt vSize=(UInt)v->size;
-    char posArea=(v->pFlag&(fUnknown<<goSize))?'?':isPosLorEorGtoSize(vSize, parent);
+    infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT=0;
+    char posArea=(v->pFlag&(fUnknown<<goSize))?'?':isPosLorEorGtoSize(v->pos, parent);
     if(posArea=='G'){std::cout << "EXTRA ITEM ALERT!\n"; closeListAtItem(v); return;}
     UInt tmpFlags=v->pFlag&0xff000000;  // TODO B4: move this flag stuff into deepCopy. Clean the following block.
     if (spec){
@@ -333,7 +324,7 @@ void agent::processVirtual(infon* v){
     if(EOT){ if(posArea=='?'){posArea='E'; closeListAtItem(v);}
         else if(posArea!='E') throw "List was too short";}
     if (posArea=='E') {v->pFlag|=isBottom+isLast; return;}
-    infon* tmp= new infon;  tmp->size=(infon*)(vSize+1); tmp->spec2=spec;
+    infon* tmp= new infon; tmp->pos=(v->pos+1); tmp->spec2=spec;
     tmp->pFlag|=fUnknown+isBottom+isVirtual+(tNum<<goSize); tmp->wFlag|=iNone;
     tmp->top=tmp->next=v->next; v->next=tmp; tmp->prev=v; tmp->next->prev=tmp; tmp->spec1=args;
     v->pFlag&=~isBottom;
@@ -343,6 +334,7 @@ void agent::processVirtual(infon* v){
 void agent::InitList(infon* item) {
     infon* tmp;
     if(!(item->wFlag&nsListInited) && item->value && (((tmp=item->value->prev)->pFlag)&isVirtual)){
+//std::cout<<"INITLIST ("<<item<<")\n";
         item->wFlag|=nsListInited;
         tmp->spec2=item->spec2;
     //    if(tmp->spec2 && ((tmp->spec2->pFlag&mRepMode)==asFunc)) // Remove this after testing an argument as a function
@@ -373,9 +365,32 @@ int agent::getFollower(infon** lval, infon* i){
     return levels;
 }
 
+UInt calcItemsPos(infon* i){
+    UInt count;
+    if (i->pos) return ((UInt)i->pos)-1; //if (i->next->pos) return ((UInt)i->next->pos)-2;
+    for(count=1; !(i->pFlag&isTop); i=i->prev)
+        ++count;
+    return count;
+}
+
+void agent::AddSizeAlternate(infon* Lval, infon* Rval, infon* Pred, UInt Size, infon* Last, UInt Flags) {
+    infon *copy, *copy2, *LvalFol;
+    copy=new infon(Lval->pFlag,Lval->wFlag,(infon*)(Size),Lval->value,0,Lval->spec1,Lval->spec2,Lval->next);
+    copy->prev=Lval->prev; copy->top=Lval->top;copy->pred=Pred; copy->type=Lval->type;
+    insertID(&Lval->wrkList,copy,ProcessAlternatives|Flags); Lval->wrkList->slot=Last; Lval->wFlag&=~nsWorkListDone;
+    getFollower(&LvalFol, Lval);
+    if (LvalFol){
+        copy2=new infon(LvalFol->pFlag,LvalFol->wFlag,LvalFol->size,LvalFol->value,0,LvalFol->spec1,LvalFol->spec2,LvalFol->next);
+        copy2->top=LvalFol->top; copy2->prev=LvalFol->prev; copy2->type=LvalFol->type; copy2->pred=copy;
+        insertID(&copy2->wrkList,Rval,Flags); insertID(&LvalFol->wrkList,copy2,ProcessAlternatives|Flags); LvalFol->wFlag&=~nsWorkListDone;
+    }
+}
+
 void agent::addIDs(infon* Lvals, infon* Rvals, UInt flags, int asAlt){
     const int maxAlternates=100;
     if(Lvals==Rvals) return;
+ std::cout<<"FLAGS"<<flags<<"\n"; flags=(flags&mLooseType);
+    if(!(flags&mLooseType)) {insertID(&Lvals->wrkList,Rvals,flags); Lvals->wFlag&=~nsWorkListDone; return;}
     infon* RvlLst[maxAlternates]; infon* crntAlt=Rvals; infon *pred, *Rval, *prev=0; UInt size;
     int altCnt=1; RvlLst[0]=crntAlt;
     while(crntAlt && (crntAlt->pFlag&isTentative)){
@@ -383,7 +398,7 @@ void agent::addIDs(infon* Lvals, infon* Rvals, UInt flags, int asAlt){
         RvlLst[altCnt++]=crntAlt;
         if(altCnt>=maxAlternates) throw "Too many nested alternates";
     }
-    size=((UInt)Lvals->next->size)-2; crntAlt=Lvals; pred=Lvals->pred;
+    size=calcItemsPos(Lvals); crntAlt=Lvals; pred=Lvals->pred;
     while(crntAlt){  // Lvals
         for(int i=0; i<altCnt; ++i){ // Rvals
             if (!asAlt && altCnt==1 && crntAlt==Lvals){
@@ -393,7 +408,7 @@ void agent::addIDs(infon* Lvals, infon* Rvals, UInt flags, int asAlt){
                 AddSizeAlternate(crntAlt, Rval, pred, size, (prev)?prev->prev:0, flags);
             }
         }
-        if(crntAlt->pFlag&isTentative) {prev=crntAlt; size=((UInt)crntAlt->next->size)-2; crntAlt=getTop(crntAlt); if(crntAlt) crntAlt->pFlag|=hasAlts;}
+        if(crntAlt->pFlag&isTentative) {prev=crntAlt; size=calcItemsPos(crntAlt); crntAlt=getTop(crntAlt); if(crntAlt) crntAlt->pFlag|=hasAlts;}
         else crntAlt=0;
     }
 }
@@ -450,11 +465,11 @@ int agent::compute(infon* i){
     return 1;
 }
 
-void resolve(infon* i, infon* theOne){ std::cout<<"RESOLVING";
+void resolve(infon* i, infon* theOne){ //std::cout<<"RESOLVING";
     infon *prev=0;
     while(i && theOne){
         if(theOne->pFlag&isTentative){
-            closeListAtItem(theOne); std::cout<<"-CLOSED\n";
+            closeListAtItem(theOne); //std::cout<<"-CLOSED\n";
             return;
         } else {
             i->pFlag&=~hasAlts; copyTo(theOne, i);
@@ -462,10 +477,10 @@ void resolve(infon* i, infon* theOne){ std::cout<<"RESOLVING";
             prev=i; i=i->pred; theOne=theOne->pred;
         }
     } if (theOne){theOne->next=prev->value; theOne->pFlag|=isLast+isBottom;}
-    std::cout<<"-OPENED:"<<printInfon (i)<<"\n";
+ //   std::cout<<"-OPENED:"<<printInfon (i)<<"\n";
 }
 
-#define SetBypassDeadEnd() {result=BypassDeadEnd; infon* CA=getTop(ci); if (CA) {std::cout<< printInfon(CA) <<'>'; AddSizeAlternate(CA, item, 0, ((UInt)ci->next->size)-1, ci, looseType); }}
+#define SetBypassDeadEnd() {result=BypassDeadEnd; infon* CA=getTop(ci); if (CA) {AddSizeAlternate(CA, item, 0, ((UInt)ci->next->size)-1, ci, looseType); }}
 
 int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
     infNode *wrkNode=ci->wrkList; infon *item, *IDfol, *tmp, *theOne=0; Qitem cn;
@@ -491,7 +506,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             if (altCount>=1) break; // don't keep looking after found
             if(wrkNode->idFlags&isRawFlag){
               tmp=new infon(ci->pFlag,ci->wFlag,ci->size,ci->value,0,ci->spec1,ci->spec2,ci->next);
-              tmp->prev=ci->prev; tmp->top=ci->top; tmp->type=ci->type;
+              tmp->prev=ci->prev; tmp->top=ci->top; tmp->type=ci->type; tmp->pos=ci->pos;
               insertID(&tmp->wrkList, item,0);
               wrkNode->item=item=tmp;
               wrkNode->idFlags^=isRawFlag;
@@ -501,15 +516,19 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             preNormalize(item, &cn);
             tempRes=doWorkList(item, CIfol,1); if(result<tempRes) result=tempRes;
             if (tempRes==BypassDeadEnd) {wrkNode->idFlags|=NoMatch; break;}
-        case (ProcessAlternatives+NodeDoneFlag):
             altCount++;  theOne=item;
+            break;
+        case (ProcessAlternatives+NodeDoneFlag):
+            altCount++;  theOne=item; result=DoNext;
             break;
         case MergeIdent:
             wrkNode->idFlags|=SetComplete; IDfol=0;
             UInt fm=item->wFlag&mFindMode; UInt CIsType=ci->pFlag&tType, ItemsType=item->pFlag&tType;
             if(!(item->pFlag&isNormed) && (fm!=iNone || (item->wrkList && !(item->pFlag&isNormed)))) {
                 if(item->top==0) {item->top=ci->top;}
-                normalize(item);
+                QitemPtr Qi(new Qitem(item));
+                fetch_NodesNormalForm(Qi);
+      // normalize(item);
                 if (item->wFlag&mAsProxie) {item=item->value;fm=item->wFlag&mFindMode;}
                 ItemsType=item->pFlag&tType;
             }
@@ -523,7 +542,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                 if (ItemsType && CIsType!=tList && CIsType!=ItemsType){
                     std::cout << "Non-matching base types for "<<printInfon(ci)<<"("<<ci->type->S<<") and "<<printInfon(item)<<" ("<<item->type->S<<").\n";
                     SetBypassDeadEnd(); continue;
-                } else if((ci->type && !(ci->wFlag&iHardFunc)) && (item->type==0 || !checkTypeMatch(ci->type,item->type))){
+                } else if((ci->type && !(ci->wFlag&iHardFunc)) && (item->type && !checkTypeMatch(ci->type,item->type))){
                     std::cout << "Non-matching model types for "<<printInfon(ci)<<"("<<ci->type->S<<") and "<<printInfon(item)<<" ("<<item->type->S<<").\n";
                     SetBypassDeadEnd(); continue;
                 }
@@ -572,17 +591,30 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                             }
 
                             else if (infTypes== tList+4*tList){
-                                if(ci->value) {addIDs(ci->value, item->value, looseType, asAlt);}
-                                else {ci->value=item->value; cpFlags(item,ci,0xff);if(!(ci->pFlag&(fUnknown<<goSize)) && ci->size==0){IDfol=item;} else item->value->top=ci;}
+                                if(ci->value) {
+                                    if(!(item->value->pFlag&isTentative)) ci->value->pFlag&= ~isTentative; // See note below ("This is used...")
+                                    if(looseType) addIDs(ci->value, item->value, looseType+1, asAlt);
+                                    else{
+                                        insertID(&ci->value->wrkList,item->value,0);
+                                        ci->value->wFlag&=~nsWorkListDone;
+                                    }
+                                } else {ci->value=item->value; cpFlags(item,ci,0xff);if(!(ci->pFlag&(fUnknown<<goSize)) && ci->size==0){IDfol=item;} else item->value->top=ci;}
                             }
                         }
                         if(flagMask) {cpFlags(item,ci,(flagMask+0xff00));}
+                        if(true){
+                            // This is used when we are merging two lists and the 'item' is not tentative but ci is.
+                            // There are likely cases where we want to put something other than 'true' in the condition above.
+                            // We could also make all these changes when the list-heads are merged but what about alternatives?
+                            // Until there is a problem we do it this way:
+                            if(!(item->pFlag&isTentative)) ci->pFlag&= ~isTentative;
+                        }
                     }
                     isIndef=0;
                     if(CIfol){
                         if(infonSizeCmp(ci,item)==0 || (infTypes!= tString+4*tString)){
                             level=((IDfol)?0:getFollower(&IDfol, item));
-                            if(IDfol){if(level==0) addIDs(CIfol, IDfol, looseType, asAlt); else result=BypassDeadEnd;}
+                            if(IDfol){if(level==0) addIDs(CIfol, IDfol, looseType+2, asAlt); else result=BypassDeadEnd;}
                             else  if( (infTypes!= tList+4*tList)) {// temporaty hack
                                 if ((tmp=ci->isntLast()) && (tmp->next->pFlag&isTentative)) {
                                     SetBypassDeadEnd();
@@ -592,18 +624,18 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                         } else if((infTypes== tString+4*tString) && infonSizeCmp(ci,item)<0){
                             cSize=(UInt)ci->size;
                             tmp=new infon(item->pFlag,item->wFlag,(infon*)((UInt)item->size-cSize),(infon*)((UInt)item->value+cSize),0,0,item->next);
-                            addIDs(CIfol, tmp, looseType, asAlt);
+                            addIDs(CIfol, tmp, looseType+3, asAlt);
                         }
                     }
                 break;
                 case tNum+4*tString: result=DoNext; break;
                 case tString+4*tNum: result=DoNext;break;
                 case tString+4*tList: InitList(item);  result=DoNext; break;
-                case tNum+4*tList:   InitList(item); addIDs(ci,item->value,looseType, asAlt); result=DoNext;break; // This should probably be insertID not addIDs. Check it out.
+                case tNum+4*tList:   InitList(item); addIDs(ci,item->value,looseType+4, asAlt); result=DoNext;break; // This should probably be insertID not addIDs. Check it out.
                 case tList+4*tUnknown:
                 case tList+4*tString:
                 case tList+4*tNum:
-                    if(ci->value){addIDs(ci->value, item, looseType, asAlt);}
+                    if(ci->value){addIDs(ci->value, item, looseType+5, asAlt);}
                     else{copyTo(item, ci);}
                     result=DoNext;
             }
@@ -615,7 +647,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                if (tmp->pFlag&hasAlts) {f=0; break;}
             if(f) resolve(ci, theOne);
     }
-    ci->pFlag|=isNormed; ci->pFlag&=~(sizeIndef+isTentative);
+    ci->pFlag|=isNormed; ci->pFlag&=~(sizeIndef);//+isTentative);
     return result;
 }
 
@@ -720,85 +752,75 @@ void agent::preNormalize(infon* CI, Qitem *cn){
     }
 }
 
-#define pushCIsFollower {int lvl=cn.level-cn.nxtLvl; if(lvl>0) ItmQ.push(Qitem(cn.CIfol,0,0,lvl,cn.bufCnt));}
+#define pushCIsFollower {int lvl=cn->level-cn->nxtLvl; if(lvl>0) ItmQ.push(QitemPtr(new Qitem(cn->CIfol,0,0,lvl,cn->bufCnt,cn->parent)));}
 
 infon* agent::Normalize(infon* i, infon* firstID){
     infon *CI;
     if (i==0) return 0;
-    infQ ItmQ; ItmQ.push(Qitem(i,firstID,(firstID)?1:0,0));
+    infQ ItmQ; ItmQ.push(QitemPtr(new Qitem(i,firstID,(firstID)?1:0,0)));
     while (!ItmQ.empty()){
-        Qitem cn=ItmQ.front(); ItmQ.pop(); CI=cn.item; cn.doShortNorm=0;
+        QitemPtr cn=ItmQ.front(); ItmQ.pop(); CI=cn->item; cn->doShortNorm=0;
         if(CI->wFlag&nsBottomNotLast) return 0;
-        preNormalize(CI, &cn);
-        if (cn.doShortNorm) return 0;
-        if((CI->wFlag&mFindMode)==0 && cn.IDStatus==2)
-            {cn.IDStatus=0; insertID(&CI->wrkList,cn.firstID,0);}
+        preNormalize(CI, &*cn);
+        if (cn->doShortNorm) return 0;
+        if((CI->wFlag&mFindMode)==0 && cn->IDStatus==2)
+            {cn->IDStatus=0; insertID(&CI->wrkList,cn->firstID,0);}
         if((CI->pFlag&tType)==tList){InitList(CI);}
-        cn.nxtLvl=getFollower(&cn.CIfol, CI);
-        if((CI->pFlag&asDesc) && !cn.override) cn.whatNext=DoNext;//{pushCIsFollower; continue;}
-        else cn.whatNext=doWorkList(CI, cn.CIfol);
-        switch (cn.whatNext) {
-        case DoNextIf: if(++cn.bufCnt>=ListBuffCutoff){cn.nxtLvl=getFollower(&cn.CIfol,getTop(CI))+1; pushCIsFollower; break;}
-        case DoNext:
-            if((CI->pFlag&(fConcat+tType))==(fConcat+tNum)){
-                compute(CI); if(cn.CIfol && !(CI->pFlag&isLast)){pushCIsFollower;}
-            }else if(!((CI->pFlag&asDesc)&&!cn.override)&&((CI->value&&((CI->pFlag&tType)==tList))||(CI->pFlag&fConcat)) && !(CI->value->pFlag&isNormed)){
-                ItmQ.push(Qitem(CI->value,cn.firstID,((cn.IDStatus==1)&!(CI->pFlag&fConcat))?2:cn.IDStatus,cn.level+1)); // push CI->value
-            }else if (cn.CIfol){pushCIsFollower;}
-            break;
-        case BypassDeadEnd: {cn.nxtLvl=getFollower(&cn.CIfol,getTop(CI))+1; pushCIsFollower;} break;
-        case DoNothing: break;
-        }
+        cn->nxtLvl=getFollower(&cn->CIfol, CI);
+        if((CI->pFlag&asDesc) && !cn->override) cn->whatNext=DoNext;//{pushCIsFollower; continue;}
+        else cn->whatNext=doWorkList(CI, cn->CIfol);
+        pushNextInfon(CI, cn, ItmQ);
     }
     return (i->pFlag&isNormed)?i:0;
 };
 
-int agent::fetch_NodesNormalForm(Qitem &cn){
-        int result=0; cn.CI=cn.item;
-        if(cn.item->wFlag&nsBottomNotLast) return 0;
-        if(!(cn.item->wFlag&nsNormBegan)){cn.CI=cn.item; cn.CIfol=0; cn.doShortNorm=0; cn.item->wFlag|=nsNormBegan;}
-        if(!(cn.CI->wFlag&nsPreNormed)){
-            result=0; preNormalize(cn.CI, &cn); // NOWDO: make preNorm return something
+int agent::fetch_NodesNormalForm(QitemPtr cn){
+        int result=0; cn->CI=cn->item;
+        if(cn->item->wFlag&nsBottomNotLast) return 0;
+        if(!(cn->item->wFlag&nsNormBegan)){cn->CI=cn->item; cn->CIfol=0; cn->doShortNorm=0; cn->item->wFlag|=nsNormBegan;}
+        if(!(cn->CI->wFlag&nsPreNormed)){
+            result=0; preNormalize(cn->CI, &*cn); // NOWDO: make preNorm return something
             if(result>0) return result;
-            cn.CI->wFlag|=nsPreNormed;
-            if (cn.doShortNorm) cn.CI->wFlag|=nsWorkListDone;
-            if((cn.CI->wFlag&mFindMode)==0 && cn.IDStatus==2)
-                {cn.IDStatus=0; insertID(&cn.CI->wrkList,cn.firstID,0);}
+            cn->CI->wFlag|=nsPreNormed;
+            if (cn->doShortNorm) cn->CI->wFlag|=nsWorkListDone;
+            if((cn->CI->wFlag&mFindMode)==0 && cn->IDStatus==2)
+                {cn->IDStatus=0; insertID(&cn->CI->wrkList,cn->firstID,0);}
         }
 
-        if(!(cn.CI->wFlag&nsWorkListDone)){
-            if(!cn.CIfol) cn.nxtLvl=getFollower(&cn.CIfol, cn.CI);
-            if((cn.CI->pFlag&asDesc) && !cn.override) {cn.whatNext=DoNext;}
+        if(!(cn->CI->wFlag&nsWorkListDone)){
+            if(!cn->CIfol) cn->nxtLvl=getFollower(&cn->CIfol, cn->CI);
+            if((cn->CI->pFlag&asDesc) && !cn->override) {cn->whatNext=DoNext;}
             else {
-                if((cn.CI->pFlag&tType)==tList){InitList(cn.CI);}
-                cn.whatNext=doWorkList(cn.CI, cn.CIfol);
+                if((cn->CI->pFlag&tType)==tList){InitList(cn->CI);}
+                cn->whatNext=doWorkList(cn->CI, cn->CIfol);
             }
-           cn.CI->wFlag|=nsWorkListDone;
+           //cn->CI->wFlag|=nsWorkListDone;
         }
         // NOWDO: Notify-and-remove subscribers
     return 0;
 }
 
-void agent::pushNextInfon(infon* CI, Qitem &cn, infQ &ItmQ){
-    switch (cn.whatNext) {
-    case DoNextIf: if(++cn.bufCnt>=ListBuffCutoff){cn.nxtLvl=getFollower(&cn.CIfol,getTop(CI))+1; pushCIsFollower; break;}
+void agent::pushNextInfon(infon* CI, QitemPtr cn, infQ &ItmQ){
+    switch (cn->whatNext) {
+    case DoNextIf: if(++cn->bufCnt>=ListBuffCutoff){cn->nxtLvl=getFollower(&cn->CIfol,getTop(CI))+1; if(cn->parent) {cn->bufCnt=cn->parent->bufCnt; cn->parent=cn->parent->parent;} pushCIsFollower; break;}
     case DoNext:
         if((CI->pFlag&(fConcat+tType))==(fConcat+tNum)){
-            compute(CI); if(cn.CIfol && !(CI->pFlag&isLast)){pushCIsFollower;}
-        }else if(!((CI->pFlag&asDesc)&&!cn.override)&&((CI->value&&((CI->pFlag&tType)==tList))||(CI->pFlag&fConcat)) && !(CI->value->pFlag&isNormed)){
-            ItmQ.push(Qitem(CI->value,cn.firstID,((cn.IDStatus==1)&!(CI->pFlag&fConcat))?2:cn.IDStatus,cn.level+1)); // Push CI->value
-        }else if (cn.CIfol){pushCIsFollower;}
+            compute(CI); if(cn->CIfol && !(CI->pFlag&isLast)){pushCIsFollower;}
+        }else if(!((CI->pFlag&asDesc)&&!cn->override)&&((CI->value&&((CI->pFlag&tType)==tList))||(CI->pFlag&fConcat)) && !(CI->value->pFlag&isNormed)){
+            ItmQ.push(QitemPtr(new Qitem(CI->value,cn->firstID,((cn->IDStatus==1)&!(CI->pFlag&fConcat))?2:cn->IDStatus,cn->level+1,0,cn))); // Push CI->value
+        }else if (cn->CIfol){pushCIsFollower;}
         break;
-    case BypassDeadEnd: {cn.nxtLvl=getFollower(&cn.CIfol,getTop(CI))+1; pushCIsFollower;} break;
+    case BypassDeadEnd: {cn->nxtLvl=getFollower(&cn->CIfol,getTop(CI))+1; pushCIsFollower;} break;
     case DoNothing: break;
     }
 }
 
 infon* agent::normalize(infon* i, infon* firstID){
         if (i==0) return 0;
-        infQ ItmQ; ItmQ.push(Qitem(i,firstID,(firstID)?1:0,0));
+        QitemPtr Qi(new Qitem(i,firstID,(firstID)?1:0,0));
+        infQ ItmQ; ItmQ.push(Qi);
         while (!ItmQ.empty()){
-            Qitem cn=ItmQ.front(); ItmQ.pop(); infon* CI=cn.item;
+            QitemPtr cn=ItmQ.front(); ItmQ.pop(); infon* CI=cn->item;
             fetch_NodesNormalForm(cn);
             //wait?
             pushNextInfon(CI, cn, ItmQ);

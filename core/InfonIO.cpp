@@ -193,7 +193,7 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
         for(tok=peek(); tok != rchr && stay; tok=peek()){
             if(tok=='<') {foundRet=1; streamGet(); j=ReadInfon();}
             else if(nxtTok("...")){
-                j=new infon(fUnknown+isVirtual+(tNum<<goSize),iNone,(infon*)(size+1));stay=0;
+                j=new infon(fUnknown+isVirtual+(tNum<<goSize),iNone,(infon*)(size+1));j->pos=(size+1); stay=0;
             } else j=ReadInfon();
             if(++size==1){
                 if(!foundRet && !foundBar && stay && nxtTok("|")){
@@ -306,6 +306,7 @@ infon* QParser::ReadInfon(int noIDs){
         }
         if(toSet==0) throw ":= operator requires [....] on the left side";
         if(toRef==0) throw "=: operator requires [....] on the right side";
+        if((toRef->type==0) && !(code&mLooseType)) toRef->type=toSet->type;
         insertID(&toSet->wrkList, toRef, code);
     }
     if(!(noIDs&2)){  // load function "calls"

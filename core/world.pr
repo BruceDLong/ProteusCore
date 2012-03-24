@@ -1,5 +1,9 @@
 <%
 {
+%frame = {?|...}
+
+%portal = {frame|...}
+
 %my2ndItem=[_ _]
 %everyOther={[_ _]|...}
 %setTo6=([???]=6)

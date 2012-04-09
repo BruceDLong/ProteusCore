@@ -14,65 +14,34 @@ using namespace std;
 #include <readline/readline.h>
 #include <readline/history.h>
 
-/* A static variable for holding the line. */
 static char *line_read = (char *)NULL;
+std::string HIST_FILE(getenv("HOME"));
 
-/* Read a string, and return a pointer to it.
-   Returns "quit" on EOF. */
-std::string
-rl_gets (const char* prompt)
-{
-  /* If the buffer has already been allocated,
-     return the memory to the free pool. */
-  if (line_read)
-    {
+std::string rl_gets (const char* prompt) { //Read a string, and return a pointer to it. returns 'quit' on EOF (ctrl D)
+
+  if (line_read){ // Free the last string
       free (line_read);
       line_read = (char*)NULL;
     }
 
-  /* Get a line from the user. */
-  line_read = readline (prompt);
+  line_read = readline (prompt);  // Get a line from the user.
 
-  /* If the line has any text in it,
-     save it on the history. */
-  if (line_read && *line_read)
+  if (line_read && *line_read && (strcmp(line_read, "quit")!=0)){ // Save valid lines in history.
     add_history (line_read);
-
-  if (line_read == NULL)
-  {
-    line_read = (char*)"quit";
+    write_history (HIST_FILE.c_str());
   }
-    std::string output(line_read);
-  return (output);
+  if (line_read == NULL) line_read = (char*)"quit";
+  return (std::string(line_read));
 }
 
-std::string HIST_FILE(getenv("HOME"));
 void rl_init() {
   HIST_FILE.append("/.proteus.clip.hist");
-  int a = read_history (HIST_FILE.c_str());
+  read_history (HIST_FILE.c_str());
   stifle_history (1000);
-  std::cout << "History " << HIST_FILE  << " read with exit code " << a << std::endl;
-}
-
-void rl_finalize() {
-  int a = write_history (HIST_FILE.c_str());
-  std::cout << "History " << HIST_FILE << " written with exit code " << a << std::endl;
-}
-
-// up-to-here maybe wrap this whole in a IFDEF clause?
-
-char getCH(){
-    char ch;
-    if (cin.eof()||cin.fail()) {cout << "END OF FILE\n"; exit(1);}
-    cin.get(ch);
-    return ch;
 }
 
 std::string readln(std::string prompt){
-    // char ch;
     std::string str="";
-    // cout << prompt;
-    //for(ch=getCH(); ch!='\n';ch=getCH())str+=ch;
     str = rl_gets(prompt.c_str());
     return str;
 }
@@ -85,19 +54,14 @@ int AutoEval(infon* CI, agent* a);
 bool IsHardFunc(char* tag);
 
 int main(int argc, char **argv){
-        rl_init(); // with IFDEF readline?
+    rl_init();
     signal(SIGSEGV, reportFault);
 
     // Load World
     agent a(0, IsHardFunc, AutoEval);
-    std::cout << "Loading world\n";
-    std::fstream InfonInW("world.pr");
-    QParser q(InfonInW);
-    a.world=q.parse();
-    if (!a.world) {std::cout<<"Error:"<<q.buf<<"\n"; exit(1);}
+    if(a.loadInfon("world.pr", &a.world, true)) exit(1);
     topInfon=a.world;  // use topInfon in the ddd debugger to view World
 
-    a.normalize (a.world);
     cout<<"\nThe Proteus CLI. Type some infons or 'quit'\n\n";
     while(!cin.eof()){
         std::string entry= readln("Proteus: ");
@@ -109,15 +73,14 @@ int main(int argc, char **argv){
         istrstream fin(entry.c_str());
         QParser q(fin);
         Entry=q.parse(); // cout <<"Parsed.\n";
-        try{
-            a.normalize(Entry); // cout << "Normalizd\n";
+        if (Entry) try{
+            //a.normalize(Entry); // cout << "Normalizd\n";
+            Entry=a.append(Entry, a.world);
         } catch (char const* errMsg){std::cout<<errMsg<<"\n";}
-    //  a.append(Entry, a.world);
 
         if (Entry) cout<<"\n"<<printInfon(Entry)<<"\n\n";
         else {cout<<"\nError: "<<q.buf<<"\n\n";}
     }
-        rl_finalize(); // with IFDEF readline?
  return 0;
 }
 

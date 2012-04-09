@@ -13,6 +13,8 @@
 #include <cstdio>
 #include "remiss.h"
 
+#include <uniset.h>
+
 #define Indent {for (int x=0;x<indent;++x) s+=" ";}
 std::string printPure (infon* i, UInt f, UInt wSize, infon* CI){
     std::string s;
@@ -144,12 +146,16 @@ bool QParser::chkStr(const char* tok){
     return true;
 }
 
+// TODO: MODIFY THESE FOR UNICODE
+bool isTagStart(char nTok) {return (iscsym(nTok)&&!isdigit(nTok)&&(nTok!='_'));}
+bool isTagChar (char nTok) {return iscsym(nTok);}
+
 #include <cstdarg>
 const char* QParser::nxtTokN(int n, ...){
     char* tok; va_list ap; va_start(ap,n); int i,p;
     for(i=n; i; --i){
         tok=va_arg(ap, char*); nTok=Peek();
-        if(strcmp(tok,"ABC")==0) {if(iscsym(nTok)&&!isdigit(nTok)&&(nTok!='_')) {getbuf(iscsym(peek())); break;} else tok=0;}
+        if(strcmp(tok,"ABC")==0) {if(isTagStart(nTok)) {getbuf(isTagChar(peek())); break;} else tok=0;}
         else if(strcmp(tok,"123")==0) {if(isdigit(nTok)) {getbuf((isdigit(peek())||peek()=='.')); break;} else tok=0;}
         else if (chkStr(tok) || chkStr(altTok(tok))) break; else tok=0;
     }
@@ -322,6 +328,10 @@ infon* QParser::ReadInfon(int noIDs){
 
 infon* QParser::parse(){
     char tok;
+
+    //UErrorCode err = U_ZERO_ERROR;
+    //UnicodeString pattern; //pattern="[:XID_Continue:]";
+    //UnicodeSet TagChars(pattern, err);
     try{
         textParsed="";
         line=1; scanPast((char*)"<%");

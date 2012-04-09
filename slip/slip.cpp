@@ -521,6 +521,10 @@ void InitializePortalSystem(int argc, char** argv){
  //   if (SDL_TimerInit() < 0) {MSGl("Couldn't initialize Timer Driver: "<<SDL_GetError()); exit(2);}
     //MAYBE: if (DebugMode) PrintConfiguration from common.c Set debugmode via command-line argument
 
+    SDL_EnableKeyRepeat(300, 130);
+    SDL_EnableUNICODE(1);
+    atexit(cleanup);
+
     if(theAgent.loadInfon(worldFile, &theAgent.world)) exit(1);
     User* portalUser=new User;
     if(loadUserRecord(portalUser, username, password)) {MSGl("\nUser could not be authenticated. Exiting..."); exit(5);}
@@ -528,20 +532,18 @@ void InitializePortalSystem(int argc, char** argv){
     infon *themeInfon, *stuffInfon;
     if(theAgent.loadInfon(theme.c_str(), &themeInfon, 0)) exit(1);
     theAgent.utilField=themeInfon;
-
+    if(theAgent.loadInfon(portalUser->myStuff.c_str(), &stuffInfon, 0)) exit(1);
+/*
 infon* PORTAL;
 if(theAgent.loadInfon("portals.pr", &PORTAL, 0)) exit(1);
 debugInfon=PORTAL;
 NormalizeAndPresent(PORTAL);
 MSGl("\nOK\n"<<printInfon(PORTAL));
 exit(2);
+*/
 
-    if(theAgent.loadInfon(portalUser->myStuff.c_str(), &stuffInfon, 0)) exit(1);
+
     CreateTurbulancePortal(windowTitle, 100,1300,1024,768, portalUser, themeInfon, stuffInfon);
-
-    SDL_EnableKeyRepeat(300, 130);
-    SDL_EnableUNICODE(1);
-    atexit(cleanup);
 }
 
 #define IS_CTRL (ev.key.keysym.mod&KMOD_CTRL)

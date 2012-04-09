@@ -1,5 +1,9 @@
 <%
 {
+{%test={_ "Hello"}}
+6 5 4 3
+test== 5
+/*
 %frame = {?|...}
 
 %portal = {frame|...}
@@ -15,7 +19,8 @@
     %NOW_VAL = _
 
     %weather_report = {HIGH_NUM LOW_NUM NOW_VAL }
-
+*/
+...
 }
 //{1 2 3}
 %>

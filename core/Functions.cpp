@@ -203,7 +203,7 @@ int AutoEval(infon* CI, agent* a){
         str1.S[str1.L]=0;
         a->loadInfon(str1.S, &I, 1);
         copyTo(I,CI);
-    } else if (strcmp(funcName.S, "timestr")==0){ cout << "DOING TIME\n";
+    } else if (strcmp(funcName.S, "timestr")==0){ //cout << "DOING TIME\n";
         string s="Time:"; char l[30]; itoa(time(0),l); s+=l;
         stng sOut; stngCpy(sOut, s.c_str());
         setString(CI, &sOut);

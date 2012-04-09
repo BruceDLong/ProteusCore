@@ -50,7 +50,6 @@ enum colonFlags {c1Left=0x100, c2Left=0x200, c1Right=0x400, c2Right=0x800};
 enum normState {mnStates=0x1f0000, nsListInited=0x10000, nsNormBegan=0x20000, nsPreNormed=0x40000, nsWorkListDone=0x80000, nsNormComplete=0x100000, nsBottomNotLast=0x200000};
 
 struct infon;
-struct assocInfon {infon *VarRef, *nextRef; assocInfon(infon* first=0):VarRef(first),nextRef(0){};};
 
 struct infNode {infon* item; infon* slot; UInt idFlags; infNode* next; infNode(infon* itm=0, UInt f=0):item(itm),idFlags(f){};};
 enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, InitSearchList=2, SetComplete=3, NodeDoneFlag=8, NoMatch=16,isRawFlag=32,
@@ -90,7 +89,7 @@ struct agent {
     fix16_t gRealNxt(infon** ItmPtr);
     char* gStrNxt(infon** ItmPtr, char*txtBuff);
     infon* gListNxt(infon** ItmPtr);
-    void append(infon* i, infon* list);
+    infon* append(infon* i, infon* list);
     int checkTypeMatch(stng* LType, stng* RType);
     int compute(infon* i);
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);

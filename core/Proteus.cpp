@@ -9,7 +9,7 @@
 #include "Proteus.h"
 #include "remiss.h"
 
-const int ListBuffCutoff=4;
+const int ListBuffCutoff=2;
 
 typedef std::map<dblPtr,UInt>::iterator altIter;
 
@@ -174,17 +174,27 @@ infon* agent::gListNxt(infon** ItmPtr){
 }
 
 ///////////// Routines for copying, appending, etc.
-void agent::append(infon* i, infon* list){ // appends an item to the end of a list
-    i->next=i->top=list->value; i->prev=i->next->prev; i->next->prev=i;
-    i->prev->pFlag^=isBottom; i->pFlag|=isBottom;
-//  signalSubscriptions();
+infon* agent::append(infon* i, infon* list){ // appends an item to the end of a tentative list
+    if(! (list && list->value && list->value->prev)) return 0;
+    infon *last=list->value->prev;
+    infon *p=last, *q;
+    do {  // find the earliest-but-at-end tentative in list
+        q=p; p=p->prev; // Shift left in list
+    } while(p!=last && (p->pFlag&(isVirtual+isTentative)));
+    if(!(q && (q->pFlag&(isVirtual+isTentative)))) return 0;
+    if(q->pFlag&isVirtual) processVirtual(q);
+    copyTo(i, q); if((q->pFlag&tType)==tList) q->value->top=q;
+    q->spec1=i->spec1; q->spec2=i->spec2; q->wrkList=i->wrkList;
+    normalize(q);
+    q->pFlag&= ~(isVirtual+isTentative);
+    return q;
 }
 
 infon* agent::copyList(infon* from, int flags){
-    infon* top=0; infon* follower; infon* p=from;
+    infon* top=0; infon* follower; infon* q, *p=from;
     if(from==0)return 0;
     do {
-        infon* q=new infon;
+        q=new infon;
         deepCopy(p,q, 0, 0, flags); q->pos=p->pos;
         if (top==0) follower=top=q;
         q->prev=follower; q->top=top; follower=follower->next=q;
@@ -271,7 +281,7 @@ void agent::deepCopy(infon* from, infon* to, infon* args, PtrMap* ptrs, int flag
 void recover(infon* i){ delete i;}
 
 void closeListAtItem(infon* lastItem){ // remove (no-longer valid) items to the right of lastItem in a list.
-std::cout << "CLOSING: " << printInfon(lastItem) << "\n";
+//std::cout << "CLOSING: " << printInfon(lastItem) << "\n";
     // TODO: Will this work when a list becomes empty?
     infon *itemAfterLast, *nextItem; UInt count=0;
     for(itemAfterLast=lastItem->next; !(itemAfterLast->pFlag&isTop); itemAfterLast=nextItem){

@@ -12,6 +12,8 @@
 const int ListBuffCutoff=2;
 
 typedef std::map<dblPtr,UInt>::iterator altIter;
+std::map<Tag,infon*> tag2Ptr;
+std::map<infon*,Tag> ptr2Tag;
 
 #define recAlts(lval, rval) {if((rval->pFlag&tType)==tString) alts[dblPtr((char*)rval->value,lval)]++;}
 #define getTop(item) (((item->pFlag&isTop)||item->top==0)? item->top : item->top->top)
@@ -526,13 +528,7 @@ void agent::preNormalize(infon* CI, Qitem *cn){
                 if(newID) {CI->wFlag|=mAsProxie; CI->value=newID; newID->pFlag|=isNormed; CI->wFlag&=~mFindMode; newID=0;}
                 cn->doShortNorm=true;
             } break;
-            case iTagDef: {
-                caseDown(CI->type); //std::cout<<"Defining:'"<<(char*)CI->type->S<<"'\n";
-                std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
-                if (tagPtr==tag2Ptr.end()) {tag2Ptr[*CI->type]=CI->wrkList->item; CI->wrkList=0;}
-                else{throw("A tag is being redefined, which isn't allowed");}
-                CI->wrkList=0; CI->wFlag=0;
-                break;}
+            case iTagDef: break; // Reserved
             case iTagUse: {
                 if(CI->type == 0) throw ("A tag was null which is a bug");
                 caseDown(CI->type); //OUT("Recalling: "<<(char*)CI->type->S)

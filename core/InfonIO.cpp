@@ -13,7 +13,7 @@
 #include <cstdio>
 #include "remiss.h"
 
-#include <uniset.h>
+//#include <uniset.h>
 
 #define Indent {for (int x=0;x<indent;++x) s+=" ";}
 std::string printPure (infon* i, UInt f, UInt wSize, infon* CI){
@@ -149,13 +149,16 @@ bool QParser::chkStr(const char* tok){
 // TODO: MODIFY THESE FOR UNICODE
 bool isTagStart(char nTok) {return (iscsym(nTok)&&!isdigit(nTok)&&(nTok!='_'));}
 bool isTagChar (char nTok) {return iscsym(nTok);}
+#include <algorithm>
+void tagNormalForm(std::string& tag){std::transform(tag.begin(), tag.end(), tag.begin(), ::tolower);}
 
 #include <cstdarg>
 const char* QParser::nxtTokN(int n, ...){
     char* tok; va_list ap; va_start(ap,n); int i,p;
     for(i=n; i; --i){
         tok=va_arg(ap, char*); nTok=Peek();
-        if(strcmp(tok,"ABC")==0) {if(isTagStart(nTok)) {getbuf(isTagChar(peek())); break;} else tok=0;}
+        if(strcmp(tok,"cTok")==0) {if(iscsym(nTok)&&!isdigit(nTok)&&(nTok!='_')) {getbuf(iscsym(peek())); break;} else tok=0;}
+        else if(strcmp(tok,"unicodeTok")==0) {if(isTagStart(nTok)) {getbuf(isTagChar(peek())); break;} else tok=0;}
         else if(strcmp(tok,"123")==0) {if(isdigit(nTok)) {getbuf((isdigit(peek())||peek()=='.')); break;} else tok=0;}
         else if (chkStr(tok) || chkStr(altTok(tok))) break; else tok=0;
     }
@@ -236,19 +239,37 @@ infon* QParser::ReadInfon(int noIDs){
     if(nxtTok("@")){pFlag|=toExec;}
     if(nxtTok("#")){pFlag|=asDesc;}
     if(nxtTok("?")){fs=fv=fUnknown; wFlag=iNone;}
-    else if(nxtTok("ABC")){
+    else if(nxtTok("unicodeTok")){
         wFlag|=iTagUse; tags=new stng;
         // if(iscsym(tok)&&!isdigit(tok)){  // change 'if' to 'do-while' when tag-chains are ready.
             stngApnd((*tags),buf,strlen(buf)+1);
     }else if( nxtTok("%")){ // TODO: Don't allow these outside of := or :
-        pFlag|=fUnknown;
-        // TODO: %Wind, %Cars, %ART, %Veins are mis-read here.
-        if (nxtTok("W")){std::cout<<"WORLD"<<"\n"; wFlag|=iToWorld; }
-        else if (nxtTok("C")){wFlag|=iToCtxt;}
-        else if (nxtTok("A")){wFlag|=iToArgs;}
-        else if (nxtTok("V")){wFlag|=iToVars;}
-        else if(nxtTok("ABC")){wFlag|=iTagDef; tags=new stng; stngApnd((*tags),buf,strlen(buf)+1); caseDown(tags);}
-        else if (nTok=='\\' || nTok=='^'){
+        pFlag|=fUnknown; Tag* tag=0; Tag* prevTag=0; bool done=false;
+        if (nxtTok("unicodeTok")){
+            if      (strcmp(buf,"W")==0){wFlag|=iToWorld;}
+            else if (strcmp(buf,"C")==0){wFlag|=iToCtxt;}
+            else if (strcmp(buf,"A")==0){wFlag|=iToArgs;}
+            else if (strcmp(buf,"V")==0){wFlag|=iToVars;}
+            else do{ // Here we process tag definitions
+                tag=new Tag; tag->definition=(infon*)prevTag; prevTag=tag;
+                tag->tag=buf;
+                if(nxtTok(":")){if(nxtTok("cTok"))tag->language=buf; else tag->language="en";} //TODO: instead of en, use user's language, also, verify locale
+                if(nxtTok(":")){tag->pronunciation="";} //TODO: Load pronunciation.
+                if(nxtTok("=")){done=true;}
+                else if(nxtTok("%")){if (!nxtTok("unicodeTok")){throw "Expected tag to define after '%'";}}
+                else throw "Expected %tag or tag definition";
+            } while (!done);
+            infon* definition=ReadInfon();
+            for(Tag* t=tag; t; t=prevTag){
+                prevTag=(Tag*)t->definition; t->definition=definition;
+                tagNormalForm(t->tag);
+                std::map<Tag,infon*>::iterator tagPtr=tag2Ptr.find(*t);
+                if (tagPtr==tag2Ptr.end()) {tag2Ptr[*t]=definition; ptr2Tag[definition]=*t;}
+                else{throw("A tag is being redefined, which isn't allowed");}
+            }
+            return ReadInfon(noIDs);
+            //else {wFlag|=iTagDef; tags=new stng; stngApnd((*tags),buf,strlen(buf)+1); caseDown(tags);}
+        } else if (nTok=='\\' || nTok=='^'){
             for(s1=0; (nTok=streamGet())=='\\';) {s1=(infon*)((UInt)s1+1); ChkNEOF;}
             if (nTok=='^') wFlag|=iToPath; else {wFlag|=iToPathH; streamPut(1);}
         }
@@ -315,7 +336,7 @@ infon* QParser::ReadInfon(int noIDs){
         if((toRef->type==0) && !(code&mLooseType)) toRef->type=toSet->type;
         insertID(&toSet->wrkList, toRef, code);
     }
-    if(!(noIDs&2)){  // load function "calls"
+    if(!(noIDs&2)){  // Load function "calls"
         if(nxtTok(":>" )) {infon* j=ReadInfon(1); j->wFlag|=sUseAsFirst; j->spec2=i; i=j; chk4HardFunc(i);}
         else if(nxtTok("<:")) {i->wFlag|=sUseAsFirst;
             i->spec2=ReadInfon(1);  chk4HardFunc(i);}
@@ -328,7 +349,6 @@ infon* QParser::ReadInfon(int noIDs){
 
 infon* QParser::parse(){
     char tok;
-
     //UErrorCode err = U_ZERO_ERROR;
     //UnicodeString pattern; //pattern="[:XID_Continue:]";
     //UnicodeSet TagChars(pattern, err);

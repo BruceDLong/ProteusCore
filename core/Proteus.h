@@ -51,9 +51,14 @@ enum normState {mnStates=0x1f0000, nsListInited=0x10000, nsNormBegan=0x20000, ns
 
 struct infon;
 
+struct Tag {std::string tag, language, pronunciation; infon* definition;};
+inline bool operator< (const Tag& a, const Tag& b) {int c=strcmp(a.tag.c_str(), b.tag.c_str()); if(c==0) return (a.language.substr(0,2)<b.language.substr(0,2)); else return (c<0);}
+inline bool operator==(const Tag& a, const Tag& b) {if(a.tag==b.tag) return (a.language.substr(0,2)==b.language.substr(0,2)); else return false;}
+extern std::map<Tag,infon*> tag2Ptr;
+extern std::map<infon*,Tag> ptr2Tag;
+
 struct infNode {infon* item; infon* slot; UInt idFlags; infNode* next; infNode(infon* itm=0, UInt f=0):item(itm),idFlags(f){};};
-enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, InitSearchList=2, SetComplete=3, NodeDoneFlag=8, NoMatch=16,isRawFlag=32,
-    skipFollower=64, mLooseType=128};
+enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, InitSearchList=2, SetComplete=3, NodeDoneFlag=8, NoMatch=16,isRawFlag=32, skipFollower=64, mLooseType=128};
 
 struct infon {
     infon(UInt pf=0, UInt wf=0, infon* s=0, infon*v=0,infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0):

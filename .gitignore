@@ -25,3 +25,14 @@ cmake_install.cmake
 libProteus.so
 ptest
 test_build.pyc
+
+core/InfonIO.d
+core/OKOutput.pyc
+core/Proteus.d
+core/auto.cgpr
+core/clip
+core/clip.d
+core/core
+core/doNose.pyc
+core/functest.pr
+

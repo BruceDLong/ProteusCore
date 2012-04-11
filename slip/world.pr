@@ -1,15 +1,15 @@
 //MODEL:  2fd4e1c6 7a2cNotA RealHash Code739 1b93eb12
 // Proteus: 0.8
-// Language: us
+// Language: en.us
 // Compiler: Bruce Long
 
 <%
 {
-%aMOUNT = _
+%AMOUNT = _
 %X=amount  %Y=amount  %Z=amount
 %LOCAL={}
 %SUPER={}
-%cLUSTER={}
+%CLUSTER={}
 %TIME={_}
 %LOCATION={x y z}
 %START={}
@@ -34,11 +34,11 @@
 %PROTON = {quark::={quark_mode=down} *2+{quark::={quark_mode=up}|...}}   // 1 down-quark and 2 up-quarks
 
 %NUCLEUS = {{neutron|...} {proton|...}}
-%aTOM = {nucleus {electron|...}}
+%ATOM = {nucleus {electron|...}}
 
 %MOLECULE = {{atom|...} ...}
 
-%cELL = {cell_nucleus cytoplasm membrane}
+%CELL = {cell_nucleus cytoplasm membrane}
 %TISSUE = {{cell|...} ...}
 
 %ORGAN = {{tissue|...} ...}
@@ -48,17 +48,17 @@
 %MIND = {world_model self_model {sense|...} {body_control|...} motive_register model_processor}
 
 %PERSON = {body mind motivations}
-%vERTABRATE = {Animal spinal_column limbic_system ...}
+%VERTABRATE = {Animal spinal_column limbic_system ...}
 %MAMMAL = {vertabrate mammary_glands ...}
 %HUMAN = {Mammal ...}
 // REFERENCE TO LIFE DATABASE
 
 %SENSE_BASED_AFFECTOR = {}
-%aRT_WORK      = {sense_based_state_affector =: (sense=vision)}
+%ART_WORK      = {sense_based_state_affector =: (sense=vision)}
 %MUSIC_PIECE   = {sense_based_state_affector =: (sense=audition)}
-%aROMA_THERAPY = {sense_based_state_affector =: (sense=smell)}
+%AROMA_THERAPY = {sense_based_state_affector =: (sense=smell)}
 %MASSAGE       = {sense_based_state_affector =: (sense=touch)}
-%cULINARY_WORK = {sense_based_state_affector =: (sense=taste)}
+%CULINARY_WORK = {sense_based_state_affector =: (sense=taste)}
 
 %MALE = {}
 %FEMALE = {}
@@ -69,7 +69,7 @@
 
 %GOVERNMENT = {bureaucracy legal_system enforcement_system ...}
 %NATION = {government citizenry {business|...} {NGO|...} {land_area|...} ...}
-%cONTINENT = {{biome|...} ...}
+%CONTINENT = {{biome|...} ...}
 %OCEAN = {}
 %BIOME = {}
 %PLANET = {phys_obj core surface atmosphere ...}
@@ -79,23 +79,23 @@
 %GALACTIC_SUPERCLUSTER = {%phys_obj {Galaxy|...} }
 %UNIVERSE = {Galactic_Supercluster|...}
 
-%cPU = {}
+%CPU = {}
 %GPU = {}
 
-%cOMPUTER={}
+%COMPUTER={}
 %LAPTOP={}
 %TABLET={}
 %PHONE={}
 %IOS = {}
 %iPad={}
-%aNDROID = {}
+%ANDROID = {}
 
 %Mac = {}
 %Linux = {}
 %windows = {}
 
 %MP3 = {}
-%wORD_DOC = {}
+%WORD_DOC = {}
 
 %TCP_IP_STREAM = {}
 

@@ -51,14 +51,18 @@ static void reportFault(int Signal){cout<<"\nSegmentation Fault.\n"; fflush(stdo
 
 infon *topInfon, *Entry;
 int AutoEval(infon* CI, agent* a);
-bool IsHardFunc(char* tag);
+bool IsHardFunc(string tag);
 
+#include <unicode/putil.h>
 int main(int argc, char **argv){
+    u_setDataDirectory("/home/bruce/proteus/unicode/install/share/icu/49.1.1");
     rl_init();
     signal(SIGSEGV, reportFault);
 
     // Load World
     agent a(0, IsHardFunc, AutoEval);
+    a.locale=std::locale("").name().substr(0,5);
+    cout<<"Locale:"<<a.locale<<"\n";
     if(a.loadInfon("world.pr", &a.world, true)) exit(1);
     topInfon=a.world;  // use topInfon in the ddd debugger to view World
 
@@ -66,12 +70,20 @@ int main(int argc, char **argv){
     while(!cin.eof()){
         std::string entry= readln("Proteus: ");
         if (entry=="quit") break;
+        if (entry=="dict") {
+            cout<<"Locale:"<<a.locale<<"\n";
+            for(std::map<Tag,infon*>::iterator tagPtr=tag2Ptr.begin(); tagPtr!=tag2Ptr.end(); tagPtr++){
+                std::cout<<tagPtr->first.tag<< ":" << tagPtr->first.locale << "=" <<printInfon(tagPtr->second)<< "   "<<tagPtr->first.norm<<"\n";
+            }
+            continue;
+        }
+        if (entry.substr(0,7)=="locale=") {a.locale=entry.substr(7); cout<<"Locale:"<<a.locale<<"\n"; continue;}
         if (entry=="") continue;
         //char ch='x', pr; do {pr=ch; ch=getCH(); entry+=ch;} while (!(pr=='%' && ch=='>'));
         //cout << "Parsing ["<<entry<<"]\n";
         entry="<%" + entry + "%>";
         istrstream fin(entry.c_str());
-        QParser q(fin);
+        QParser q(fin); q.locale=a.locale;
         Entry=q.parse(); // cout <<"Parsed.\n";
         if (Entry) try{
             //a.normalize(Entry); // cout << "Normalizd\n";

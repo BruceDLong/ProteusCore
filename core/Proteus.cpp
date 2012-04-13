@@ -185,10 +185,10 @@ infon* agent::append(infon* i, infon* list){ // appends an item to the end of a 
     } while(p!=last && (p->pFlag&(isVirtual+isTentative)));
     if(!(q && (q->pFlag&(isVirtual+isTentative)))) return 0;
     if(q->pFlag&isVirtual) processVirtual(q);
-    copyTo(i, q); if((q->pFlag&tType)==tList) q->value->top=q;
+    copyTo(i, q); if(((q->pFlag&tType)==tList) && q->size) q->value->top=q;
     q->spec1=i->spec1; q->spec2=i->spec2; q->wrkList=i->wrkList;
-    normalize(q);
     q->pFlag&= ~(isVirtual+isTentative);
+    normalize(q);
     return q;
 }
 
@@ -445,8 +445,8 @@ inline infon* getMasterList(infon* item){
     return 0;
 }
 
-int agent::checkTypeMatch(stng* LType, stng* RType){
-    return isEq(LType->S, RType->S);
+int agent::checkTypeMatch(Tag* LType, Tag* RType){
+    return (*LType)==(*RType);
 }
 
 int agent::compute(infon* i){
@@ -531,10 +531,10 @@ void agent::preNormalize(infon* CI, Qitem *cn){
             case iTagDef: break; // Reserved
             case iTagUse: {
                 if(CI->type == 0) throw ("A tag was null which is a bug");
-                caseDown(CI->type); //OUT("Recalling: "<<(char*)CI->type->S)
-                std::map<stng,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
+         //       caseDown(CI->type->tag); // OUT("Recalling: "<<CI->type->tag<<":"<<CI->type->locale);
+                std::map<Tag,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
                 if (tagPtr!=tag2Ptr.end()) {UInt tmpFlags=CI->pFlag&0xff000000; deepCopy(tagPtr->second,CI); CI->pFlag|=tmpFlags; deTagWrkList(CI);} // TODO B4: move this flag stuff into deepCopy.
-                else{OUT("\nBad tag:'"<<(char*)(CI->type->S)<<"'\n");throw("A tag was used but never defined");}
+                else{OUT("\nBad tag:'"<<CI->type->tag<<"'\n");throw("A tag was used but never defined");}
                 break;}
             case iGetFirst:      StartTerm (CI, &newID); break;
             case iGetMiddle:  break; // TODO: iGetMiddle
@@ -645,10 +645,10 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             if (item->pFlag&fConcat) std::cout << "WARNING: Trying to merge a concatenation.\n";
             if (!(looseType=(wrkNode->idFlags&mLooseType))) { // TODO: More rigorously verify and test strict/loose typing system.
                 if (ItemsType && CIsType!=tList && CIsType!=ItemsType){
-                    std::cout << "Non-matching base types for "<<printInfon(ci)<<"("<<ci->type->S<<") and "<<printInfon(item)<<" ("<<item->type->S<<").\n";
+                    std::cout << "Non-matching base types for "<<printInfon(ci)<<"("<<ci->type->tag<<") and "<<printInfon(item)<<" ("<<item->type->tag<<").\n";
                     SetBypassDeadEnd(); continue;
                 } else if((ci->type && !(ci->wFlag&iHardFunc)) && (item->type && !checkTypeMatch(ci->type,item->type))){
-                    std::cout << "Non-matching model types for "<<printInfon(ci)<<"("<<ci->type->S<<") and "<<printInfon(item)<<" ("<<item->type->S<<").\n";
+                    std::cout << "Non-matching model types for "<<printInfon(ci)<<"("<<ci->type->tag<<") and "<<printInfon(item)<<" ("<<item->type->tag<<").\n";
                     SetBypassDeadEnd(); continue;
                 }
             }

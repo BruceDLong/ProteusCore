@@ -1,24 +1,24 @@
 <%
 {
-{%test={_ "Hello"}}
+&test={_ "Hello"}
 6 5 4 3
 test== 5
 /*
-%frame = {?|...}
+&frame = {?|...}
 
-%portal = {frame|...}
+&portal = {frame|...}
 
-%my2ndItem=[_ _]
-%everyOther={[_ _]|...}
-%setTo6=([???]=6)
-%color=#{*_+_ *_+_ *_+_}
-%size=#*_+_
+&my2ndItem=[_ _]
+&everyOther={[_ _]|...}
+&setTo6=([???]=6)
+&color=#{*_+_ *_+_ *_+_}
+&size=#*_+_
 
-    %HIGH_NUM = _
-    %LOW_NUM = _
-    %NOW_VAL = _
+    &HIGH_NUM = _
+    &LOW_NUM = _
+    &NOW_VAL = _
 
-    %weather_report = {HIGH_NUM LOW_NUM NOW_VAL }
+    &weather_report = {HIGH_NUM LOW_NUM NOW_VAL }
 */
 ...
 }

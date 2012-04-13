@@ -22,7 +22,7 @@ static void reportFault(int Signal){OUT("Segmentation Fault."); fflush(stdout); 
 
 infon* topInfon;
 int AutoEval(infon* CI, agent* a);
-bool IsHardFunc(char* tag);
+bool IsHardFunc(std::string tag);
 
 int main(int argc, char **argv)
 {

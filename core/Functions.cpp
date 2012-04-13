@@ -27,9 +27,9 @@
 
 using namespace std;
 
-bool IsHardFunc(char* tag){
-        return(isEq(tag,"addOne") || isEq(tag,"loadInfon") || isEq(tag,"imageOf") || isEq(tag,"textInfon")
-            || isEq(tag,"time") || isEq(tag,"cos") || isEq(tag,"sin") || isEq(tag,"textLine") || isEq(tag,"timestr"));
+bool IsHardFunc(string tag){
+        return((tag=="addOne") || (tag=="loadInfon") || (tag=="imageOf") || (tag=="textInfon")
+            || (tag=="time") || (tag=="cos") || (tag=="sin") || (tag=="textLine") || (tag=="timestr"));
 }
 
 int getStrArg(infon* i, stng* str, agent* a){
@@ -129,23 +129,23 @@ int LoadFromSystemCmd(agent* a, infon* type, string cmd){
 
 int AutoEval(infon* CI, agent* a){
     int int1, EOT;
-    stng funcName=*CI->type;
+    string funcName=CI->type->tag;
  //  std::cout << "EVAL:"<<funcName.S<<"\n";
-    if (strcmp(funcName.S, "sin")==0){
+    if (funcName=="sin"){
         if (!getRealArg(CI, &int1, a)) {CI->wFlag=iNone; return 0;}
         setRealVal(CI, fix16_sin(int1));  // *pi/180
-    } else if (strcmp(funcName.S, "cos")==0){
+    } else if (funcName=="cos"){
         if (!getRealArg(CI, &int1, a)) {CI->wFlag=iNone; return 0;}
         setRealVal(CI, fix16_cos(int1));  // *pi/180
-    } else if (strcmp(funcName.S, "time")==0){
+    } else if (funcName=="time"){
         tm now;
         time_t rawtime;
         time(&rawtime);
         now=*localtime(&rawtime);
         if (!getIntArg(CI, &int1, a)) return 0;
         if (int1==0)  setIntVal(CI, now.tm_sec);
-    } else if (strcmp(funcName.S, "imageOf")==0){
-        char majorType[100];
+    } else if (funcName=="imageOf"){
+        string majorType;
         char minorType[100];
         infon* args=CI->spec2;
         args->top=CI;
@@ -159,12 +159,12 @@ int AutoEval(infon* CI, agent* a){
  //     cout << printInfon(objectToImage) << "---[" << args->type << "]\n";
         if(objectToImage->type==0){
             switch(objectToImage->pFlag&tType){
-                case tNum: strcpy(majorType, "tNum");         break;
-                case tString: strcpy(majorType, "tString");   break;
-                case tList: strcpy(majorType, "tList");       break;
-                case tUnknown: strcpy(majorType, "tUnknown"); break;
+                case tNum: majorType="tNum";         break;
+                case tString: majorType="tString";   break;
+                case tList: majorType="tList";       break;
+                case tUnknown: majorType="tUnknown"; break;
             }
-        } else {memcpy(majorType,objectToImage->type->S, objectToImage->type->L); majorType[objectToImage->type->L]=0;}
+        } else {majorType=objectToImage->type->tag;}
         if(argsSize>1){
             args=args->next;
             if ((args->pFlag&tType) != tString) {cout<<"Error: minorType in imageOf is not a string\n"; exit (0); return 0;}
@@ -178,7 +178,7 @@ int AutoEval(infon* CI, agent* a){
         for (EOT=a->StartTerm(theme, &i); !EOT; EOT=a->getNextTerm(&i)) {
             if ((i->value->pFlag&tType) != tString) continue;
             copyInfonString2charBuf(i->value, tagBuf);
-            if (strcmp(tagBuf, majorType) == 0) {
+            if (tagBuf==majorType){
                 foundMajorType = i;
                 break;
             }
@@ -189,7 +189,7 @@ int AutoEval(infon* CI, agent* a){
         for (EOT=a->StartTerm(foundMajorType, &i); !EOT; EOT=a->getNextTerm(&i)) {
             if ((i->value->pFlag&tType) != tString) continue;
             copyInfonString2charBuf(i->value, tagBuf);
-            if (argsSize==1 || strcmp(tagBuf, minorType) == 0) {
+            if (argsSize==1 || strcmp(tagBuf,minorType)==0) {
                 foundMinorType=i;
                 break;
             }
@@ -197,29 +197,29 @@ int AutoEval(infon* CI, agent* a){
         if (foundMinorType == 0) {cout<<"Error: no associated minorType ("<<minorType<<") found in Theme\n"; exit (0);  return 0;}
         UInt tmpFlags=(CI->pFlag&0xff000000); a->deepCopy(foundMinorType->value->next, CI); CI->pFlag=(CI->pFlag&0x00ffffff)+tmpFlags;
         CI->spec2=args;
-    } else if (strcmp(funcName.S, "loadInfon")==0){
+    } else if (funcName=="loadInfon"){
         stng str1; infon* I;
         if (!getStrArg(CI, &str1, a)) return 0;
         str1.S[str1.L]=0;
         a->loadInfon(str1.S, &I, 1);
         copyTo(I,CI);
-    } else if (strcmp(funcName.S, "timestr")==0){ //cout << "DOING TIME\n";
+    } else if (funcName=="timestr"){ //cout << "DOING TIME\n";
         string s="Time:"; char l[30]; itoa(time(0),l); s+=l;
         stng sOut; stngCpy(sOut, s.c_str());
         setString(CI, &sOut);
-    } else if (strcmp(funcName.S, "infonToText")==0){
+    } else if (funcName=="infonToText"){
         infon* inf1;
         getInfonArg(CI, &inf1, a);
         string s=printInfon(inf1);
         stng sOut; stngCpy(sOut, s.c_str());
         setString(CI, &sOut);
-    } else if (strcmp(funcName.S, "textInfon")==0){
+    } else if (funcName=="textInfon"){
         infon* inf1;
         getInfonArg(CI, &inf1, a);
         string s=printPure(inf1->value, inf1->pFlag, 0, 0);
         stng sOut; stngCpy(sOut, s.c_str());
         setString(CI, &sOut);
-    } else if (strcmp(funcName.S, "textLine")==0){
+    } else if (funcName=="textLine"){
         infon* inf1, *i; string s="";
         getInfonArg(CI, &inf1, a);
         for (EOT=a->StartTerm(inf1->value, &i); !EOT; EOT=a->getNextTerm(&i)) {
@@ -228,7 +228,7 @@ int AutoEval(infon* CI, agent* a){
         }
         stng sOut; stngCpy(sOut, s.c_str());
         setString(CI, &sOut);
-    } else if (strcmp(funcName.S, "addOne")==0){
+    } else if (funcName=="addOne"){
         if (!getIntArg(CI, &int1, a)) return 0;
         setIntVal(CI, int1+1);
     } else return 0;

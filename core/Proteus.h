@@ -13,6 +13,7 @@
 #include <iostream>
 #include <string.h>
 #include <stddef.h>
+#include <locale>
 #include <boost/intrusive_ptr.hpp>
 
 #include "../libfixmath/libfixmath/fixmath.h"
@@ -51,9 +52,10 @@ enum normState {mnStates=0x1f0000, nsListInited=0x10000, nsNormBegan=0x20000, ns
 
 struct infon;
 
-struct Tag {std::string tag, language, pronunciation; infon* definition;};
-inline bool operator< (const Tag& a, const Tag& b) {int c=strcmp(a.tag.c_str(), b.tag.c_str()); if(c==0) return (a.language.substr(0,2)<b.language.substr(0,2)); else return (c<0);}
-inline bool operator==(const Tag& a, const Tag& b) {if(a.tag==b.tag) return (a.language.substr(0,2)==b.language.substr(0,2)); else return false;}
+#include <unicode/unistr.h>
+struct Tag {std::string tag, locale, pronunciation, norm; infon* definition;};
+inline bool operator< (const Tag& a, const Tag& b) {int c=strcmp(a.norm.c_str(), b.norm.c_str()); if(c==0) return (a.locale.substr(0,2)<b.locale.substr(0,2)); else return (c<0);}
+inline bool operator==(const Tag& a, const Tag& b) {if(a.norm==b.norm) return (a.locale.substr(0,2)==b.locale.substr(0,2)); else return false;}
 extern std::map<Tag,infon*> tag2Ptr;
 extern std::map<infon*,Tag> ptr2Tag;
 
@@ -71,7 +73,7 @@ struct infon {
     infon *next, *prev, *top, *top2, *pred;
     infon *spec1, *spec2;   // Used to store indexes, functions args, etc.
     infNode* wrkList;
-    stng* type;
+    Tag* type;
 };
 
 struct Qitem;
@@ -84,7 +86,7 @@ typedef std::queue<QitemPtr> infQ;
 typedef std::map<infon*, infon*> PtrMap;
 
 struct agent {
-    agent(infon* World=0, bool (*isHF)(char*)=0, int (*eval)(infon*, agent*)=0){world=World; isHardFunc=isHF; autoEval=eval;};
+    agent(infon* World=0, bool (*isHF)(std::string)=0, int (*eval)(infon*, agent*)=0){world=World; isHardFunc=isHF; autoEval=eval;};
     int StartTerm(infon* varIn, infon** varOut);
     int LastTerm(infon* varIn, infon** varOut);
     int getNextTerm(infon** p);
@@ -95,13 +97,14 @@ struct agent {
     char* gStrNxt(infon** ItmPtr, char*txtBuff);
     infon* gListNxt(infon** ItmPtr);
     infon* append(infon* i, infon* list);
-    int checkTypeMatch(stng* LType, stng* RType);
+    int checkTypeMatch(Tag* LType, Tag* RType);
     int compute(infon* i);
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
     void preNormalize(infon* CI, Qitem *cn);
     infon* normalize(infon* i, infon* firstID=0);
    infon* Normalize(infon* i, infon* firstID=0);
     infon *world, context;
+    std::string locale;
     void* utilField; // Field for application specific use.
     void deepCopy(infon* from, infon* to, infon* args=0, PtrMap* ptrs=0, int flags=0);
     int loadInfon(const char* filename, infon** inf, bool normIt=true);
@@ -109,10 +112,8 @@ struct agent {
     int fetch_NodesNormalForm(QitemPtr cn);
     void pushNextInfon(infon* CI, QitemPtr cn, infQ &ItmQ);
     private:
-        bool (*isHardFunc)(char*);
+        bool (*isHardFunc)(std::string);
         int (*autoEval)(infon*, agent*);
-        std::map<stng,infon*> tag2Ptr;
-        std::map<infon*,stng> ptr2Tag;
         std::map<dblPtr,UInt> alts;
         void InitList(infon* item);
         infon* copyList(infon* from, int flags);
@@ -144,6 +145,7 @@ struct QParser{
     char nTok; // First character of last token
     int line;  // linenumber, position in text
     std::string textParsed;
+    std::string locale;
     infon* ti; // top infon
 };
 

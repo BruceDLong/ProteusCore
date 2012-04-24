@@ -54,6 +54,9 @@ int AutoEval(infon* CI, agent* a);
 bool IsHardFunc(string tag);
 
 #include <unicode/putil.h>
+#include <unicode/ustream.h>
+#define PrntLocale(L) {icu::UnicodeString lang,country; cout<<L.getDisplayLanguage(L, lang) <<"-"<< L.getDisplayCountry(L, country) <<" (" << L.getBaseName()<<")\n"; }
+
 int main(int argc, char **argv){
     u_setDataDirectory("/home/bruce/proteus/unicode/install/share/icu/49.1.1");
     rl_init();
@@ -61,8 +64,8 @@ int main(int argc, char **argv){
 
     // Load World
     agent a(0, IsHardFunc, AutoEval);
-    a.locale=std::locale("").name().substr(0,5);
-    cout<<"Locale:"<<a.locale<<"\n";
+    a.locale.createCanonical(std::locale("").name().c_str());
+    cout<<"Locale: "; PrntLocale(a.locale);
     if(a.loadInfon("world.pr", &a.world, true)) exit(1);
     topInfon=a.world;  // use topInfon in the ddd debugger to view World
 
@@ -71,14 +74,17 @@ int main(int argc, char **argv){
         std::string entry= readln("Proteus: ");
         if (entry=="quit") break;
         if (entry=="dict") {
-            cout<<"Locale:"<<a.locale<<"\n";
+            cout<<"Locale: "; PrntLocale(a.locale);
             for(std::map<Tag,infon*>::iterator tagPtr=tag2Ptr.begin(); tagPtr!=tag2Ptr.end(); tagPtr++){
-                std::cout<<tagPtr->first.tag<< ":" << tagPtr->first.locale << "=" <<printInfon(tagPtr->second)<< "   "<<tagPtr->first.norm<<"\n";
+                std::cout<<tagPtr->first.tag<< ":" << tagPtr->first.locale << "\t= " <<printInfon(tagPtr->second)<<"\n";
             }
             continue;
-        }
-        if (entry.substr(0,7)=="locale=") {a.locale=entry.substr(7); cout<<"Locale:"<<a.locale<<"\n"; continue;}
-        if (entry=="") continue;
+        } else if (entry.substr(0,7)=="locale=") {
+            icu::UnicodeString str,lang,country;
+            a.locale=icu::Locale::createCanonical(entry.substr(7).c_str());
+            cout<<"Locale: "; PrntLocale(a.locale);
+            continue;
+        } if (entry=="") continue;
         //char ch='x', pr; do {pr=ch; ch=getCH(); entry+=ch;} while (!(pr=='%' && ch=='>'));
         //cout << "Parsing ["<<entry<<"]\n";
         entry="<%" + entry + "%>";

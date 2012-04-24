@@ -58,7 +58,7 @@ using namespace std;
 infon* debugInfon=0; // Assign this to an infon to assist in debugging.
 
 int AutoEval(infon* CI, agent* a);
-bool IsHardFunc(char* tag);
+bool IsHardFunc(string tag);
 agent theAgent(0, IsHardFunc, AutoEval);
 
 struct User {
@@ -466,9 +466,9 @@ infon* NormalizeAndPresent(infon* i, infon* firstID=0){
             theAgent.fetch_NodesNormalForm(cn);
 
             if(CI->type){
-                if(strcmp(CI->type->S, "portal")==0){MSGl("PORTAL");}
-                else if(strcmp(CI->type->S, "frame")==0){MSGl("FRAME");}
-                else {MSGl(CI->type->S<<" ["<<CI<<"]"); }
+                if(CI->type->tag == "portal"){MSGl("PORTAL");}
+                else if(CI->type->tag == "frame"){MSGl("FRAME");}
+                else {MSGl(CI->type->tag <<" ["<<CI<<"]"); }
 
             }else {MSG("*");}
             //wait?

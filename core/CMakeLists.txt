@@ -4,7 +4,7 @@ cmake_policy(SET CMP0015 NEW)
 add_definitions(-Wno-deprecated -Wno-write-strings -fpermissive -g -Wall)
 
 set(PROTEUS_SRCS Proteus.cpp InfonIO.cpp Functions.cpp)
-set(UNICODE_LIBS icuuc icuio icudata icutu icui18n icule iculx icutest dl)
+set(UNICODE_LIBS icuio icui18n icutu icuuc icudata icule iculx icutest dl)
 
 include_directories( ../unicode/install/include/ )
 

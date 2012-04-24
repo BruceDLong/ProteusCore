@@ -13,7 +13,7 @@
 #include <iostream>
 #include <string.h>
 #include <stddef.h>
-#include <locale>
+#include <unicode/locid.h>
 #include <boost/intrusive_ptr.hpp>
 
 #include "../libfixmath/libfixmath/fixmath.h"
@@ -37,7 +37,7 @@ inline bool operator> (const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) ret
 inline bool operator==(const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) return (a.key2==b.key2); else return false;}
 
 enum masks {mRepMode=0x0700, mMode=0x0800, isNormed=0x1000, asDesc=0x2000, toExec=0x4000, sizeIndef=0x100, mListPos=0xff000000, goSize=16};
-enum vals {toGiven=0, toWorldCtxt=0x0100, toHomePos=0x0200, fromHere=0x0300, asFunc=0x0400, intersect=0x0500, asTag=0x0600, asNone=0x0700, // TODO B4: remove these
+enum vals {
     fMode=0xf8, fConcat=0x08, fLoop=0x10, fInvert=0x20, fIncomplete=0x40, fUnknown=0x80,
     tType=3, tUnknown=0, tNum=1, tString=2, tList=3,   notLast=(0x04<<goSize), tReal=0x04,
     isFirst=0x01000000, isLast=0x02000000, isTop=0x04000000, isBottom=0x8000000,
@@ -104,9 +104,9 @@ struct agent {
     infon* normalize(infon* i, infon* firstID=0);
    infon* Normalize(infon* i, infon* firstID=0);
     infon *world, context;
-    std::string locale;
+    icu::Locale locale;
     void* utilField; // Field for application specific use.
-    void deepCopy(infon* from, infon* to, infon* args=0, PtrMap* ptrs=0, int flags=0);
+    void deepCopy(infon* from, infon* to, PtrMap* ptrs=0, int flags=0);
     int loadInfon(const char* filename, infon** inf, bool normIt=true);
 
     int fetch_NodesNormalForm(QitemPtr cn);
@@ -145,7 +145,7 @@ struct QParser{
     char nTok; // First character of last token
     int line;  // linenumber, position in text
     std::string textParsed;
-    std::string locale;
+    icu::Locale locale;
     infon* ti; // top infon
 };
 

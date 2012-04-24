@@ -1,10 +1,10 @@
 <%
 // User: Bruce
 {
-%FRIENDS = {person}
+&FRIENDS = {person}
 
-%BRUCE = {PERSON MALE HUMAN}
-%STUFF = {FRIENDS MUSIC VIDEOS BOOKS DOCUMENTS POSSESSIONS ...}
+&BRUCE = {PERSON MALE HUMAN}
+&STUFF = {FRIENDS MUSIC VIDEOS BOOKS DOCUMENTS POSSESSIONS ...}
 
 BRUCE = {
     STUFF = {
@@ -34,8 +34,4 @@ BRUCE = {
 
 }
 %>
-const char *texts[3] = {
-    "This is some english text",
-    "هذه هي بعض النصوص العربي",
-    "這是一些中文",
-};
+

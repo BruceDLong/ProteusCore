@@ -82,11 +82,6 @@ std::string printInfon(infon* i, infon* CI){
     return s;
 }
 
-UErrorCode err=U_ZERO_ERROR;
-const icu::Normalizer2 *tagNormer=Normalizer2::getNFKCCasefoldInstance(err);
-const UnicodeSet TagChars(UnicodeString("[:XID_Continue:]"), err);
-const UnicodeSet TagStarts(UnicodeString("[:XID_Start:]"), err);
-
 #define streamPut(nChars) {for(int n=nChars; n>0; --n){stream.putback(textParsed[textParsed.size()-1]); textParsed.resize(textParsed.size()-1);}}
 #define ChkNEOF {if(stream.eof() || stream.fail()) throw "Unexpected End of file";}
 #define getbuf(c) {ChkNEOF; for(p=0;(c);buf[p++]=streamGet()){if (p>=bufmax) throw "String Overflow";} buf[p]=0;}
@@ -123,7 +118,25 @@ void QParser::RmvWSC (){ // Remove whitespace and comments.
     }
 }
 
+#include "unicode/uspoof.h"
+#include "unicode/unorm.h"
 #define U8_IS_SINGLE(c) (((c)&0x80)==0)
+UErrorCode err=U_ZERO_ERROR;
+const icu::Normalizer2 *tagNormer=Normalizer2::getNFKCCasefoldInstance(err);
+const UnicodeSet TagChars(UnicodeString("[:XID_Continue:]"), err);
+const UnicodeSet TagStarts(UnicodeString("[:XID_Start:]"), err);
+bool iscsymOrUni (char nTok) {return (iscsym(nTok) || (nTok&0x80));}
+bool isTagStart(char nTok) {return (iscsymOrUni(nTok)&&!isdigit(nTok)&&(nTok!='_'));}
+
+bool tagIsBad(std::string tag, const char* locale) {
+    if(!TagStarts.contains(tag.c_str()[0])) return 1; // First tag character is invalid
+    if((size_t)TagChars.spanUTF8(tag.c_str(), -1, USET_SPAN_SIMPLE) != tag.length()) return 1;
+    UErrorCode err;  USpoofChecker *sc = uspoof_open(&err);
+    uspoof_setChecks(sc, USPOOF_SINGLE_SCRIPT|USPOOF_INVISIBLE, &err);
+    uspoof_setAllowedLocales(sc, locale, &err);
+    int result=uspoof_checkUTF8(sc, tag.c_str(), -1, 0, &err);
+    return (result!=0);
+}
 
 const char* altTok(std::string tok){
     return 0;
@@ -152,10 +165,6 @@ bool QParser::chkStr(const char* tok){
     return true;
 }
 
-bool iscsymOrUni (char nTok) {return (iscsym(nTok) || (nTok&0x80));}
-bool isTagStart(char nTok) {return (iscsymOrUni(nTok)&&!isdigit(nTok)&&(nTok!='_'));}
-bool tagIsBad(std::string tag) {return 0;} //TODO: check for XID_Start and XID_Continue and no spoofing.
-
 #include <cstdarg>
 const char* QParser::nxtTokN(int n, ...){
     char* tok; va_list ap; va_start(ap,n); int i,p;
@@ -163,6 +172,7 @@ const char* QParser::nxtTokN(int n, ...){
         tok=va_arg(ap, char*); nTok=Peek();
         if(strcmp(tok,"cTok")==0) {if(iscsym(nTok)&&!isdigit(nTok)&&(nTok!='_')) {getbuf(iscsym(peek())); break;} else tok=0;}
         else if(strcmp(tok,"unicodeTok")==0) {if(isTagStart(nTok)) {getbuf(iscsymOrUni(peek())); break;} else tok=0;}
+        else if(strcmp(tok,"<abc>")==0) {if(chkStr("<")) {getbuf((peek()!='>')); chkStr(">"); break;} else tok=0;}
         else if(strcmp(tok,"123")==0) {if(isdigit(nTok)) {getbuf((isdigit(peek())||peek()=='.')); break;} else tok=0;}
         else if (chkStr(tok) || chkStr(altTok(tok))) break; else tok=0;
     }
@@ -210,13 +220,13 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
                 do{ // Here we process tag definitions
                 tag=new Tag; tag->definition=(infon*)prevTag; prevTag=tag;
                 if (!nxtTok("unicodeTok")) throw "Expected a tag after '&'";
-                tag->tag=buf; tag->locale=locale;
+                tag->tag=buf; tag->locale=locale.getBaseName();
                 tagNormer->normalize(UnicodeString::fromUTF8(tag->tag), err).toUTF8String(tag->norm);
-                if(tagIsBad(tag->norm)) throw "Illegal tag being defined";
-                if(nxtTok(":")){if(nxtTok("cTok"))tag->locale=buf;}
-                if(nxtTok(":")){tag->pronunciation="";} //TODO: Load pronunciation.
+                if(tagIsBad(tag->norm, tag->locale.c_str())) throw "Illegal tag being defined";
+                if(nxtTok(":")){if(nxtTok("cTok")) {icu::Locale tmp; tag->locale=(tmp.createCanonical(buf)).getBaseName();}}
+                if(nxtTok(":")){if(nxtTok("<abc>")) tag->pronunciation=buf;}
                 if(nxtTok("=")){done=true;}
-                else if(!nxtTok("&")) throw "Expected %tag or tag definition";
+                else if(!nxtTok("&")) throw "Expected &tag or tag locale, pronunciation or definition";
                 } while (!done);
                 infon* definition=ReadInfon();
                 for(Tag* t=tag; t; t=prevTag){
@@ -239,7 +249,7 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
                 }
                 *i=head=prev=j; head->pFlag|=isFirst+isTop;if(*pFlag&fConcat)*pFlag|=(j->pFlag&tType);
             }
-            if (foundRet==1) {check('>'); *i=j; foundRet++; *pFlag|=intersect;}
+            if (foundRet==1) {check('>'); *i=j; foundRet++; /* *pFlag|=intersect; */}  // TODO: when repairing Middle-Indexing, repair 'intersect'
             j->top=head; j->next=head; prev->next=j; j->prev=prev; head->prev=j;
             prev=j; RmvWSC();
         }
@@ -270,9 +280,9 @@ infon* QParser::ReadInfon(int noIDs){
     if(nxtTok("?")){fs=fv=fUnknown; wFlag=iNone;}
     else if(nxtTok("unicodeTok")){
         wFlag|=iTagUse; tags=new Tag;
-        tags->tag=buf; tags->locale=locale;
+        tags->tag=buf; tags->locale=locale.getBaseName();
         tagNormer->normalize(UnicodeString::fromUTF8(tags->tag), err).toUTF8String(tags->norm);
-        if(tagIsBad(tags->norm)) throw "Illegal tag being used";
+        if(tagIsBad(tags->norm, locale.getBaseName())) throw "Illegal tag being used";
     }else if( nxtTok("%")){ // TODO: Don't allow these outside of := or :
         pFlag|=fUnknown;
         if (nxtTok("cTok")){

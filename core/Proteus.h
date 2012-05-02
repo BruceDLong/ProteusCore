@@ -36,10 +36,12 @@ inline bool operator< (const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) ret
 inline bool operator> (const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) return (a.key2>b.key2); else return (a.key1>b.key1);}
 inline bool operator==(const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) return (a.key2==b.key2); else return false;}
 
-enum masks {mRepMode=0x0700, mMode=0x0800, isNormed=0x1000, asDesc=0x2000, toExec=0x4000, sizeIndef=0x100, mListPos=0xff000000, goSize=16};
+enum masks {mMode=0x0800, isNormed=0x1000, asDesc=0x2000, toExec=0x4000, sizeIndef=0x100, mListPos=0xff000000, goSize=16};
 enum vals {
-    fMode=0xf8, fConcat=0x08, fLoop=0x10, fInvert=0x20, fIncomplete=0x40, fUnknown=0x80,
     tType=3, tUnknown=0, tNum=1, tString=2, tList=3,   notLast=(0x04<<goSize), tReal=0x04,
+    mFormat=0x7<<2, FUnknown=1<<2, FConcat=2<<2, fInt=3<<2, fRational=4<<2, fFloat=5<<2, // Format of size and value fields. 0,6,7 not yet used.
+    fLoop=0x20, fInvert=0x40, fIncomplete=0x80,
+
     isFirst=0x01000000, isLast=0x02000000, isTop=0x04000000, isBottom=0x8000000,
     noAlts=0, hasAlts=0x10000000, noMoreAlts=0x20000000, isTentative=0x40000000, isVirtual=0x80000000
     };
@@ -49,6 +51,20 @@ enum seeds {mSeed=0x30, sNone=0x00, sUseAsFirst=0x10, sUseAsList=0x20, sUseAsLas
 enum wMasks {mFindMode = 0x0f, mIsTopRefNode = 0x1000, mIsHeadOfGetLast=0x2000, mAsProxie=0x4000, mAssoc=0x8000};
 enum colonFlags {c1Left=0x100, c2Left=0x200, c1Right=0x400, c2Right=0x800};
 enum normState {mnStates=0x1f0000, nsListInited=0x10000, nsNormBegan=0x20000, nsPreNormed=0x40000, nsWorkListDone=0x80000, nsNormComplete=0x100000, nsBottomNotLast=0x200000};
+
+#define SetBits(item, mask, val) {(item) &= ~(mask); (item)|=(val);}
+#define SizeIsUnknown(inf) (((inf)->pFlag&(mFormat<<goSize))==FUnknown)
+#define SizeIsKnown(inf) (((inf)->pFlag&(mFormat<<goSize))!=FUnknown)
+#define SizeIsConcat(inf) (((inf)->pFlag&(mFormat<<goSize))==FConcat)
+#define ValueIsUnknown(inf) (((inf)->pFlag&mFormat)==FUnknown)
+#define ValueIsKnown(inf) (((inf)->pFlag&mFormat)!=FUnknown)
+#define ValueIsConcat(inf) (((inf)->pFlag&mFormat)==FConcat)
+#define FormatIsUnknown(inf) (((inf)&mFormat)==FUnknown)
+#define FormatIsKnown(inf) (((inf)&mFormat)!=FUnknown)
+#define FormatIsConcat(inf) (((inf)&mFormat)==FConcat)
+#define IsSimpleUnknownNum(inf) ((((inf)->pFlag&(((mFormat+tType)<<goSize)+(mFormat+tType)))==((FUnknown+tNum)<<goSize)+(FUnknown+tNum)) && (((inf)->wFlag&mFindMode)==iNone))
+#define SetValueFormat(inf, fmt) SetBits((inf)->pFlag, (mFormat), (fmt))
+#define SetSizeFormat(inf, fmt) SetBits((inf)->pFlag, (mFormat<<goSize), (fmt<<goSize))
 
 struct infon;
 
@@ -158,19 +174,19 @@ enum WorkItemResults {DoNothing, BypassDeadEnd, DoNext, DoNextBounded};
 
 inline void getInt(infon* inf, int* num, int* sign) {     \
   UInt f=inf->pFlag;                           \
-  if((f&tType)==tNum && !(f&fUnknown)) (*num)=(UInt)inf->value; else (*num)=0;     \
+  if((f&tType)==tNum && FormatIsKnown(f)) (*num)=(UInt)inf->value; else (*num)=0;     \
   *sign=f&fInvert;}
 
 inline fix16_t getReal(infon* inf) {
     UInt f=inf->pFlag;
-    if((f&tType)==tNum && !(f&fUnknown)) {
+    if((f&tType)==tNum && FormatIsKnown(f)) {
         if(f&tReal) return ((f&fInvert)? (-(fix16_t)inf->value): (fix16_t)inf->value);
         else return fix16_from_int((f&fInvert)?(-(int)inf->value):((int)inf->value));
     } else return 0;
 }
 
 inline void getStng(infon* i, stng* str) {
-    if((i->pFlag&tType)==tString && !(i->pFlag&fUnknown)) {
+    if((i->pFlag&tType)==tString && ValueIsKnown(i)) {
         str->S=(char*)i->value; str->L=(UInt)i->size;
     }
 }

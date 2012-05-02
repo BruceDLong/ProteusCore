@@ -1,5 +1,5 @@
 /////////////////////////////////////////////////////
-// Proteus Parser 6.0  Copyright (c) 1997-2011 Bruce Long
+// Proteus Parser 6.0  Copyright (c) 1997-2012 Bruce Long
 /*  This file is part of the "Proteus Engine"
     The Proteus Engine is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
     The Proteus Engine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
@@ -11,6 +11,9 @@
 #include <stdlib.h>
 #include <math.h>
 #include <cstdio>
+#include <gmp.h>
+#include <gmpxx.h>
+
 #include "remiss.h"
 
 #include <unicode/putil.h>
@@ -22,22 +25,22 @@ using namespace icu;
 #define Indent {for (int x=0;x<indent;++x) s+=" ";}
 std::string printPure (infon* i, UInt f, UInt wSize, infon* CI){
     std::string s;
-    if ((f&(fIncomplete+fUnknown)) && !(f&tNum)) s+="?";
+    if (((f&(fIncomplete+mFormat))==(fIncomplete+FUnknown)) && ((f&tType)!=tNum)) s+="?";
     UInt type=f&tType;
     if (type==tNum){
-        if (f & fUnknown) s+='_';
+        if (FormatIsUnknown(f)) s+='_';
         else if(f&tReal){char buf[70]; sprintf(buf,"%f", fix16_to_dbl((fix16_t)i)); s.append(buf);}
         else {char buf[70]; itoa((UInt)i, buf); s.append(buf);}
     } else if(type==tString){s+="\"";s.append((char*)i,wSize);s+="\""; }
-    else if(type==tList||(f&fConcat)){
-        s+=(f&fConcat)?"(":"{";
+    else if(type==tList || FormatIsConcat(f)){
+        s+=(FormatIsConcat(f))?"(":"{";
         for(infon* p=i;p;) {
             if(p==i && f&fLoop && i->spec2){printInfon(i->spec2,CI); s+=" | ";}
             if(p->pFlag&isTentative) {s+="..."; break;}
             else {s+=printInfon(p, CI); s+=' ';}
             if (p->pFlag&isBottom) p=0; else p=p->next;
         }
-        s+=(f&fConcat)?")":"}";
+        s+=(FormatIsConcat(f))?")":"}";
     }
     return s;
 }
@@ -53,8 +56,8 @@ std::string printInfon(infon* i, infon* CI){
     if (mode==iTagUse) {
         s+=i->type->tag; s+=" ";
     } else if(f&isNormed || mode==iNone /* || f&notParent */){
-        if (f&(fUnknown<<goSize)) {s+=printPure(i->value, f, i->wSize, CI); if((f&tType)!=tList) s+=",";}
-        else if (f&fUnknown) {s+=printPure(i->size, f>>goSize,i->wSize, CI); s+=";";}
+        if ((f&(mFormat<<goSize))==(FUnknown<<goSize)) {s+=printPure(i->value, f, i->wSize, CI); if((f&tType)!=tList) s+=",";}
+        else if (FormatIsUnknown(f)) {s+=printPure(i->size, f>>goSize,i->wSize, CI); s+=";";}
         else{
             if((f&tType)==tNum) {s+=((f>>goSize)&fInvert)?"/":"*"; s+=printPure(i->size, f>>goSize, 0,CI);}
              if((f&tType)==tNum) s+=(f&fInvert)?"-":"+";
@@ -209,7 +212,7 @@ char errMsg[100];
 UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
     UInt p=0, size=0, stay=1; char rchr, tok; infon *head=0, *prev; infon* j;
     if(nxtTok("(") || nxtTok("{") || nxtTok("[")){
-        if(nTok=='(') {rchr=')'; *pFlag|=(fConcat+tNum);}
+        if(nTok=='(') {rchr=')'; SetBits(*pFlag, mFormat+tType,(FConcat+tNum));}
         else if(nTok=='['){rchr=']'; *pFlag|=tList; *wFlag=iGetLast;}
         else {rchr='}'; *pFlag|=tList;}
         RmvWSC(); int foundRet=0; int foundBar=0;
@@ -241,13 +244,14 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
             // OK, process an element or description of this list
             if(tok=='<') {foundRet=1; streamGet(); j=ReadInfon();}
             else if(nxtTok("...")){
-                j=new infon(fUnknown+isVirtual+(tNum<<goSize),iNone,(infon*)(size+1));j->pos=(size+1); stay=0;
+                j=new infon(FUnknown+isVirtual+(tNum<<goSize),iNone,(infon*)(size+1));j->pos=(size+1); stay=0;
             } else j=ReadInfon();
             if(++size==1){
                 if(!foundRet && !foundBar && stay && nxtTok("|")){
                     *s2=j; *pFlag|=fLoop; size=0; foundBar=1; RmvWSC(); continue;
                 }
-                *i=head=prev=j; head->pFlag|=isFirst+isTop;if(*pFlag&fConcat)*pFlag|=(j->pFlag&tType);
+                *i=head=prev=j; head->pFlag|=isFirst+isTop;
+                if(FormatIsConcat(*pFlag)) *pFlag|=(j->pFlag&tType);
             }
             if (foundRet==1) {check('>'); *i=j; foundRet++; /* *pFlag|=intersect; */}  // TODO: when repairing Middle-Indexing, repair 'intersect'
             j->top=head; j->next=head; prev->next=j; j->prev=prev; head->prev=j;
@@ -261,12 +265,14 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
         if(nxtTok("~"))  (*wFlag)|=mAssoc;
     } else if (nxtTok("123")) {  // read number
         *pFlag|=tNum; size=1;
-        if(strchr(buf,'.')) {(*i)=(infon*)fix16_from_dbl(atof(buf)); *pFlag|=tReal;} else *i=(infon*)atoi(buf);
-    } else if (nxtTok("_")){*pFlag|=fUnknown+tNum;
-    } else if (nxtTok("$")){*pFlag|=fUnknown+tString;
+        if(strchr(buf,'.')) {
+            (*i)=(infon*)fix16_from_dbl(atof(buf)); *pFlag|=tReal;
+        } else *i=(infon*)atoi(buf);
+    } else if (nxtTok("_")){*pFlag|=FUnknown+tNum;
+    } else if (nxtTok("$")){*pFlag|=FUnknown+tString;
     } else if (nxtTok("\"") || nxtTok("'")){  // read string
         getbuf(peek()!=nTok); streamGet();
-        *pFlag+=tString; *i=(((*pFlag)&fUnknown)? 0 : (infon*)new char[p]); memcpy(*i,buf,p);
+        *pFlag+=tString; *i=((FormatIsUnknown(*pFlag))? 0 : (infon*)new char[p]); memcpy(*i,buf,p);
         size=p;
     } else {strcpy(errMsg, "'X' was not expected"); errMsg[1]=nTok; throw errMsg;}
     return size;
@@ -277,14 +283,14 @@ infon* QParser::ReadInfon(int noIDs){
     Tag* tags=0; const char* cTok, *eTok, *cTok2; /*int textEnd=0; int textStart=textParsed.size();*/
     if(nxtTok("@")){pFlag|=toExec;}
     if(nxtTok("#")){pFlag|=asDesc;}
-    if(nxtTok("?")){fs=fv=fUnknown; wFlag=iNone;}
+    if(nxtTok("?")){fs=fv=FUnknown; wFlag=iNone;}
     else if(nxtTok("unicodeTok")){
         wFlag|=iTagUse; tags=new Tag;
         tags->tag=buf; tags->locale=locale.getBaseName();
         tagNormer->normalize(UnicodeString::fromUTF8(tags->tag), err).toUTF8String(tags->norm);
         if(tagIsBad(tags->norm, locale.getBaseName())) throw "Illegal tag being used";
     }else if( nxtTok("%")){ // TODO: Don't allow these outside of := or :
-        pFlag|=fUnknown;
+        pFlag|=FUnknown;
         if (nxtTok("cTok")){
             if      (strcmp(buf,"W")==0){wFlag|=iToWorld;}
             else if (strcmp(buf,"C")==0){wFlag|=iToCtxt;}
@@ -301,26 +307,26 @@ infon* QParser::ReadInfon(int noIDs){
         size=ReadPureInfon(&iSize, &fs, &wFlag, &s2);
         if(op=='+'){
             iVal=iSize; iSize=(infon*)size; fv=fs; fs=tNum; // use identity term '1'
-            if (size==0 && (fv==(fUnknown+tNum) || fv==(fUnknown+tString))) fs=fUnknown+tNum;
+            if (size==0 && (fv==(FUnknown+tNum) || fv==(FUnknown+tString))) fs=FUnknown+tNum;
         }else if(op=='*'){
             if((fs&tType)==tString || (fs&tType)==tList) throw("Terms cannot be strings or lists");
             if(nxtTok("+")) op='+'; else if(nxtTok("-")) {op='+'; fv|=fInvert;}
             if (op=='+'){size=ReadPureInfon(&iVal,&fv,&wFlag,&s2);}
             else {iVal=0; fv=tNum;}    // use identity summand '0'
         } else { // no operator
-            if(nxtTok(";")){iVal=0; fv=fUnknown;}
+            if(nxtTok(";")){iVal=0; fv=FUnknown;}
             else {
                 nxtTok(",");
                 iVal=iSize;fv=fs; fs=tNum; iSize=(infon*)size;
-                if (size==0 && (fv==(fUnknown+tNum) || fv==(fUnknown+tString))) fs=fUnknown+tNum; // set size's flags for _ and $
-                else if(((fv&tType)==tList) && iVal && ((iVal->prev)->pFlag)&isVirtual) {fs|=fUnknown;} // set size's flags for {...}
+                if (size==0 && (fv==(FUnknown+tNum) || fv==(FUnknown+tString))) fs=FUnknown+tNum; // set size's flags for _ and $
+                else if(((fv&tType)==tList) && iVal && ((iVal->prev)->pFlag)&isVirtual) {fs|=FUnknown;} // set size's flags for {...}
             }
         }
     }
     infon* i=new infon((fs<<goSize)+fv+pFlag, wFlag, iSize,iVal,0,s1,s2); i->wSize=size; i->type=tags;
-    if(i->pFlag&fConcat && i->size==(infon*)1){infon* ret=i->value; delete(i); ret->top=ret->next=ret->prev=0; return ret;} // BUT we lose i's idents and some flags (desc, ...)
-    if ((i->size && ((fs&tType)==tList))||(fs&fConcat)) i->size->top=i;
-    if ((i->value&& ((fv&tType)==tList))||(fv&fConcat))i->value->top=i;
+    if(ValueIsConcat(i) && i->size==(infon*)1){infon* ret=i->value; delete(i); ret->top=ret->next=ret->prev=0; return ret;} // BUT we lose i's idents and some flags (desc, ...)
+    if ((i->size && ((fs&tType)==tList))||FormatIsConcat(fs)) i->size->top=i;
+    if ((i->value&& ((fv&tType)==tList))||FormatIsConcat(fv))i->value->top=i;
     if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~(mFindMode+mAssoc); i->wFlag|=mIsHeadOfGetLast; i=new infon(0,wFlag,0,0,0,i); i->spec1->top2=i;}
     for(char c=Peek(); !(noIDs&1) && (c==':' || c=='='); c=Peek()){
         infon *R, *toSet=0, *toRef=0; int code=0;

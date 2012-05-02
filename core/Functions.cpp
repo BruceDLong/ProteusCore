@@ -40,7 +40,7 @@ int getStrArg(infon* i, stng* str, agent* a){
 }
 
 void setString(infon* CI, stng *s){
-    UInt tmpFlags=CI->pFlag&0xff000000;
+    UInt tmpFlags=CI->pFlag&mListPos;
     CI->size=(infon*) s->L;
     CI->value=(infon*)s->S;
     CI->pFlag=tmpFlags + (tNum<<goSize)+tString;
@@ -65,7 +65,7 @@ int getRealArg(infon* i, fix16_t* Real1, agent* a){
 }
 
 void setIntVal(infon* CI, int i){
-    UInt tmpFlags=CI->pFlag&0xff000000;
+    UInt tmpFlags=CI->pFlag&mListPos;
     CI->size=CI->spec2->size;
     CI->value=(infon*) abs(i);
     if (i<0)tmpFlags|=fInvert;
@@ -74,7 +74,7 @@ void setIntVal(infon* CI, int i){
 }
 
 void setRealVal(infon* CI, fix16_t i){
-    UInt tmpFlags=CI->pFlag&0xff000000;
+    UInt tmpFlags=CI->pFlag&mListPos;
     CI->size=CI->spec2->size;
     CI->value=(infon*) i;
     CI->pFlag=tmpFlags + (tNum<<goSize)+tNum+tReal;
@@ -82,7 +82,7 @@ void setRealVal(infon* CI, fix16_t i){
 }
 
 void setIntSize(infon* CI, int i){
-    UInt tmpFlags=CI->pFlag&0xff000000;
+    UInt tmpFlags=CI->pFlag&mListPos;
     CI->size=(infon*) abs(i);
     CI->value=0;
     CI->pFlag=tmpFlags + (tNum<<goSize)+tNum;
@@ -107,7 +107,7 @@ int LoadFromSystemCmd(agent* a, infon* type, string cmd){
     stream = popen(cmd.c_str(), "r");
     while ( fgets(buffer, MAX_SYSCMD_BUFFER, stream) != NULL ){
         infon* i=new infon;
-        i->pFlag&=~((fUnknown<<goSize)+fUnknown);
+  //      i->pFlag&=~((fUnknown<<goSize)+fUnknown);
         ++count;
         a->deepCopy(type, i);
         if(mode==1){
@@ -195,7 +195,7 @@ int AutoEval(infon* CI, agent* a){
             }
         }
         if (foundMinorType == 0) {cout<<"Error: no associated minorType ("<<minorType<<") found in Theme\n"; exit (0);  return 0;}
-        UInt tmpFlags=(CI->pFlag&0xff000000); a->deepCopy(foundMinorType->value->next, CI); CI->pFlag=(CI->pFlag&0x00ffffff)+tmpFlags;
+        UInt tmpFlags=(CI->pFlag&mListPos); a->deepCopy(foundMinorType->value->next, CI); CI->pFlag=(CI->pFlag& (~mListPos))+tmpFlags;
         CI->spec2=args;
     } else if (funcName=="loadInfon"){
         stng str1; infon* I;

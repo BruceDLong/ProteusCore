@@ -15,6 +15,8 @@
 #include <stddef.h>
 #include <unicode/locid.h>
 #include <boost/intrusive_ptr.hpp>
+#include <gmp.h>
+#include <gmpxx.h>
 
 #include "../libfixmath/libfixmath/fixmath.h"
 
@@ -39,8 +41,8 @@ inline bool operator==(const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) ret
 enum masks {mMode=0x0800, isNormed=0x1000, asDesc=0x2000, toExec=0x4000, sizeIndef=0x100, mListPos=0xff000000, goSize=16};
 enum vals {
     tType=3, tUnknown=0, tNum=1, tString=2, tList=3,   notLast=(0x04<<goSize), tReal=0x04,
-    mFormat=0x7<<2, FUnknown=1<<2, FConcat=2<<2, fInt=3<<2, fRational=4<<2, fFloat=5<<2, // Format of size and value fields. 0,6,7 not yet used.
-    fLoop=0x20, fInvert=0x40, fIncomplete=0x80,
+    mFormat=0x7<<2, FUnknown=1<<2, fLiteral=2<<2, FConcat=3<<2, fFloat=4<<2, fRational=5<<2,  // Format of size and value fields. 0,6,7 not yet used.
+    fLoop=0x20, fInvert=0x40, fIncomplete=0x80, fInvalid=0x100,
 
     isFirst=0x01000000, isLast=0x02000000, isTop=0x04000000, isBottom=0x8000000,
     noAlts=0, hasAlts=0x10000000, noMoreAlts=0x20000000, isTentative=0x40000000, isVirtual=0x80000000
@@ -53,19 +55,26 @@ enum colonFlags {c1Left=0x100, c2Left=0x200, c1Right=0x400, c2Right=0x800};
 enum normState {mnStates=0x1f0000, nsListInited=0x10000, nsNormBegan=0x20000, nsPreNormed=0x40000, nsWorkListDone=0x80000, nsNormComplete=0x100000, nsBottomNotLast=0x200000};
 
 #define SetBits(item, mask, val) {(item) &= ~(mask); (item)|=(val);}
-#define SizeIsUnknown(inf) (((inf)->pFlag&(mFormat<<goSize))==FUnknown)
-#define SizeIsKnown(inf) (((inf)->pFlag&(mFormat<<goSize))!=FUnknown)
-#define SizeIsConcat(inf) (((inf)->pFlag&(mFormat<<goSize))==FConcat)
-#define ValueIsUnknown(inf) (((inf)->pFlag&mFormat)==FUnknown)
-#define ValueIsKnown(inf) (((inf)->pFlag&mFormat)!=FUnknown)
-#define ValueIsConcat(inf) (((inf)->pFlag&mFormat)==FConcat)
-#define FormatIsUnknown(inf) (((inf)&mFormat)==FUnknown)
-#define FormatIsKnown(inf) (((inf)&mFormat)!=FUnknown)
-#define FormatIsConcat(inf) (((inf)&mFormat)==FConcat)
+#define SizeIsUnknown(inf)    (((inf)->pFlag&(mFormat<<goSize))==(FUnknown<<goSize))
+#define SizeIsKnown(inf)      (((inf)->pFlag&(mFormat<<goSize))!=(FUnknown<<goSize))
+#define SizeIsConcat(inf)     (((inf)->pFlag&(mFormat<<goSize))==(FConcat<<goSize))
+#define ValueIsUnknown(inf)   (((inf)->pFlag&mFormat)==FUnknown)
+#define ValueIsKnown(inf)     (((inf)->pFlag&mFormat)!=FUnknown)
+#define ValueIsConcat(inf)    (((inf)->pFlag&mFormat)==FConcat)
+#define FormatIsUnknown(flag) (((flag)&mFormat)==FUnknown)
+#define FormatIsKnown(flag)   (((flag)&mFormat)!=FUnknown)
+#define FormatIsConcat(flag)  (((flag)&mFormat)==FConcat)
+#define FormatIs(flag, fmt)   (((flag)&mFormat)==(fmt))
 #define IsSimpleUnknownNum(inf) ((((inf)->pFlag&(((mFormat+tType)<<goSize)+(mFormat+tType)))==((FUnknown+tNum)<<goSize)+(FUnknown+tNum)) && (((inf)->wFlag&mFindMode)==iNone))
 #define SetValueFormat(inf, fmt) SetBits((inf)->pFlag, (mFormat), (fmt))
 #define SetSizeFormat(inf, fmt) SetBits((inf)->pFlag, (mFormat<<goSize), (fmt<<goSize))
 
+ /* #define asLInfPtr(pureInf) ((pureInf).pInf[0])
+#define asInfPtr(pureInf) ((infon*)(&(pureInf).pInf[0]))
+#define asBigNum(pureInf) ((BigNum)((pureInf).pInf[0]))
+#define setBigNum(pureInf) ((BigNum)((pureInf).pInf[0]))
+#define getIntVal(pureInf) ((UInt)asBigNum(pureInf).get_num().get_ui()) // TODO: What about rationals?
+*/ // TODO: Delete these
 struct infon;
 
 #include <unicode/unistr.h>
@@ -78,14 +87,35 @@ extern std::map<infon*,Tag> ptr2Tag;
 struct infNode {infon* item; infon* slot; UInt idFlags; infNode* next; infNode(infon* itm=0, UInt f=0):item(itm),idFlags(f){};};
 enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, InitSearchList=2, SetComplete=3, NodeDoneFlag=8, NoMatch=16,isRawFlag=32, skipFollower=64, mLooseType=128};
 
+struct InfonData :mpq_class {
+    UInt refCnt;
+    InfonData(char* numStr, int base):mpq_class(numStr,base), refCnt(1){};
+    InfonData(char* str);
+};
+
+struct pureInfon {
+    UInt flags;
+    mpq_class offset;
+    InfonData* dataHead;
+
+    //operator UInt() { if((flags&(tType+mFormat))==(tNum+fLiteral)) return 5; else return -1; }
+    operator std::string();
+    std::string toString(int base=10);
+    pureInfon(UInt flag=0, InfonData* Head=0):flags(flag), dataHead(Head){};
+    pureInfon(char* str, int base=0);
+  //  pureInfon(pureInfon* pInf){if(pInf){flags=pInf->flags; dataHead=pInf->dataHead; offset=pInf->offset; if (dataHead) dataHead->refCnt++;} else {flags=0; dataHead=0; offset=0;}}
+    ~pureInfon(){if(dataHead) {if(--dataHead->refCnt == 0) delete (dataHead); }}
+};
+
 struct infon {
-    infon(UInt pf=0, UInt wf=0, infon* s=0, infon*v=0,infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0):
-        pFlag(pf), wFlag(wf), size(s), value(v), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {prev=0; top=0; top2=0; type=0; pos=0;};
+    infon(UInt pf=0, UInt wf=0, infon* s=0, infon* v=0, infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0):
+        pFlag(pf), wFlag(wf), size(s), value(v), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID)
+        {prev=0; top=0; top2=0; type=0; pos=0;};
     infon* isntLast(); // 0=this is the last one. >0 = pointer to predecessor of the next one.
     UInt pFlag, wFlag, pos;
     UInt wSize; // get rid if this. disallow strings and lists in "size"
-    infon *size;        // The *-term; number of states, chars or items
-    infon *value;       // Summand List
+    infon* size; //pureInfon size;        // The *-term; number of states, chars or items
+    infon* value; //pureInfon value;       // Summand
     infon *next, *prev, *top, *top2, *pred;
     infon *spec1, *spec2;   // Used to store indexes, functions args, etc.
     infNode* wrkList;
@@ -172,10 +202,11 @@ enum WorkItemResults {DoNothing, BypassDeadEnd, DoNext, DoNextBounded};
 #define Debug(msg) /*{std::cout<< msg << "\n";}*/
 #define isEq(L,R) (L && R && strcmp(L,R)==0)
 
-inline void getInt(infon* inf, int* num, int* sign) {     \
-  UInt f=inf->pFlag;                           \
-  if((f&tType)==tNum && FormatIsKnown(f)) (*num)=(UInt)inf->value; else (*num)=0;     \
-  *sign=f&fInvert;}
+inline void getInt(infon* inf, int* num, int* sign) {
+  UInt f=inf->pFlag;
+  if((f&tType)==tNum && FormatIs(f, fLiteral)) (*num)=(UInt)inf->value; else (*num)=0;
+  *sign=f&fInvert;
+ }
 
 inline fix16_t getReal(infon* inf) {
     UInt f=inf->pFlag;

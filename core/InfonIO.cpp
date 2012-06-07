@@ -11,8 +11,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include <cstdio>
-#include <gmp.h>
-#include <gmpxx.h>
 
 #include "remiss.h"
 
@@ -185,9 +183,40 @@ const char* QParser::nxtTokN(int n, ...){
 #define nxtTok(tok) nxtTokN(1,tok)
 
 bool IsHardFunc(std::string tag);
-void  chk4HardFunc(infon* i){
+void chk4HardFunc(infon* i){
     if((i->wFlag&mFindMode)==iTagUse && IsHardFunc(i->type->tag)){i->wFlag&=~iTagUse; i->wFlag|=iHardFunc;}
 }
+
+/*mpz_class* sizeFromExp(int exp){
+    std::string size="1";
+    size.append(exp, '0');
+    mpz_class *Z=new mpz_class(size);
+    return Z;
+}*/
+/*
+infon* numberFromString(char* buf, UInt* pFlag){
+    pureInfon *intPart=0, *intSize=0, *fracPart=0, *fracSize1=0, *fracSize2=0;
+    char *pch=strchr(buf,'.');
+    if(pch){
+        *pFlag|=fFloat;
+        (*pch)=(char)0;
+        intPart=new pureInfon(buf);
+        fracPart=new pureInfon(pch+1);
+        int eos=strlen(pch+1);
+        intSize = sizeFromExp(pch-buf);
+        fracSize1=sizeFromExp(eos);
+        fracSize2=new pureInfon(*fracSize1);
+        infon* top;//UNDO! =new infon(tNum+FConcat+((tNum+fLiteral)<<goSize), 0, (infon*)new pureInfon(3),
+   //UNDO!                  new infon(tNum+fLiteral+((tNum+fLiteral)<<goSize)+isTop+isFirst, 0, (infon*)intSize, (infon*)intPart, 0,0,0,
+   //UNDO!                      new infon(tNum+fLiteral+((tNum+fLiteral)<<goSize), 0, (infon*)fracSize1, (infon*)fracPart, 0,0,0,
+  //UNDO!                           new infon(tNum+fLiteral+((tNum+fLiteral)<<goSize)+isBottom+isLast, 0, (infon*)fracSize2, (infon*)new pureInfon(0))
+   //UNDO!                      )
+   //UNDO!                  )
+   //UNDO!              );
+        return top;
+    }else {*pFlag|=fLiteral; return ((infon*)new pureInfon(buf)); }
+}
+*/
 
 infon* grok(infon* item, UInt tagCode, int* code){
     if((item->wFlag&mFindMode)==iTagUse) {(*code)|=tagCode; return item;}
@@ -264,7 +293,7 @@ UInt QParser::ReadPureInfon(infon** i, UInt* pFlag, UInt *wFlag, infon** s2){
         check(rchr);
         if(nxtTok("~"))  (*wFlag)|=mAssoc;
     } else if (nxtTok("123")) {  // read number
-        *pFlag|=tNum; size=1;
+        *pFlag|=(tNum+fLiteral); size=1;
         if(strchr(buf,'.')) {
             (*i)=(infon*)fix16_from_dbl(atof(buf)); *pFlag|=tReal;
         } else *i=(infon*)atoi(buf);

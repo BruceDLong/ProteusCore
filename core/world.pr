@@ -1,5 +1,5 @@
 <%
-{
+{'ONE' 'TWO'/*
 &test={_ "Hello"}
 6 5 4 3
 test== 5

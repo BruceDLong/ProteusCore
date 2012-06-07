@@ -69,7 +69,7 @@ void setIntVal(infon* CI, int i){
     CI->size=CI->spec2->size;
     CI->value=(infon*) abs(i);
     if (i<0)tmpFlags|=fInvert;
-    CI->pFlag=tmpFlags + (tNum<<goSize)+tNum;
+    CI->pFlag=tmpFlags + ((tNum+fLiteral)<<goSize)+(tNum+fLiteral);
     CI->wFlag=iNone;
 }
 

@@ -264,8 +264,8 @@ void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags){
 
     infNode *p=from->wrkList, *q;  // Merge Identity Lists
     if(p) do {
-        q=new infNode; q->item=new infon; q->idFlags=p->idFlags;
-        if((p->item->pFlag&mFindMode)==iNone) {q->item=new infon; q->idFlags=p->idFlags; deepCopy (p->item, q->item, ptrs);}
+        q=new infNode; q->idFlags=p->idFlags;
+        if((p->item->wFlag&mFindMode)==iNone || true) {q->item=new infon; q->idFlags=p->idFlags; deepCopy (p->item, q->item, ptrs);}
         else {q->item=p->item;}
         prependID(&to->wrkList, q);
         p=p->next;
@@ -290,7 +290,7 @@ void closeListAtItem(infon* lastItem){ // remove (no-longer valid) items to the 
         count++;
     } while (!(itemAfterLast->pFlag&isTop));
     itemAfterLast->top->size=(infon*)count;
-    SetSizeFormat(itemAfterLast, fInt);
+    SetSizeFormat(itemAfterLast, fLiteral); itemAfterLast->pFlag|=(tNum<<goSize);
 }
 
 char isPosLorEorGtoSize(UInt pos, infon* item){
@@ -420,7 +420,7 @@ infon* getIdentFromPrev(infon* prev){
     return prev->wrkList->item->wrkList->item;
 }
 
-inline int infonSizeCmp(infon* left, infon* right) { // -1: L<R,  0: L=R, 1: L>R. Infons must have known, numeric sizes
+inline int infonSizeCmp(infon* left, infon* right) { // -1: L<R,  0: L=R, 1: L>R. Infons must have fLiteral, numeric sizes
     UInt leftType=left->pFlag&tType, rightType=right->pFlag&tType;
     if(leftType==rightType)
         if (left->size==right->size) return 0;
@@ -661,7 +661,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                         if (ItemsType==tList) InitList(item);
                         UInt flagMask=0; infon* oldCiSize=ci->size;
                         // MERGE SIZES
-                        if(!looseType && SizeIsKnown(item)){ // If item's size is known, we copy size
+                        if(!looseType &&  SizeIsKnown(item)){ // If item's size is known, we copy size
                             if(SizeIsUnknown(ci)) {ci->size=item->size;  flagMask|=(0xff<<goSize); }
                             else if (infonSizeCmp(ci,item)!=0 &&  (infTypes!= tList+4*tList) && (infTypes!= tString+4*tString)){
                                 SetBypassDeadEnd(); std::cout<<"Sizes contradict\n"; break;
@@ -707,7 +707,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                         if(infonSizeCmp(ci,item)==0 || (infTypes!= tString+4*tString)){
                             level=((IDfol)?0:getFollower(&IDfol, item));
                             if(IDfol){if(level==0) addIDs(CIfol, IDfol, looseType, asAlt); else result=BypassDeadEnd;}
-                            else  if( (infTypes!= tList+4*tList)) {// temporaty hack but it works ok.
+                            else  if( (infTypes!= tList+4*tList)) {// temporary hack but it works ok.
                                 if ((tmp=ci->isntLast()) && (tmp->next->pFlag&isTentative)) {SetBypassDeadEnd();}
                                 if((tmp=getMasterList(ci) )){closeListAtItem(tmp); result=BypassDeadEnd; }
                             }

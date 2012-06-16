@@ -41,8 +41,8 @@ int getStrArg(infon* i, stng* str, agent* a){
 
 void setString(infon* CI, stng *s){
     UInt tmpFlags=CI->pFlag&mListPos;
-    CI->size=(infon*) s->L;
-    CI->value=(infon*)s->S;
+//UNDO:    CI->size=(infon*) s->L;
+//UNDO:    CI->value=(infon*)s->S;
     CI->pFlag=tmpFlags + (tNum<<goSize)+tString;
     CI->wFlag=iNone;
 }
@@ -59,7 +59,7 @@ int getIntArg(infon* i, int* Int1, agent* a){
 int getRealArg(infon* i, fix16_t* Real1, agent* a){
     i->spec2->top=i;
     a->normalize(i->spec2);
-    if(!(i->spec2->pFlag&tReal)) return 0;
+//UNDO:    if(!(i->spec2->pFlag&tReal)) return 0;
     *Real1=getReal(i->spec2);
     return 1;
 }
@@ -67,23 +67,23 @@ int getRealArg(infon* i, fix16_t* Real1, agent* a){
 void setIntVal(infon* CI, int i){
     UInt tmpFlags=CI->pFlag&mListPos;
     CI->size=CI->spec2->size;
-    CI->value=(infon*) abs(i);
+//UNDO:    CI->value=(infon*) abs(i);
     if (i<0)tmpFlags|=fInvert;
     CI->pFlag=tmpFlags + ((tNum+fLiteral)<<goSize)+(tNum+fLiteral);
     CI->wFlag=iNone;
 }
 
 void setRealVal(infon* CI, fix16_t i){
-    UInt tmpFlags=CI->pFlag&mListPos;
+ //UNDO:   UInt tmpFlags=CI->pFlag&mListPos;
     CI->size=CI->spec2->size;
-    CI->value=(infon*) i;
-    CI->pFlag=tmpFlags + (tNum<<goSize)+tNum+tReal;
+//UNDO:    CI->value=(infon*) i;
+ //UNDO:   CI->pFlag=tmpFlags + (tNum<<goSize)+tNum+tReal;
     CI->wFlag=iNone;
 }
 
 void setIntSize(infon* CI, int i){
     UInt tmpFlags=CI->pFlag&mListPos;
-    CI->size=(infon*) abs(i);
+//UNDO:    CI->size=(infon*) abs(i);
     CI->value=0;
     CI->pFlag=tmpFlags + (tNum<<goSize)+tNum;
     CI->wFlag=iNone;
@@ -111,19 +111,19 @@ int LoadFromSystemCmd(agent* a, infon* type, string cmd){
         ++count;
         a->deepCopy(type, i);
         if(mode==1){
-            i->size=(infon*)strlen(buffer);
-            i->value=(infon*)malloc((UInt)i->size+1);
-            strcpy((char*)i->value, buffer);
+ //UNDO:           i->size=(infon*)strlen(buffer);
+ //UNDO:           i->value=(infon*)malloc((UInt)i->size+1);
+ //UNDO:           strcpy((char*)i->value, buffer);
         } else if(mode==2){
-            i->size=(infon*)1;
-            i->value=(infon*)atoi(buffer);
+//UNDO:            i->size=(infon*)1;
+ //UNDO:           i->value=(infon*)atoi(buffer);
         } else if(mode==3){ //////////// MAKE THIS WORK
         }
-        if(head->value){i->next=head->value; i->prev=head->value->prev; i->top=head->value; head->value->prev=i; i->prev->next=i;}
-        else {head->value=i->next=i->prev=i; i->top=head; i->pFlag|=isFirst+isTop;}
+        if(head->value.listHead){i->next=head->value.listHead; i->prev=head->value.listHead->prev; i->top=head->value.listHead; head->value.listHead->prev=i; i->prev->next=i;}
+        else {head->value.listHead=i->next=i->prev=i; i->top=head; i->pFlag|=isFirst+isTop;}
     }
     pclose(stream);
-    head->size=(infon*)count;
+//UNDO:    head->size=(infon*)count;
     return 0;
 }
 
@@ -153,9 +153,9 @@ int AutoEval(infon* CI, agent* a){
         infon* foundMajorType=0;
         infon* foundMinorType=0;
         infon* objectToImage=0;
-        UInt argsSize=(UInt)args->size;
+        UInt argsSize=0; //UNDO: (UInt)args->size;
         if ((args->pFlag&tType) != tList) {cout<<"Error: Argument to imageOf is not a list\n";  exit (0); return 0;}
-        objectToImage=args=args->value;
+//UNDO:        objectToImage=args=args->value;
  //     cout << printInfon(objectToImage) << "---[" << args->type << "]\n";
         if(objectToImage->type==0){
             switch(objectToImage->pFlag&tType){
@@ -168,7 +168,7 @@ int AutoEval(infon* CI, agent* a){
         if(argsSize>1){
             args=args->next;
             if ((args->pFlag&tType) != tString) {cout<<"Error: minorType in imageOf is not a string\n"; exit (0); return 0;}
-            else {copyInfonString2charBuf(args, minorType);}
+ //UNDO:           else {copyInfonString2charBuf(args, minorType);}
         }
         args=args->next;
         infon* i=0;
@@ -176,8 +176,8 @@ int AutoEval(infon* CI, agent* a){
         if (theme == 0) {cout<<"Error: Theme is not defined\n";  exit (0);  return 0;}
         char tagBuf[100];
         for (EOT=a->StartTerm(theme, &i); !EOT; EOT=a->getNextTerm(&i)) {
-            if ((i->value->pFlag&tType) != tString) continue;
-            copyInfonString2charBuf(i->value, tagBuf);
+//UNDO:            if ((i->value->pFlag&tType) != tString) continue;
+//UNDO:            copyInfonString2charBuf(i->value, tagBuf);
             if (tagBuf==majorType){
                 foundMajorType = i;
                 break;
@@ -187,15 +187,15 @@ int AutoEval(infon* CI, agent* a){
         if (foundMajorType == 0) {cout<<"Error: majorType '"<<majorType<<"' not found in Theme\n";  exit (0);  return 0;}
         i=0;
         for (EOT=a->StartTerm(foundMajorType, &i); !EOT; EOT=a->getNextTerm(&i)) {
-            if ((i->value->pFlag&tType) != tString) continue;
-            copyInfonString2charBuf(i->value, tagBuf);
+//UNDO:            if ((i->value->pFlag&tType) != tString) continue;
+//UNDO:            copyInfonString2charBuf(i->value, tagBuf);
             if (argsSize==1 || strcmp(tagBuf,minorType)==0) {
                 foundMinorType=i;
                 break;
             }
         }
         if (foundMinorType == 0) {cout<<"Error: no associated minorType ("<<minorType<<") found in Theme\n"; exit (0);  return 0;}
-        UInt tmpFlags=(CI->pFlag&mListPos); a->deepCopy(foundMinorType->value->next, CI); CI->pFlag=(CI->pFlag& (~mListPos))+tmpFlags;
+//UNDO:        UInt tmpFlags=(CI->pFlag&mListPos); a->deepCopy(foundMinorType->value->next, CI); CI->pFlag=(CI->pFlag& (~mListPos))+tmpFlags;
         CI->spec2=args;
     } else if (funcName=="loadInfon"){
         stng str1; infon* I;
@@ -216,15 +216,16 @@ int AutoEval(infon* CI, agent* a){
     } else if (funcName=="textInfon"){
         infon* inf1;
         getInfonArg(CI, &inf1, a);
-        string s=printPure(inf1->value, inf1->pFlag, 0, 0);
+        string s=printPure(inf1->value.dataHead, inf1->pFlag, 0, 0);
         stng sOut; stngCpy(sOut, s.c_str());
         setString(CI, &sOut);
     } else if (funcName=="textLine"){
         infon* inf1, *i; string s="";
         getInfonArg(CI, &inf1, a);
-        for (EOT=a->StartTerm(inf1->value, &i); !EOT; EOT=a->getNextTerm(&i)) {
-            if ((i->pFlag&tType) == tString) s.append((char*)i->value, (UInt)i->size);
-            else if ((i->pFlag&tType) == tNum) s+=printPure(i->value, i->pFlag, 0, 0);
+  //UNDO:      for (EOT=a->StartTerm(inf1->value, &i); !EOT; EOT=a->getNextTerm(&i))
+  {
+ //UNDO:           if ((i->pFlag&tType) == tString) s.append((char*)i->value, (UInt)i->size);
+ //UNDO:           else if ((i->pFlag&tType) == tNum) s+=printPure(i->value, i->pFlag, 0, 0);
         }
         stng sOut; stngCpy(sOut, s.c_str());
         setString(CI, &sOut);

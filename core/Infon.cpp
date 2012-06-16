@@ -30,7 +30,10 @@ using namespace std;
 
 const int blockSize=sizeof(mp_limb_t);
 
-InfonData::InfonData(char* str):mpq_class(0), refCnt(1){
+void unRefInfon(infon* i){};
+void unRefInfData(infonData* i){};
+
+infonData::infonData(char* str):mpq_class(0), refCnt(1){
     int strSize=strlen(str)+1;
     mpz_ptr numerator=get_num_mpz_t();
     numerator->_mp_size = numerator->_mp_alloc = ((strSize==0)?1:(strSize-1)/blockSize+1);
@@ -40,20 +43,52 @@ InfonData::InfonData(char* str):mpq_class(0), refCnt(1){
 };
 
 pureInfon::operator string() {
-    if((flags&(tType+mFormat))==(tNum+fLiteral)) return dataHead->get_str();
-    else return (char*)dataHead->get_num_mpz_t()->_mp_d;
+    if((flagsZ&(tType+mFormat))==(tNum+fLiteral)) return dataHead->get_str();
+    else return string((char*)dataHead->get_num_mpz_t()->_mp_d);
 }
 
-pureInfon::pureInfon(char* str, int base) {
+void pureInfon::setValUI(const UInt &num){
+    offset=0;
+    if(PureIsInListMode(*this)) unRefInfon(listHead);
+    else unRefInfData(dataHead);
+    dataHead=new infonData(num);
+    flagsZ = tNum+fLiteral;
+}
+
+int infCmp(infon* A, infon* B){
+    if(!infonSizeCmp(A,B)) return -2;
+
+    // By here, types match, sizes are equal, literal numbers.
+    UInt A_flag=A->value.flagsZ&(tType+mFormat), B_flag=B->value.flagsZ&(tType+mFormat);
+    if(A_flag != (tNum+fLiteral) || A_flag != (tString+fLiteral)) return -2;
+    if(B_flag != (tNum+fLiteral) || B_flag != (tString+fLiteral)) return -2;
+
+    if(A_flag==(tNum+fLiteral) && B_flag==(tNum+fLiteral)) return cmp(*A->value.dataHead, *B->value.dataHead);
+    if(A_flag==(tString+fLiteral) && B_flag==(tString+fLiteral))
+        return memcmp(
+            ((char*)(A->value.dataHead->get_num_mpz_t()->_mp_d))+A->value.offset.get_num().get_ui(),
+            ((char*)(B->value.dataHead->get_num_mpz_t()->_mp_d))+B->value.offset.get_num().get_ui(),
+            A->getSize().get_ui());
+    throw "TODO: in infCmp(), handle mixed infon types (string/num)";
+}
+
+pureInfon::pureInfon(char* str, int base){
     if (base==-1) { // str is a string
-        flags|=tString+fLiteral;
-        dataHead=new InfonData(str);
+        flagsZ|=tString+fLiteral;
+        dataHead=new infonData(str);
     } else { // str is a number
         char *pch=strchr(str,'.');
-        if (pch=='\0') {flags=tNum+fLiteral; dataHead=new InfonData(str,base);}
+        if (pch=='\0') {flagsZ=tNum+fLiteral; dataHead=new infonData(str,base);}
         else{
             (*pch)='\0';
-            flags=tNum+fFloat;
+            flagsZ=tNum+fFloat;
         }
     }
+}
+
+mpz_class& infon::getSize(){
+    if(size.offset!=0) throw "Size needs updateing. Account for offset.";
+    if((size.flagsZ&(tNum+fLiteral))!=(tNum+fLiteral)) throw "Size needs updating. Account for non-literal sizes.";
+    if(size.dataHead->get_den().get_ui()!=1) throw "Size needs updating. Account for fractional sizes.";
+    return size.dataHead->get_num();
 }

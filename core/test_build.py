@@ -62,7 +62,7 @@ def test_engine():
    ('1', 'Addition with reverse references', r'{4, 6, (%\\:[_] %\\:[_, _] )}', '<{*1+4 *1+6 *1+10 }>'),
    ('1', 'A two argument function', r'[+{_, _} +{[+_]:=%\\ [+_ +_]:=%\\  [+_]:=%\\} ]<:+{9,4}', '<{*1+9 *1+4 *1+9 }>'),
    ('2', 'define and use a tag', '{&color=#{*_+_ *_+_ *_+_} &size=#*_+_}', '<{}>', 'color', '#{_, _, _, }'),
-   ('2', "nested empty tags", r'{&frame = {?|...} &portal = {frame|...}}', '<{}>', 'portal=*4+{frame|...}', '{ | {...} {...} {...} {...} }'),
+   ('2', "nested empty tags", r'{&frame = {?|...} &portal = {frame|...}}', '<{}>', 'portal=*4+{frame|...}', '{{...} {...} {...} {...} }'),
    ('2', 'Two argument function defined with a tag', r'+{&func={+{_, _} +{%\\:[_] %\\:[_, _]  %\\:[_]}}  }', '<{}>', 'func<: +{9,4}', '{*1+9 *1+4 *1+9 }'),
    ('1', 'Simple parsing', '{*_ +{"A"|...} "AARON"} ==  \'AAAARON\' // This is a comment', '<{{"A" "A" } "AARON" }>'),
    ('1', 'Parse & select option 2', r'[...]="ARONdacks" :== {"AARON" "ARON"} ', '<"ARON">'),
@@ -70,7 +70,7 @@ def test_engine():
    ('1', 'Two item parse', r'{[...] :== {"AARON" "BOBO" "ARON" "AAAROM"}   "dac"} ==  "ARONdacks"', '<{"ARON" "dac" }>'),
    ('1', 'Two item parse; error 1', r'{[...] :== {"AARON" "BOBO" "ARON" "AAAROM"}   "dac"} ==  "ARONjacks"', '<ERROR>'), #NEXT-TASK // No dac, only jac
    ('1', 'Two item parse; error 2', r'{[...] :== {"AARON" "BOBO" "ARON" "AAAROM"}   "dac"} ==  "slapjacks"', '<ERROR>'), #NEXT-TASK // slap doesn't match.
-   ('1', 'Two item parse, get first option', r'{[...] :== {"ARON" "BOBO" "AARON" "CeCe"}   "dac"} ==  "ARONdacks"', '<{"ARON" "dac" }>'), #NEXT-TASK: {"ARONdacks" "dac" }
+   ('1', 'Two item parse, get first option', r'{[...] :== {"ARON" "BOBO" "AARON" "CeCe"}   "dac"} ==  "ARONdacks"', '<{"ARON" "dac" }>'),
    #('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \\[?]}]<:{"slothe", "Hello", "bob", 65432}|...}', '<{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } }>'),  #FAIL
    # Add the above test but with a list in the comprehension yeild.
    #('1', "Adding prep for 'reduce'", r'{[ ? {%\\:[?] (%\\:[?] *1+22)}]<: {*1+5 *2+7 *3+9 *4+13}|...}', '<{ | {*1+5 *1+27 } {*2+7 *2+29 } {*3+9 *3+31 } {*4+13 *4+35 } }>'),
@@ -82,9 +82,9 @@ def test_engine():
     ('1', "fromHere indexing string 2", "{111, 222, %^:*3+[...] 444, 555, 666, {'hi'}}", '<{*1+111 *1+222 *1+555 *1+444 *1+555 *1+666 {"hi" } }> '),
     ('1', "fromHere indexing negative", "{111, 222, %^:/3+[...] 444, 555, 666, 777}", '<{*1+111 *1+222 *1+777 *1+444 *1+555 *1+666 *1+777 }> '),
 
-    ('1', "Test lists with simple associations", r'{ {5, 7, 3, 8} {%\\:[_]~ | ...}}', r'<{{*1+5 *1+7 *1+3 *1+8 } { | *1+5 *1+7 *1+3 *1+8 } }> '),
+    ('1', "Test lists with simple associations", r'{ {5, 7, 3, 8} {%\\:[_]~ | ...}}', r'<{{*1+5 *1+7 *1+3 *1+8 } {*1+5 *1+7 *1+3 *1+8 } }> '),
     ('1', "Test internal associations", r'{ {5, 7, 3, 8} ({0} {+(%\\\\:[_]~ %\\\:[_]~) | ...})}', r'<{{*1+5 *1+7 *1+3 *1+8 } ({*1+0 } {*1+5 *1+12 *1+15 *1+23 } ) }>'), # FAIL
-    ('1', "Test sequential func argument passing", r'{ {5, 7, 3, 8} {addOne<:(%\\\:[_]~) | ...}}', '<{{*1+5 *1+7 *1+3 *1+8 } { | *1+6 *1+8 *1+4 *1+9 } }>'),
+    ('1', "Test sequential func argument passing", r'{ {5, 7, 3, 8} {addOne<:(%\\\:[_]~) | ...}}', '<{{*1+5 *1+7 *1+3 *1+8 } {*1+6 *1+8 *1+4 *1+9 } }>'),
 
     ('1', "Select 2nd item from list", r'*2+[...] := {8 7 6 5 4 3}', '*1+7'),
     ('2', "Select item by concept tag: 'third item of ...'", r'{&thirdItem=*3+[...]}', '<{}>', 'thirdItem := {8 7 6 5 4 3}', '*1+6'),

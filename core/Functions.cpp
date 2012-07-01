@@ -47,7 +47,7 @@ void setString(infon* CI, stng *s){
     CI->wFlag=iNone;
 }
 
-int getIntArg(infon* i, int* Int1, agent* a){
+int getIntArg(infon* i, BigNum* Int1, agent* a){
     int sign;
     i->spec2->top=i;
     a->normalize(i->spec2);
@@ -64,10 +64,10 @@ int getRealArg(infon* i, fix16_t* Real1, agent* a){
     return 1;
 }
 
-void setIntVal(infon* CI, int i){
+void setIntVal(infon* CI, BigNum i){
     UInt tmpFlags=CI->pFlag&mListPos;
     CI->size=CI->spec2->size;
-//UNDO:    CI->value=(infon*) abs(i);
+    CI->value = pureInfon(i); //abs(i);
     if (i<0)tmpFlags|=fInvert;
     CI->pFlag=tmpFlags + ((tNum+fLiteral)<<goSize)+(tNum+fLiteral);
     CI->wFlag=iNone;
@@ -100,9 +100,9 @@ const int MAX_SYSCMD_BUFFER=2*1024;
 int LoadFromSystemCmd(agent* a, infon* type, string cmd){
     FILE *stream; string line; int mode=0; int count=0;
     char buffer[MAX_SYSCMD_BUFFER];
-    if((type->pFlag&tType)==tString){ mode=1;}
-    else if((type->pFlag&tType)==tNum){mode=2;}
-    else if((type->pFlag&tType)==tList){mode=3;}
+    if(InfsType(type)==tString){ mode=1;}
+    else if(InfsType(type)==tNum){mode=2;}
+    else if(InfsType(type)==tList){mode=3;}
     infon* head=new infon((tNum<<goSize)+tList,0);
     stream = popen(cmd.c_str(), "r");
     while ( fgets(buffer, MAX_SYSCMD_BUFFER, stream) != NULL ){
@@ -129,6 +129,7 @@ int LoadFromSystemCmd(agent* a, infon* type, string cmd){
 
 int AutoEval(infon* CI, agent* a){
     int int1, EOT;
+    BigNum bigNum;
     string funcName=CI->type->tag;
  //  std::cout << "EVAL:"<<funcName.S<<"\n";
     if (funcName=="sin"){
@@ -142,8 +143,8 @@ int AutoEval(infon* CI, agent* a){
         time_t rawtime;
         time(&rawtime);
         now=*localtime(&rawtime);
-        if (!getIntArg(CI, &int1, a)) return 0;
-        if (int1==0)  setIntVal(CI, now.tm_sec);
+        if (!getIntArg(CI, &bigNum, a)) return 0;
+        if (bigNum==0)  setIntVal(CI, now.tm_sec);
     } else if (funcName=="imageOf"){
         string majorType;
         char minorType[100];
@@ -154,7 +155,7 @@ int AutoEval(infon* CI, agent* a){
         infon* foundMinorType=0;
         infon* objectToImage=0;
         UInt argsSize=0; //UNDO: (UInt)args->size;
-        if ((args->pFlag&tType) != tList) {cout<<"Error: Argument to imageOf is not a list\n";  exit (0); return 0;}
+        if (InfsType(args) != tList) {cout<<"Error: Argument to imageOf is not a list\n";  exit (0); return 0;}
 //UNDO:        objectToImage=args=args->value;
  //     cout << printInfon(objectToImage) << "---[" << args->type << "]\n";
         if(objectToImage->type==0){
@@ -167,7 +168,7 @@ int AutoEval(infon* CI, agent* a){
         } else {majorType=objectToImage->type->tag;}
         if(argsSize>1){
             args=args->next;
-            if ((args->pFlag&tType) != tString) {cout<<"Error: minorType in imageOf is not a string\n"; exit (0); return 0;}
+            if (InfsType(args) != tString) {cout<<"Error: minorType in imageOf is not a string\n"; exit (0); return 0;}
  //UNDO:           else {copyInfonString2charBuf(args, minorType);}
         }
         args=args->next;
@@ -176,7 +177,7 @@ int AutoEval(infon* CI, agent* a){
         if (theme == 0) {cout<<"Error: Theme is not defined\n";  exit (0);  return 0;}
         char tagBuf[100];
         for (EOT=a->StartTerm(theme, &i); !EOT; EOT=a->getNextTerm(&i)) {
-//UNDO:            if ((i->value->pFlag&tType) != tString) continue;
+//UNDO:            if (InfsType(i->value) != tString) continue;
 //UNDO:            copyInfonString2charBuf(i->value, tagBuf);
             if (tagBuf==majorType){
                 foundMajorType = i;
@@ -216,7 +217,7 @@ int AutoEval(infon* CI, agent* a){
     } else if (funcName=="textInfon"){
         infon* inf1;
         getInfonArg(CI, &inf1, a);
-        string s=printPure(inf1->value.dataHead, inf1->pFlag, 0, 0);
+        string s=printPure(&inf1->value, inf1->pFlag, 0, 0);
         stng sOut; stngCpy(sOut, s.c_str());
         setString(CI, &sOut);
     } else if (funcName=="textLine"){
@@ -230,8 +231,8 @@ int AutoEval(infon* CI, agent* a){
         stng sOut; stngCpy(sOut, s.c_str());
         setString(CI, &sOut);
     } else if (funcName=="addOne"){
-        if (!getIntArg(CI, &int1, a)) return 0;
-        setIntVal(CI, int1+1);
+        if (!getIntArg(CI, &bigNum, a)) return 0;
+        setIntVal(CI, bigNum+1);
     } else return 0;
     CI->type=0;
     return 1;

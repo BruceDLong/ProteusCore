@@ -66,7 +66,7 @@ int main(int argc, char **argv){
     agent a(0, IsHardFunc, AutoEval);
     a.locale.createCanonical(std::locale("").name().c_str());
     cout<<"Locale: "; PrntLocale(a.locale);
-  //UNDO:  if(a.loadInfon("world.pr", &a.world, true)) exit(1);
+    if(a.loadInfon("world.pr", &a.world, true)) exit(1);
     topInfon=a.world;  // use topInfon in the ddd debugger to view World
 
     cout<<"\nThe Proteus CLI. Type some infons or 'quit'\n\n";
@@ -92,8 +92,8 @@ int main(int argc, char **argv){
         QParser q(fin); q.locale=a.locale;
         Entry=q.parse(); // cout <<"Parsed.\n";
         if (Entry) try{
-            a.normalize(Entry); // cout << "Normalizd\n";
-            //Entry=a.append(Entry, a.world);
+            //a.normalize(Entry); // cout << "Normalizd\n";
+            Entry=a.append(Entry, a.world);
         } catch (char const* errMsg){std::cout<<errMsg<<"\n";}
 
         if (Entry) cout<<"\n"<<printInfon(Entry)<<"\n\n";

@@ -39,7 +39,7 @@ inline bool operator< (const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) ret
 inline bool operator> (const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) return (a.key2>b.key2); else return (a.key1>b.key1);}
 inline bool operator==(const dblPtr& a, const dblPtr& b) {if(a.key1==b.key1) return (a.key2==b.key2); else return false;}
 
-enum masks {mMode=0x080000, isNormed=0x100000, asDesc=0x200000, toExec=0x400000, sizeIndef=0x100, mListPos=0xff000000, goSize=16};
+enum masks {mMode=0x080000, isNormed=0x100000, asDesc=0x200000, toExec=0x400000, sizeIndef=0x80, mListPos=0xff000000, goSize=16};
 enum InfonFlags {  // Currently called 'pureInfon'
     tType=3, tUnknown=0, tNum=1, tString=2, tList=3,
     mFormat=0x7<<2, fUnknown=0x4, fLiteral=0x8, fConcat=0x0C, fFloat=0x10, fRational=0x14,  // Format of size and value fields. 0,6,7 not yet used.
@@ -79,6 +79,7 @@ enum normState {mnStates=0x1f0000, nsListInited=0x10000, nsNormBegan=0x20000, ns
 #define SetValueFormat(inf, fmt) SetBits((inf)->value.flags, (mFormat), (fmt))
 #define SetSizeFormat(inf, fmt) SetBits((inf)->size.flags, (mFormat), (fmt))
 #define SetSizeType(inf, ttype) SetBits((inf)->size.flags, (tType), (ttype))
+#define SetPureTypeForm(pInf,Ty,Fo) SetBits((pInf).flags, (mFormat+tType), (Ty+Fo))
 #define PureIsInListMode(pure) ((pure).listHead) //(((((pure).flags&tType)==tList) && (((pure).flags&mFormat)>=fLiteral)) || ((((pure).flags&tType)!=tUnknown) && (((pure).flags&mFormat)>=fConcat)))
 #define PureIsInDataMode(pure) ((pure).dataHead) //( (((pure).flags&mFormat)==fLiteral) && ((((pure).flags&tType)==tNum) || (((pure).flags&tType)==tString) ))
 
@@ -86,19 +87,19 @@ enum normState {mnStates=0x1f0000, nsListInited=0x10000, nsNormBegan=0x20000, ns
 #define InfIsNormed(inf)       ((inf)->wFlag & isNormed)
 #define InfAsDesc(inf)         ((inf)->wFlag & asDesc)
 #define InfToExec(inf)         ((inf)->wFlag & toExec)
-#define InfIsTop(inf)          ((inf)->pFlag & isTop)
-#define InfIsBottom(inf)       ((inf)->pFlag & isBottom)
-#define InfIsFirst(inf)        ((inf)->pFlag & isFirst)
-#define InfIsLast(inf)         ((inf)->pFlag & isLast)
-#define InfHasAlts(inf)        ((inf)->pFlag & hasAlts)
-#define InfIsVirtual(inf)      ((inf)->pFlag & isVirtual)
-#define InfIsTentative(inf)    ((inf)->pFlag & isTentative)
-#define InfIsVirtTent(inf)     ((inf)->pFlag & (isVirtual+isTentative))
-#define SetIsTent(inf)         (inf)->pFlag |=isTentative
-#define SetIsVirt(inf)         (inf)->pFlag |=isVirtual
-#define ResetVirt(inf)         (inf)->pFlag &= ~isVirtual
-#define ResetTent(inf)         (inf)->pFlag &= ~isTentative
-#define ResetVirtTent(inf)     (inf)->pFlag &= ~(isVirtual+isTentative)
+#define InfIsTop(inf)          ((inf)->wFlag & isTop)
+#define InfIsBottom(inf)       ((inf)->wFlag & isBottom)
+#define InfIsFirst(inf)        ((inf)->wFlag & isFirst)
+#define InfIsLast(inf)         ((inf)->wFlag & isLast)
+#define InfHasAlts(inf)        ((inf)->wFlag & hasAlts)
+#define InfIsVirtual(inf)      ((inf)->wFlag & isVirtual)
+#define InfIsTentative(inf)    ((inf)->wFlag & isTentative)
+#define InfIsVirtTent(inf)     ((inf)->wFlag & (isVirtual+isTentative))
+#define SetIsTent(inf)         (inf)->wFlag |=isTentative
+#define SetIsVirt(inf)         (inf)->wFlag |=isVirtual
+#define ResetVirt(inf)         (inf)->wFlag &= ~isVirtual
+#define ResetTent(inf)         (inf)->wFlag &= ~isTentative
+#define ResetVirtTent(inf)     (inf)->wFlag &= ~(isVirtual+isTentative)
 
 struct infon;
 
@@ -138,7 +139,7 @@ struct pureInfon {
 };
 
 struct infon {
-    infon(UInt pf=0, UInt wf=0, pureInfon* s=0, pureInfon* v=0, infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0);
+    infon(UInt wf=0, pureInfon* s=0, pureInfon* v=0, infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0);
     infon* isntLast(); // 0=this is the last one. >0 = pointer to predecessor of the next one.
     mpz_class& getSize();
     UInt pFlag, wFlag;
@@ -218,7 +219,7 @@ const int bufmax=1024*32;
 struct QParser{
     QParser(std::istream& _stream):stream(_stream){};
     infon* parse(); // if there is an error it is returned in buf as a char* string.
-    UInt ReadPureInfon(pureInfon* i, UInt* pFlag, UInt *flags2, infon** s2);
+    UInt ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2);
     infon* ReadInfon(int noIDs=0);
     char streamGet();
     void scanPast(char* str);
@@ -245,13 +246,13 @@ enum WorkItemResults {DoNothing, BypassDeadEnd, DoNext, DoNextBounded};
 #define isEq(L,R) (L && R && strcmp(L,R)==0)
 
 inline void getInt(infon* inf, BigNum* num, int* sign) {
-  UInt f=inf->pFlag;
+  UInt f=inf->wFlag;
   if(InfIsLiteralNum(inf)) (*num)=*inf->value.dataHead; else (*num)=0;
   *sign=f&fInvert;
  }
 
 inline double getReal(infon* inf) {
-    UInt f=inf->pFlag;
+    UInt f=inf->wFlag;
     if((f&tType)==tNum && FormatIsKnown(f)) {
 //UNDO:        if(f&tReal) return ((f&fInvert)? (-(fix16_t)inf->value): (fix16_t)inf->value);
  //UNDO:       else return fix16_from_int((f&fInvert)?(-(int)inf->value):((int)inf->value));

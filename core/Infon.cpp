@@ -41,8 +41,8 @@ infonData::infonData(char* str):mpq_class(0), refCnt(0){
 
 infonData::infonData(char* numStr, int base):mpq_class(numStr,base), refCnt(0){};
 
-infon::infon(UInt pf, UInt wf, pureInfon* s, pureInfon* v, infNode*ID,infon*s1,infon*s2,infon*n):
-        pFlag(pf), wFlag(wf), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {
+infon::infon(UInt wf, pureInfon* s, pureInfon* v, infNode*ID,infon*s1,infon*s2,infon*n):
+        wFlag(wf), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {
     prev=0; top=0; top2=0; type=0; pos=0;
     if(s) size=*s;
     if(v) value=*v;

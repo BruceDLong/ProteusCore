@@ -20,7 +20,7 @@
 #define pi 3.14159
 #define Zto1(gInt) (float)(((float)gInt)  /* / 1024.0*/)
 
-#define cpFlags(from, to, mask) {to->pFlag=(to->pFlag& ~(mask))+((from)->pFlag&mask); to->wFlag=from->wFlag; {if(to->type==0) to->type=from->type;}}
+#define cpFlags(from, to, mask) {to->pFlag=(to->pFlag& ~(mask))+((from)->pFlag&mask); to->wFlag=from->wFlag&0x00ffffff; {if(to->type==0) to->type=from->type;}}
 #define copyTo(from, to) {if(from!=to){to->size=(from)->size; to->value=(from)->value; cpFlags((from),to,0x00ffffff);}}
 
 #define copyInfonString2charBuf(inf, buf) {memcpy(buf, (char*)inf->value, (UInt)inf->size); buf[(UInt)inf->size]=0;}
@@ -65,12 +65,12 @@ int getRealArg(infon* i, fix16_t* Real1, agent* a){
 }
 
 void setIntVal(infon* CI, BigNum i){
-    UInt tmpFlags=CI->pFlag&mListPos;
+    UInt tmpFlags=CI->wFlag&mListPos;
     CI->size=CI->spec2->size;
     CI->value = pureInfon(i); //abs(i);
     if (i<0)tmpFlags|=fInvert;
-    CI->pFlag=tmpFlags + ((tNum+fLiteral)<<goSize)+(tNum+fLiteral);
-    CI->wFlag=iNone;
+    SetPureTypeForm(CI->size, tNum, fLiteral); SetPureTypeForm(CI->value, tNum, fLiteral);
+    CI->wFlag=tmpFlags+iNone;
 }
 
 void setRealVal(infon* CI, fix16_t i){
@@ -103,7 +103,7 @@ int LoadFromSystemCmd(agent* a, infon* type, string cmd){
     if(InfsType(type)==tString){ mode=1;}
     else if(InfsType(type)==tNum){mode=2;}
     else if(InfsType(type)==tList){mode=3;}
-    infon* head=new infon((tNum<<goSize)+tList,0);
+    infon* head=new infon((tNum<<goSize)+tList,0); throw "TODO: REPAIR SYS CMD LOAD";
     stream = popen(cmd.c_str(), "r");
     while ( fgets(buffer, MAX_SYSCMD_BUFFER, stream) != NULL ){
         infon* i=new infon;
@@ -120,7 +120,7 @@ int LoadFromSystemCmd(agent* a, infon* type, string cmd){
         } else if(mode==3){ //////////// MAKE THIS WORK
         }
         if(head->value.listHead){i->next=head->value.listHead; i->prev=head->value.listHead->prev; i->top=head->value.listHead; head->value.listHead->prev=i; i->prev->next=i;}
-        else {head->value.listHead=i->next=i->prev=i; i->top=head; i->pFlag|=isFirst+isTop;}
+        else {head->value.listHead=i->next=i->prev=i; i->top=head; i->wFlag|=isFirst+isTop;}
     }
     pclose(stream);
 //UNDO:    head->size=(infon*)count;

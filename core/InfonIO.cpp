@@ -210,9 +210,9 @@ void numberFromString(char* buf, pureInfon* pInf, int base=10){
         infDataPtr fracSize1(new infonData(*sizeFromExp(eos)));
         infDataPtr fracSize2(new infonData(*fracSize1));
  /*        pInf->listHead=new infon(0, 0, (infon*)new pureInfon(intSize),
-                     new infon(tNum+fLiteral+((tNum+fLiteral)<<goSize)+isTop+isFirst, 0, (infon*)intSize, (infon*)intPart, 0,0,0,
+                     new infon(tNum+fLiteral+((tNum+fLiteral)<<goSize), isTop+isFirst, (infon*)intSize, (infon*)intPart, 0,0,0,
                          new infon(tNum+fLiteral+((tNum+fLiteral)<<goSize), 0, (infon*)fracSize1, (infon*)fracPart, 0,0,0,
-                             new infon(tNum+fLiteral+((tNum+fLiteral)<<goSize)+isBottom+isLast, 0, (infon*)fracSize2, (infon*)new pureInfon(0))
+                             new infon(tNum+fLiteral+((tNum+fLiteral)<<goSize), isBottom+isLast, (infon*)fracSize2, (infon*)new pureInfon(0))
                         )
                      )
                  );*/
@@ -240,13 +240,13 @@ infon* grok(infon* item, UInt tagCode, int* code){
 }
 
 char errMsg[100];
-UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* pFlag, UInt *wFlag, infon** s2){
+UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2){
     UInt p=0, size=0, stay=1; char rchr, tok; infon *head=0, *prev; infon* j;
     infDataPtr* i=&(pInf)->dataHead;
     if(nxtTok("(") || nxtTok("{") || nxtTok("[")){
-        if(nTok=='(') {rchr=')'; SetBits(*pFlag, mFormat+tType,(fConcat+tNum));}
-        else if(nTok=='['){rchr=']'; *pFlag|=(tList+fLiteral); *wFlag=iGetLast;}
-        else {rchr='}'; *pFlag|=(tList+fLiteral);}
+        if(nTok=='(') {rchr=')'; SetBits(*flags, mFormat+tType,(fConcat+tNum));}
+        else if(nTok=='['){rchr=']'; *flags|=(tList+fLiteral); *wFlag=iGetLast;}
+        else {rchr='}'; *flags|=(tList+fLiteral);}
         RmvWSC(); int foundRet=0; int foundBar=0;
         for(tok=peek(); tok != rchr && stay; tok=peek()){
             if(tok=='&') { // This is a definition, not an element
@@ -277,42 +277,42 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* pFlag, UInt *wFlag, infon** s
             if(tok=='<') {foundRet=1; streamGet(); j=ReadInfon();}
             else if(nxtTok("...")){
                 pureInfon pSize(size+1);
-                j=new infon(isVirtual,iNone, &pSize); SetValueFormat(j, fUnknown); j->pos=(size+1); stay=0;
+                j=new infon(iNone+isVirtual, &pSize); SetValueFormat(j, fUnknown); j->pos=(size+1); stay=0;
             } else j=ReadInfon();
             if(++size==1){
                 if(!foundRet && !foundBar && stay && nxtTok("|")){
-                    *s2=j; *pFlag|=fLoop; size=0; foundBar=1; RmvWSC(); continue;
+                    *s2=j; *flags|=fLoop; size=0; foundBar=1; RmvWSC(); continue;
                 }
-                pInf->listHead=j; head=prev=j; head->pFlag|=isFirst+isTop;
-                if(FormatIsConcat(*pFlag)) *pFlag|=(j->pFlag&tType);
+                pInf->listHead=j; head=prev=j; head->wFlag|=isFirst+isTop;
+                if(FormatIsConcat(*flags)) *flags|=(InfsType(j));
             }
             if (foundRet==1) {check('>'); pInf->listHead=j; foundRet++; /* *pFlag|=intersect; */}  // TODO: when repairing Middle-Indexing, repair 'intersect'
             j->top=head; j->next=head; prev->next=j; j->prev=prev; head->prev=j; prev=j; RmvWSC();
         }
         if(head){
-            head->prev->pFlag|=isBottom;
-            if (!(head->pFlag&fIncomplete) && stay) head->prev->pFlag|=isLast;
+            head->prev->wFlag|=isBottom;
+            if (!(VsFlag(head)&fIncomplete) && stay) head->prev->wFlag|=isLast;
         }
         check(rchr);
         if(nxtTok("~"))  (*wFlag)|=mAssoc;
     } else if (nxtTok("0X") || nxtTok("0x")) { // read hex number
-        if( nxtTok("0x#")){ size=1; numberFromString(buf, pInf, 16); *pFlag|=((tNum+dHex)|pInf->flags); } else throw "Hex number expected after '0x'";
+        if( nxtTok("0x#")){ size=1; numberFromString(buf, pInf, 16); *flags|=((tNum+dHex)|pInf->flags); } else throw "Hex number expected after '0x'";
     } else if (nxtTok("0B") || nxtTok("0b")) { // read binary number
-        if( nxtTok("0b#")){ size=1; numberFromString(buf, pInf, 2); *pFlag|=((tNum+dBinary)|pInf->flags);} else throw "Binary number expected after '0b'";
-    } else if (nxtTok("123")) { size=1; *pFlag|=(tNum+dDecimal+(strchr(buf,'.')?fFloat:fLiteral)); *i=infDataPtr(new infonData(buf,10)); // read decimal number
-    } else if (nxtTok("_")){*pFlag|=fUnknown+tNum;
-    } else if (nxtTok("$")){*pFlag|=fUnknown+tString;
+        if( nxtTok("0b#")){ size=1; numberFromString(buf, pInf, 2); *flags|=((tNum+dBinary)|pInf->flags);} else throw "Binary number expected after '0b'";
+    } else if (nxtTok("123")) { size=1; *flags|=(tNum+dDecimal+(strchr(buf,'.')?fFloat:fLiteral)); *i=infDataPtr(new infonData(buf,10)); // read decimal number
+    } else if (nxtTok("_")){*flags|=fUnknown+tNum;
+    } else if (nxtTok("$")){*flags|=fUnknown+tString;
     } else if (nxtTok("\"") || nxtTok("'")){ // read string
         getbuf(peek()!=nTok); streamGet();
-        size=p; *pFlag+=(tString+fLiteral);
-        *i=(FormatIsUnknown(*pFlag))? 0 :infDataPtr(new infonData(buf));
+        size=p; *flags+=(tString+fLiteral);
+        *i=(FormatIsUnknown(*flags))? 0 :infDataPtr(new infonData(buf));
     } else {strcpy(errMsg, "'X' was not expected"); errMsg[1]=nTok; throw errMsg;}
-    pInf->flags=*pFlag;
+    pInf->flags=*flags;
     return size;
 }
 
 infon* QParser::ReadInfon(int noIDs){
-    char op=0; UInt size=0; pureInfon iSize, iVal; infon *s1=0,*s2=0; UInt pFlag=0,wFlag=0,fs=0,fv=0;
+    char op=0; UInt size=0; pureInfon iSize, iVal; infon *s1=0,*s2=0; UInt wFlag=0,fs=0,fv=0;
     Tag* tags=0; const char* cTok, *eTok, *cTok2; /*int textEnd=0; int textStart=textParsed.size();*/
     if(nxtTok("@")){wFlag|=toExec;}
     if(nxtTok("#")){wFlag|=asDesc;}
@@ -357,11 +357,11 @@ infon* QParser::ReadInfon(int noIDs){
             }
         }
     }
-    infon* i=new infon(pFlag, wFlag, &iSize,&iVal,0,s1,s2); i->wSize=size; i->type=tags;
+    infon* i=new infon(wFlag, &iSize,&iVal,0,s1,s2); i->wSize=size; i->type=tags;
     if(ValueIsConcat(i) && (*i->size.dataHead)==1){infon* ret=i->value.listHead; delete(i); ret->top=ret->next=ret->prev=0; return ret;} // BUT we lose i's idents and some flags (desc, ...)
     if (i->size.listHead) i->size.listHead->top=i;
     if (i->value.listHead)i->value.listHead->top=i;
-    if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~(mFindMode+mAssoc); i->wFlag|=mIsHeadOfGetLast; i=new infon(0,wFlag,0,0,0,i); i->spec1->top2=i;}
+    if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~(mFindMode+mAssoc); i->wFlag|=mIsHeadOfGetLast; i=new infon(wFlag,0,0,0,i); i->spec1->top2=i;}
     for(char c=Peek(); !(noIDs&1) && (c==':' || c=='='); c=Peek()){
         infon *R, *toSet=0, *toRef=0; int code=0;
         cTok=nxtTokN(2,"::",":");

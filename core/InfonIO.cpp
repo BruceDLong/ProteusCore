@@ -21,13 +21,13 @@
 using namespace icu;
 
 #define Indent {for (int x=0;x<indent;++x) s+=" ";}
-std::string printPure (pureInfon* i, UInt f, UInt wSize, infon* CI){
-    std::string s;
-    if (((f&(fIncomplete+mFormat))==(fIncomplete+fUnknown)) && ((f&tType)!=tNum)) s+="?";
-    UInt type=f&tType;
+string printPure (pureInfon* i, UInt wSize, infon* CI){
+    string s; UInt f=i->flags;
+    if (((f&(fIncomplete+mFormat))==(fIncomplete+fUnknown)) && ((f&mType)!=tNum)) s+="?";
+    UInt type=f&mType;
     if (type==tNum){
         if (FormatIsUnknown(f)) s+='_';
-        else if(FormatIs(f,fFloat)){s.append("FLOAT.float");}
+        else if(FormatIs(f,fFloat)){s.append(i->listHead->value.dataHead->get_str()); s+='.'; s.append(i->listHead->next->value.dataHead->get_num().get_str());}
         else if(FormatIs(f,fLiteral)){s.append(i->dataHead->get_str());}
     } else if(type==tString){s+="\"";s.append(i->toString(wSize));s+="\""; }
     else if(type==tList || FormatIsConcat(f)){
@@ -43,22 +43,23 @@ std::string printPure (pureInfon* i, UInt f, UInt wSize, infon* CI){
     return s;
 }
 
-std::string printInfon(infon* i, infon* CI){
-    std::string s; //Indent;
+string printInfon(infon* i, infon* CI){
+    string s; //Indent;
     if(i==0) {s+="null"; return s;}
     if(i==CI) s+="<font color=green>";
     UInt mode=i->wFlag&mFindMode;
 //    if(InfToExec(i)) s+="@";
     if(InfAsDesc(i)) s+="#";
+    if(i->wFlag & asNot) s+="!";
     if (mode==iTagUse) {
         s+=i->type->tag; s+=" ";
     } else if(InfIsNormed(i) || mode==iNone /* || VsFlag(i)&notParent */){
-        if (SizeIsUnknown(i)) {s+=printPure(&i->value, VsFlag(i), i->wSize, CI); if(InfsType(i) != tList) s+=",";}
-        else if (ValueIsUnknown(i)) {s+=printPure(&i->size, SsFlag(i), i->wSize, CI); s+=";";}
+        if (SizeIsUnknown(i)) {s+=printPure(&i->value, i->wSize, CI); if(InfsType(i) != tList) s+=",";}
+        else if (ValueIsUnknown(i)) {s+=printPure(&i->size, i->wSize, CI); s+=";";}
         else{
-            if(InfsType(i)==tNum) {s+=(SsFlag(i)&fInvert)?"/":"*"; s+=printPure(&i->size, SsFlag(i), 0,CI);}
+            if(InfsType(i)==tNum) {s+=(SsFlag(i)&fInvert)?"/":"*"; s+=printPure(&i->size, 0,CI);}
             if(InfsType(i)==tNum) s+=(VsFlag(i)&fInvert)?"-":"+";
-            s+=printPure(&i->value, VsFlag(i), i->getSize().get_ui(), CI);
+            s+=printPure(&i->value, i->getSize().get_ui(), CI);
         }
     } else {
         if (!InfIsNormed(i)) {
@@ -84,7 +85,7 @@ std::string printInfon(infon* i, infon* CI){
 #define streamPut(nChars) {for(int n=nChars; n>0; --n){stream.putback(textParsed[textParsed.size()-1]); textParsed.resize(textParsed.size()-1);}}
 #define ChkNEOF {if(stream.eof() || stream.fail()) throw "Unexpected End of file";}
 #define getbuf(c) {ChkNEOF; for(p=0;(c);buf[p++]=streamGet()){if (p>=bufmax) throw "String Overflow";} buf[p]=0;}
-#define check(ch) {RmvWSC(); ChkNEOF; tok=streamGet(); if(tok != ch) {std::cout<<"Expected "<<ch<<"\n"; throw "Unexpected character";}}
+#define check(ch) {RmvWSC(); ChkNEOF; tok=streamGet(); if(tok != ch) {cout<<"Expected "<<ch<<"\n"; throw "Unexpected character";}}
 
 char QParser::streamGet(){char ch=stream.get(); textParsed+=ch; return ch;}
 char QParser::peek(){if (stream.fail()) throw "Unexpected end of file";  return stream.peek();}
@@ -127,7 +128,7 @@ const UnicodeSet TagStarts(UnicodeString("[:XID_Start:]"), err);
 bool iscsymOrUni (char nTok) {return (iscsym(nTok) || (nTok&0x80));}
 bool isTagStart(char nTok) {return (iscsymOrUni(nTok)&&!isdigit(nTok)&&(nTok!='_'));}
 
-bool tagIsBad(std::string tag, const char* locale) {
+bool tagIsBad(string tag, const char* locale) {
     if(!TagStarts.contains(tag.c_str()[0])) return 1; // First tag character is invalid
     if((size_t)TagChars.spanUTF8(tag.c_str(), -1, USET_SPAN_SIMPLE) != tag.length()) return 1;
     UErrorCode err;  USpoofChecker *sc = uspoof_open(&err);
@@ -137,7 +138,7 @@ bool tagIsBad(std::string tag, const char* locale) {
     return (result!=0);
 }
 
-const char* altTok(std::string tok){
+const char* altTok(string tok){
     return 0;
     // later this should load from a dictionary file for different languages.
     if (tok=="=") return "is";
@@ -184,38 +185,32 @@ const char* QParser::nxtTokN(int n, ...){
 }
 #define nxtTok(tok) nxtTokN(1,tok)
 
-bool IsHardFunc(std::string tag);
+bool IsHardFunc(string tag);
 void chk4HardFunc(infon* i){
     if((i->wFlag&mFindMode)==iTagUse && IsHardFunc(i->type->tag)){i->wFlag&=~iTagUse; i->wFlag|=iHardFunc;}
 }
 
-mpz_class* sizeFromExp(int exp){
-    std::string size="1";
+string sizeFromExp(int exp){
+    string size="1";
     size.append(exp, '0');
-    mpz_class *Z=new mpz_class(size);
-    return Z;
+    return size;
 }
 
 void numberFromString(char* buf, pureInfon* pInf, int base=10){
     // pInf should be empty when calling this to load it.
     char *pch=strchr(buf,'.');
     if(pch){
-        pInf->flags|=fFloat;
+        pInf->flags|=tNum+fFloat;
         (*pch)=(char)0;
-        // Make a listHead ptr. 1st node=
-        infDataPtr intPart(new infonData(buf));
-        infDataPtr fracPart(new infonData(pch+1));
-        int eos=strlen(pch+1);
-        infDataPtr intSize(new infonData(*sizeFromExp(pch-buf)));
-        infDataPtr fracSize1(new infonData(*sizeFromExp(eos)));
-        infDataPtr fracSize2(new infonData(*fracSize1));
- /*        pInf->listHead=new infon(0, 0, (infon*)new pureInfon(intSize),
-                     new infon(tNum+fLiteral+((tNum+fLiteral)<<goSize), isTop+isFirst, (infon*)intSize, (infon*)intPart, 0,0,0,
-                         new infon(tNum+fLiteral+((tNum+fLiteral)<<goSize), 0, (infon*)fracSize1, (infon*)fracPart, 0,0,0,
-                             new infon(tNum+fLiteral+((tNum+fLiteral)<<goSize), isBottom+isLast, (infon*)fracSize2, (infon*)new pureInfon(0))
-                        )
-                     )
-                 );*/
+        infDataPtr intPart(new infonData(buf,base));                                    pureInfon pIntPart (intPart,  tNum+fLiteral, 0);
+        infDataPtr intSize(new infonData(sizeFromExp(pch-buf).c_str(),base));           pureInfon pIntSize (intSize,  tNum+fLiteral, 0);
+        infDataPtr fracSize(new infonData(sizeFromExp(strlen(pch+1)).c_str(),base));    pureInfon pFracSize(fracSize, tNum+fLiteral, 0);
+        BigFrac frac(BigInt(pch+1), fracSize->get_num() );
+        infDataPtr fraction(new infonData(frac));                                       pureInfon pFraction(fraction, tNum+fLiteral, 0);
+
+        infon*  intInf=new infon(isTop+isFirst,   &pIntSize, &pIntPart);
+        infon* fracInf=new infon(isBottom+isLast, &pFracSize, &pFraction);
+        pInf->listHead=intInf; intInf->next=intInf->prev=fracInf; fracInf->next=fracInf->prev=intInf;
     }else {pInf->flags|=fLiteral; pInf->dataHead=infDataPtr(new infonData(buf,base)); }
 }
 
@@ -244,7 +239,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
     UInt p=0, size=0, stay=1; char rchr, tok; infon *head=0, *prev; infon* j;
     infDataPtr* i=&(pInf)->dataHead;
     if(nxtTok("(") || nxtTok("{") || nxtTok("[")){
-        if(nTok=='(') {rchr=')'; SetBits(*flags, mFormat+tType,(fConcat+tNum));}
+        if(nTok=='(') {rchr=')'; SetBits(*flags, mFormat+mType,(fConcat+tNum));}
         else if(nTok=='['){rchr=']'; *flags|=(tList+fLiteral); *wFlag=iGetLast;}
         else {rchr='}'; *flags|=(tList+fLiteral);}
         RmvWSC(); int foundRet=0; int foundBar=0;
@@ -266,7 +261,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                 infon* definition=ReadInfon();
                 for(Tag* t=tag; t; t=prevTag){
                     prevTag=(Tag*)t->definition; t->definition=definition;
-                    std::map<Tag,infon*>::iterator tagPtr=tag2Ptr.find(*t);
+                    map<Tag,infon*>::iterator tagPtr=tag2Ptr.find(*t);
                     if (tagPtr==tag2Ptr.end()) {tag2Ptr[*t]=definition; ptr2Tag[definition]=*t;}
                     else{throw("A tag is being redefined, which isn't allowed");}
                 }
@@ -299,7 +294,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
         if( nxtTok("0x#")){ size=1; numberFromString(buf, pInf, 16); *flags|=((tNum+dHex)|pInf->flags); } else throw "Hex number expected after '0x'";
     } else if (nxtTok("0B") || nxtTok("0b")) { // read binary number
         if( nxtTok("0b#")){ size=1; numberFromString(buf, pInf, 2); *flags|=((tNum+dBinary)|pInf->flags);} else throw "Binary number expected after '0b'";
-    } else if (nxtTok("123")) { size=1; *flags|=(tNum+dDecimal+(strchr(buf,'.')?fFloat:fLiteral)); *i=infDataPtr(new infonData(buf,10)); // read decimal number
+    } else if (nxtTok("123")) { size=1; numberFromString(buf, pInf, 10); *flags|=((tNum+dHex)|pInf->flags); // read decimal number
     } else if (nxtTok("_")){*flags|=fUnknown+tNum;
     } else if (nxtTok("$")){*flags|=fUnknown+tString;
     } else if (nxtTok("\"") || nxtTok("'")){ // read string
@@ -316,6 +311,7 @@ infon* QParser::ReadInfon(int noIDs){
     Tag* tags=0; const char* cTok, *eTok, *cTok2; /*int textEnd=0; int textStart=textParsed.size();*/
     if(nxtTok("@")){wFlag|=toExec;}
     if(nxtTok("#")){wFlag|=asDesc;}
+    if(nxtTok("!")){wFlag|=asNot;}
     if(nxtTok("?")){iSize.flags=fUnknown; iVal.flags=fUnknown; wFlag=iNone;}
     else if(nxtTok("unicodeTok")){
         wFlag|=iTagUse; tags=new Tag;
@@ -339,11 +335,11 @@ infon* QParser::ReadInfon(int noIDs){
         if( nTok=='-' || nTok=='/') fs|=fInvert;
         size=ReadPureInfon(&iSize, &fs, &wFlag, &s2);
         if(op=='+'){
-            iVal=iSize; iSize=pureInfon(size); fv=iVal.flags&(mFormat+tType); // use identity term '1'
+            iVal=iSize; iSize=pureInfon(size); fv=iVal.flags&(mFormat+mType); // use identity term '1'
             if (size==0 && (fv==(fUnknown+tNum) || fv==(fUnknown+tString))) {iSize.flags=fUnknown+tNum;}
-            else if(((fv&tType)==tList) && iVal.listHead && InfIsVirtual(iVal.listHead->prev)) {iSize.flags=fUnknown+tNum;}
+            else if(((fv&mType)==tList) && iVal.listHead && InfIsVirtual(iVal.listHead->prev)) {iSize.flags=fUnknown+tNum;}
         }else if(op=='*'){
-            if((fs&tType)==tString || (fs&tType)==tList) throw("Terms cannot be strings or lists");
+            if((fs&mType)==tString || (fs&mType)==tList) throw("Terms cannot be strings or lists");
             if(nxtTok("+")) op='+'; else if(nxtTok("-")) {op='+'; fv|=fInvert;}
             if (op=='+'){size=ReadPureInfon(&iVal,&fv,&wFlag,&s2);}
             else {iVal=0; fv=tNum+fLiteral;}    // use identity summand '0'
@@ -351,9 +347,9 @@ infon* QParser::ReadInfon(int noIDs){
             if(nxtTok(";")){iVal=0; SetBits(iVal.flags, (mFormat), fUnknown)}
             else {
                 nxtTok(",");
-                iVal=iSize; iSize=pureInfon(size); fv=iVal.flags&(mFormat+tType);
+                iVal=iSize; iSize=pureInfon(size); fv=iVal.flags&(mFormat+mType);
                 if (size==0 && (fv==(fUnknown+tNum) || fv==(fUnknown+tString))) iSize.flags=fUnknown+tNum; // set size's flags for _ and $
-                else if(((fv&tType)==tList) && iVal.listHead && InfIsVirtual(iVal.listHead->prev)) {iSize.flags=fUnknown+tNum;} // set size's flags for {...}
+                else if(((fv&mType)==tList) && iVal.listHead && InfIsVirtual(iVal.listHead->prev)) {iSize.flags=fUnknown+tNum;} // set size's flags for {...}
             }
         }
     }
@@ -414,12 +410,12 @@ infon* QParser::parse(){
         textParsed="";
         line=1; scanPast((char*)"<%");
         infon*i=ReadInfon();
-        //std::cout<<"\n["<<textParsed<<"]\n";
+        //cout<<"\n["<<textParsed<<"]\n";
         check('%'); check('>'); buf[0]=0; return i;
     }
     catch(char const* err){char l[30]; itoa(line,l); strcpy(buf,"An Error Occured: "); strcat(buf,err);
         strcat(buf,". (line ");strcat(buf,l); strcat(buf,")\n");}
     catch(...){strcpy(buf,"An Unknown Error Occurred While Parsing.\n");};
-    if(stream.fail()) std::cout << "End of File Reached";
+    if(stream.fail()) cout << "End of File Reached";
     return 0;
 }

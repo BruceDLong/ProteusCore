@@ -11,17 +11,14 @@
 
 const int ListBuffCutoff=2;
 
-typedef std::map<dblPtr,UInt>::iterator altIter;
-std::map<Tag,infon*> tag2Ptr;
-std::map<infon*,Tag> ptr2Tag;
+typedef map<dblPtr,UInt>::iterator altIter;
+map<Tag,infon*> tag2Ptr;
+map<infon*,Tag> ptr2Tag;
 
 #define recAlts(lval, rval) {if(InfsType(rval)==tString) alts[dblPtr((char*)rval->value.dataHead->get_num_mpz_t()->_mp_d,lval)]++;}
 #define getTop(item) ((InfIsTop(item)||item->top==0)? item->top : item->top->top)
 #define fetchLastItem(lval, item) {for(lval=item; InfsType(lval)==tList;lval=lval->value->prev);}
 #define fetchFirstItem(lval, item) {for(lval=item; InfsTYpe(lval)==tList;lval=lval->value){};}
-#define cpType(from, to) {if(to->type==0) to->type=from->type;}
-#define cpFlags(from, to, mask) {(to)->wFlag=(((to)->wFlag& ~(mask))+(((from)->wFlag)&mask)); cpType(from,to);}
-#define copyTo(from, to) {if((from)!=(to)){(to)->size=(from)->size; (to)->value=(from)->value; cpFlags((from),(to),0x00ffffff);}}
 
 infon* infon::isntLast(){ // 0=this is the last one. >0 = pointer to predecessor of the next one.
     if (!InfIsLast(this)) return this;
@@ -32,20 +29,20 @@ infon* infon::isntLast(){ // 0=this is the last one. >0 = pointer to predecessor
 }
 
 int agent::loadInfon(const char* filename, infon** inf, bool normIt){
-    std::cout<<"Loading:'"<<filename<<"'..."<<std::flush;
-    std::fstream InfonIn(filename);
-    if(InfonIn.fail()){std::cout<<"Error: The file "<<filename<<" was not found.\n"<<std::flush; return 1;}
+    cout<<"Loading:'"<<filename<<"'..."<<flush;
+    fstream InfonIn(filename);
+    if(InfonIn.fail()){cout<<"Error: The file "<<filename<<" was not found.\n"<<flush; return 1;}
     QParser T(InfonIn); T.locale=locale;
     *inf=T.parse();
-    if (*inf) {std::cout<<"done.   "<<std::flush;}
-    else {std::cout<<"Error:"<<T.buf<<"   "<<std::flush; return 1;}
+    if (*inf) {cout<<"done.   "<<flush;}
+    else {cout<<"Error:"<<T.buf<<"   "<<flush; return 1;}
     if(normIt) {
         alts.clear();
         try{
-            std::cout<<"Normalizing..."<<std::flush; normalize(*inf); std::cout << "Normalized."<<std::flush;
-        } catch (char const* errMsg){std::cout<<errMsg;}
+            cout<<"Normalizing..."<<flush; normalize(*inf); cout << "Normalized."<<flush;
+        } catch (char const* errMsg){cout<<errMsg;}
     }
-    std::cout<<"\n";
+    cout<<"\n";
     return 0;
 }
 
@@ -146,15 +143,15 @@ gpt2: //if ((((VsFlag(*p)&mFlags1)>>8)&rType)==rList)
 }
 
 //////////// Routines for copying infon data to C formats:
-BigNum agent::gIntNxt(infon** ItmPtr){
-    UInt sign; BigNum num;
+BigInt agent::gIntNxt(infon** ItmPtr){
+    UInt sign; BigInt num;
     getInt(*ItmPtr,&num,&sign);
     getNextTerm(ItmPtr);
     return num; //(sign)?-num:num;
 }
 
-fix16_t agent::gRealNxt(infon** ItmPtr){
-    fix16_t ret=getReal(*ItmPtr);
+double agent::gRealNxt(infon** ItmPtr){
+    double ret=getReal(*ItmPtr);
     getNextTerm(ItmPtr);
     return ret;
 }
@@ -257,7 +254,7 @@ void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags){
         (*ptrMap)[from]=to;
         deepCopy (from->spec1, to->spec1, ptrMap, flags);
         if(ptrs==0) delete ptrMap;
-        if (flags && from->wFlag&mAssoc) {// std::cout<<"Initializing ASSOC\n";
+        if (flags && from->wFlag&mAssoc) {// cout<<"Initializing ASSOC\n";
             from->wFlag&= ~(mAssoc+mFindMode); from->wFlag|=iAssocNxt;
             SetValueFormat(from, fUnknown); SetSizeFormat(from, fUnknown);
         }
@@ -278,7 +275,7 @@ void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags){
 }
 
 void closeListAtItem(infon* lastItem){ // remove (no-longer valid) items to the right of lastItem in a list.
-//std::cout << "CLOSING: " << printInfon(lastItem) << "\n";
+//cout << "CLOSING: " << printInfon(lastItem) << "\n";
     // TODO: Will this work when a list becomes empty?
     infon *itemAfterLast, *nextItem; UInt count=0;
     for(itemAfterLast=lastItem->next; !InfIsTop(itemAfterLast); itemAfterLast=nextItem){
@@ -292,7 +289,7 @@ void closeListAtItem(infon* lastItem){ // remove (no-longer valid) items to the 
         itemAfterLast=itemAfterLast->next;
         count++;
     } while (!InfIsTop(itemAfterLast));
-    itemAfterLast->top->size=(mpz_class)count;
+    itemAfterLast->top->size=(BigFrac)count;
     SetSizeFormat(itemAfterLast, fLiteral); SetSizeType(itemAfterLast,tNum);
 }
 
@@ -318,7 +315,7 @@ char isPosLorEorGtoSize(UInt pos, infon* item){
 void agent::processVirtual(infon* v){
     infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT=0;
     char posArea=isPosLorEorGtoSize(v->pos, parent);
-    if(posArea=='G'){std::cout << "EXTRA ITEM ALERT!\n"; closeListAtItem(v); return;}
+    if(posArea=='G'){cout << "EXTRA ITEM ALERT!\n"; closeListAtItem(v); return;}
     UInt tmpFlags=v->wFlag&mListPos;  // TODO B4: move this flag stuff into deepCopy. Clean the following block.
     if (spec){
         if((spec->wFlag&mFindMode)==iAssocNxt) {
@@ -341,7 +338,7 @@ void agent::processVirtual(infon* v){
 void agent::InitList(infon* item) {
     infon* tmp;
     if(!(item->wFlag&nsListInited) && item->value.listHead && (((tmp=item->value.listHead->prev)->wFlag)&isVirtual)){
-//std::cout<<"INITLIST ("<<item<<")\n";
+//cout<<"INITLIST ("<<item<<")\n";
         item->wFlag|=nsListInited;
         tmp->spec2=item->spec2;
     //    if(tmp->spec2 && ((tmp->spec2->pFlag&mRepMode)==asFunc)) // Remove this after testing an argument as a function
@@ -440,7 +437,7 @@ int agent::checkTypeMatch(Tag* LType, Tag* RType){
 }
 
 int agent::compute(infon* i){
-    infon* p=i->value.listHead; BigNum vAcc, sAcc; int count=0;
+    infon* p=i->value.listHead; BigInt vAcc, sAcc; int count=0;
     if(p) do{
         normalize(p); // TODO: appending inline rather than here would allow streaming.
         if(SizeType(p)==tNum && InfsType(p)==tNum){
@@ -450,7 +447,7 @@ int agent::compute(infon* i){
             if (ValueIsUnknown(p)) return 0;
             if (InfsType(p)==tList) compute(p->value.listHead);
             if (InfsType(p)!=tNum) return 0;
-            BigNum val= *p->value.dataHead; //( (p)->value.flags & fInvert)?-p->value:p->value;
+            BigInt val= *p->value.dataHead; //( (p)->value.flags & fInvert)?-p->value:p->value;
             if(SizeIsInverted(p)){
                 if (++count==1){sAcc= *p->size.dataHead; vAcc=val;}
                     else {sAcc/= *p->size.dataHead; vAcc=(vAcc/ *p->size.dataHead)+val;}
@@ -461,16 +458,16 @@ int agent::compute(infon* i){
             } else return 0;
         p=p->next;
     } while (p!= i->value.listHead);
-    i->value=vAcc; i->size=sAcc;
+    i->value=(mpq_class)vAcc; i->size=(mpq_class)sAcc;
    // i->pFlag=(i->pFlag&0xFF00FF00)+(tNum<<goSize)+tNum;
     return 1;
 }
 
-void resolve(infon* i, infon* theOne){ //std::cout<<"RESOLVING";
+void resolve(infon* i, infon* theOne){ //cout<<"RESOLVING";
     infon *prev=0;
     while(i && theOne){
         if(InfIsTentative(theOne)){
-            closeListAtItem(theOne); //std::cout<<"-CLOSED\n";
+            closeListAtItem(theOne); //cout<<"-CLOSED\n";
             return;
         } else {
             i->wFlag&=~hasAlts; copyTo(theOne, i);
@@ -482,7 +479,7 @@ void resolve(infon* i, infon* theOne){ //std::cout<<"RESOLVING";
             prev=i; i=i->pred; theOne=theOne->pred;
         }
     } if (theOne){theOne->next=prev->value.listHead; theOne->wFlag|=isLast+isBottom;}
- //   std::cout<<"-OPENED:"<<printInfon (i)<<"\n";
+ //   cout<<"-OPENED:"<<printInfon (i)<<"\n";
 }
 
 void agent::prepWorkList(infon* CI, Qitem *cn){
@@ -512,12 +509,12 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
             case iToPathH:{  //  Handle \, \\, \\\, etc. Path with 'Home'
                 newID=CI->top;
                 for(int s=1; s<(UInt)CI->spec1; ++s) {  // for  backslashes-1 go to parent
-                    newID=getTop(newID); if (newID==0 ) {std::cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';}
+                    newID=getTop(newID); if (newID==0 ) {cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';}
                 }
                 if(CIFindMode==iToPathH) {  // If no '^', move to first item in list.
                     if(!InfIsTop(newID)) {newID=newID->top; }
-                    if (newID==0) std::cout<<"Zero TOP in "<< printInfon(CI)<<'\n';
-                    else if(!InfIsFirst(newID)) {newID=0; std::cout<<"Top but not First in "<< printInfon(CI)<<'\n';}
+                    if (newID==0) cout<<"Zero TOP in "<< printInfon(CI)<<'\n';
+                    else if(!InfIsFirst(newID)) {newID=0; cout<<"Top but not First in "<< printInfon(CI)<<'\n';}
                 }
                 if(newID) {CI->wFlag|=mAsProxie; CI->value.proxie=newID; newID->wFlag|=isNormed; CI->wFlag&=~mFindMode; newID=0;}
                 cn->doShortNorm=true;
@@ -526,7 +523,7 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
             case iTagUse: {
                 if(CI->type == 0) throw ("A tag was null which is a bug");
                 // OUT("Recalling: "<<CI->type->tag<<":"<<CI->type->locale);
-                std::map<Tag,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
+                map<Tag,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
                 if (tagPtr!=tag2Ptr.end()) {UInt tmpFlags=CI->wFlag&mListPos; deepCopy(tagPtr->second,CI); CI->wFlag|=tmpFlags; deTagWrkList(CI);} // TODO B4: move this flag stuff into deepCopy.
                 else{OUT("\nBad tag:'"<<CI->type->tag<<"'\n");throw("A tag was used but never defined");}
                 break;}
@@ -575,7 +572,7 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
                 }
             }
             insertID(&CI->wrkList, newID,(CIFindMode>=iAssocNxt)?skipFollower:0);
-            VsFlag(CI)&=~tType; CI->wFlag&=~mFindMode;
+            VsFlag(CI)&=~mType; CI->wFlag&=~mFindMode;
         }
     }
 }
@@ -588,7 +585,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
     if(CIfol && !CIfol->pred) CIfol->pred=ci;
     if(wrkNode)do{
         wrkNode=wrkNode->next; item=wrkNode->item;
-        bool cpySize=0, cpyValue=0, resetCIsTentative=0, linkCIFol=false; int reject=rAccept;
+        bool cpySize=0, cpyValue=0, resetCIsTentative=0, linkCIFol=false, invertAcceptance=(ci->wFlag&asNot); int reject=rAccept;
         if (wrkNode->idFlags&skipFollower) CIfol=0;
         switch (wrkNode->idFlags&WorkType){
         case InitSearchList: // E.g., {[....]|...}::={3 4 5 6}
@@ -601,7 +598,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             tmp->value.listHead->top=tmp;
             insertID(&tmp->value.listHead->wrkList, item->value.listHead, MergeIdent);
             processVirtual (tmp->value.listHead);
-            tmp->value.listHead->next->size=(mpz_class)2;
+            tmp->value.listHead->next->size=(mpq_class)2;
             result=DoNext; noNewContent=false;
             break;
         case ProcessAlternatives:
@@ -633,13 +630,13 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                 if (item->wFlag&mAsProxie) item=item->value.proxie;
             }
             UInt CIsType=InfsType(ci), ItemsType=InfsType(item);
-            if(CIsType==tUnknown) {
+            if(CIsType==tUnknown && !invertAcceptance) {
                 VsFlag(ci)|=(InfsType(item)+fUnknown); SetSizeType(ci, tNum); ci->wFlag|=sizeIndef;
                 isIndef=1; ci->size=item->size;
                 if (SizeIsKnown(item)) SetSizeFormat(ci, item->size.flags & mFormat);
                 CIsType=InfsType(ci);
             } else isIndef=0;
-            if (ValueIsConcat(item)) std::cout << "WARNING: Trying to merge a concatenation.\n";
+            if (ValueIsConcat(item)) cout << "WARNING: Trying to merge a concatenation.\n";
             if (!(looseType=(wrkNode->idFlags&mLooseType))) { // TODO: More rigorously verify and test strict/loose typing system.
                 if (ItemsType && CIsType!=tList && CIsType!=ItemsType){reject=rInvertable;}
                 else if((ci->type && !(ci->wFlag&iHardFunc)) && (item->type && !checkTypeMatch(ci->type,item->type))){reject=rInvertable;}
@@ -664,7 +661,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                         if(!looseType &&  SizeIsKnown(item)){
                             if(SizeIsUnknown(ci)) {cpySize=true;}
                             else if (infonSizeCmp(ci,item)!=0 &&  (infTypes!= tList+4*tList) && (infTypes!= tString+4*tString)){
-                                reject=rInvertable; std::cout<<"Sizes contradict\n"; break;
+                                reject=rInvertable; cout<<"Sizes contradict\n"; break;
                             }
                         }
                         // MERGE VALUES
@@ -707,7 +704,6 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                     else{copyTo(item, ci);}
                     result=DoNext;
             }
-            bool invertAcceptance=false;
             if (invertAcceptance) {
                 if(reject==rInvertable){reject=rAccept; result=DoNext; linkCIFol=true;}
                 else {reject=rNullable; linkCIFol=false;}
@@ -725,7 +721,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                         if((tmp=getMasterList(ci) )){closeListAtItem(tmp); if(!reject) reject=rReject; }
                     }
                 } else if((infTypes== tString+4*tString) && infonSizeCmp(ci,item)<0){
-                    mpz_class cSize=ci->getSize();
+                    BigInt cSize=ci->getSize();
                     pureInfon pSize(item->getSize()-cSize);
                     pureInfon pVal(item->value.dataHead, item->value.flags, item->value.offset+cSize);
                     tmp=new infon(item->wFlag, &pSize, &pVal,0,0,item->next);
@@ -764,7 +760,7 @@ void agent::pushNextInfon(infon* CI, QitemPtr cn, infQ &ItmQ){
         }
     case DoNext:
         if(cn->whatNext==DoNext) cn->bufCnt=0;
-        if((VsFlag(CI)&(mFormat+tType))==(fConcat+tNum)){
+        if((VsFlag(CI)&(mFormat+mType))==(fConcat+tNum)){
             compute(CI); if(cn->CIfol && !InfIsLast(CI)){pushCIsFollower;}
         }else if(!(InfAsDesc(CI)&&!cn->override)&&((CI->value.listHead&&(InfsType(CI)==tList))||ValueIsConcat(CI)) && !InfIsNormed(CI->value.listHead)){
             ItmQ.push(QitemPtr(new Qitem(CI->value.listHead,cn->firstID,((cn->IDStatus==1) & !ValueIsConcat(CI))?2:cn->IDStatus,cn->level+1,0,cn))); // Push CI->value

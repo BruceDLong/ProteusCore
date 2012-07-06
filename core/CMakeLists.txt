@@ -7,10 +7,10 @@ set(PROTEUS_SRCS Proteus.cpp Infon.cpp InfonIO.cpp Functions.cpp)
 set(UNICODE_LIBS icuio icui18n icutu icuuc icudata icule iculx icutest dl)
 
 include_directories( ../builds/libs/GMP_BigInts/gmp-5.0.4/include/ ../builds/libs/unicode/release-49-1-1/include/)
-link_directories(../libfixmath/libfixmath ../builds/libs/GMP_BigInts/gmp-5.0.4/lib/ ../builds/libs/unicode/release-49-1-1/lib/)
+link_directories(../builds/libs/GMP_BigInts/gmp-5.0.4/lib/ ../builds/libs/unicode/release-49-1-1/lib/)
 
 #add_library(Proteus SHARED ${PROTEUS_SRCS})
 add_executable(ptest ptest.cpp ${PROTEUS_SRCS})
 add_executable(clip clip.cpp ${PROTEUS_SRCS})
-target_link_libraries(clip readline fixmath gmp gmpxx ${UNICODE_LIBS})
-target_link_libraries(ptest fixmath gmp gmpxx ${UNICODE_LIBS})
+target_link_libraries(clip readline gmp gmpxx ${UNICODE_LIBS})
+target_link_libraries(ptest gmp gmpxx ${UNICODE_LIBS})

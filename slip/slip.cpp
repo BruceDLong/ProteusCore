@@ -29,15 +29,15 @@ static int doneYet=0, numEvents=0, numPortals=0;
 
 using namespace std;
 
-#define DEB(msg)  //{std::cout<< msg;}
-#define DEBl(msg) //{std::cout<< msg << "\n";}
+#define DEB(msg)  //{cout<< msg;}
+#define DEBl(msg) //{cout<< msg << "\n";}
 #define MSG(msg)  {cout<< msg << flush;}
 #define MSGl(msg) {cout<< msg << "\n" << flush;}
 #define ERR(msg)  {cout<< msg;}
 #define ERRl(msg) {cout<< msg << "\n";}
 
-#define gINT theAgent.gIntNxt(&ItemPtr)
-#define gZto1 fix16_to_dbl(theAgent.gRealNxt(&ItemPtr))
+#define gINT (theAgent.gIntNxt(&ItemPtr).get_ui())
+#define gZto1 (theAgent.gRealNxt(&ItemPtr))
 #define gSTR theAgent.gStrNxt(&ItemPtr, txtBuff)
 
 #define Z1 {a=gZto1;  DEB(a)}
@@ -231,7 +231,7 @@ enum dTools{rectangle=1, curvedRect, circle, lineTo, lineRel, moveTo, moveRel, c
 
 void DrawProteusDescription(InfonPortal* portal, infon* ProteusDesc){
     cairo_surface_t* surface=portal->cairoSurf;
-    if (surface==0 || ProteusDesc==0 || ProteusDesc->size==0) ERRl("Missing description."<<ProteusDesc);
+    if (surface==0 || ProteusDesc==0 || ProteusDesc->getSize()==0) ERRl("Missing description."<<ProteusDesc);
     //DEBl("DISPLAY:["<<printInfon(ProteusDesc));
     int count=0; int EOT_d2; char txtBuff[1024];
     infon *i, *ItemPtr, *OldItmPtr, *subItem;
@@ -521,8 +521,8 @@ void InitializePortalSystem(int argc, char** argv){
  //   if (SDL_TimerInit() < 0) {MSGl("Couldn't initialize Timer Driver: "<<SDL_GetError()); exit(2);}
     //MAYBE: if (DebugMode) PrintConfiguration from common.c Set debugmode via command-line argument
 
-    SDL_EnableKeyRepeat(300, 130);
-    SDL_EnableUNICODE(1);
+ //UNDO:   SDL_EnableKeyRepeat(300, 130);
+  //UNDO:  SDL_EnableUNICODE(1);
     atexit(cleanup);
 
     if(theAgent.loadInfon(worldFile, &theAgent.world)) exit(1);

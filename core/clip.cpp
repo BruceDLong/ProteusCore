@@ -2,11 +2,11 @@
 #include <iostream>
 #include <fstream>
 
-std::fstream log;
+using namespace std;
+fstream log;
+
 #include "Proteus.h"
 #include <stdlib.h>
-
-using namespace std;
 
 
 // maybe wrap this whole in a IFDEF clause?
@@ -15,9 +15,9 @@ using namespace std;
 #include <readline/history.h>
 
 static char *line_read = (char *)NULL;
-std::string HIST_FILE(getenv("HOME"));
+string HIST_FILE(getenv("HOME"));
 
-std::string rl_gets (const char* prompt) { //Read a string, and return a pointer to it. returns 'quit' on EOF (ctrl D)
+string rl_gets (const char* prompt) { //Read a string, and return a pointer to it. returns 'quit' on EOF (ctrl D)
 
   if (line_read){ // Free the last string
       free (line_read);
@@ -31,7 +31,7 @@ std::string rl_gets (const char* prompt) { //Read a string, and return a pointer
     write_history (HIST_FILE.c_str());
   }
   if (line_read == NULL) line_read = (char*)"quit";
-  return (std::string(line_read));
+  return (string(line_read));
 }
 
 void rl_init() {
@@ -40,8 +40,8 @@ void rl_init() {
   stifle_history (1000);
 }
 
-std::string readln(std::string prompt){
-    std::string str="";
+string readln(string prompt){
+    string str="";
     str = rl_gets(prompt.c_str());
     return str;
 }
@@ -64,19 +64,19 @@ int main(int argc, char **argv){
 
     // Load World
     agent a(0, IsHardFunc, AutoEval);
-    a.locale.createCanonical(std::locale("").name().c_str());
+    a.locale.createCanonical(locale("").name().c_str());
     cout<<"Locale: "; PrntLocale(a.locale);
     if(a.loadInfon("world.pr", &a.world, true)) exit(1);
     topInfon=a.world;  // use topInfon in the ddd debugger to view World
 
     cout<<"\nThe Proteus CLI. Type some infons or 'quit'\n\n";
     while(!cin.eof()){
-        std::string entry= readln("Proteus: ");
+        string entry= readln("Proteus: ");
         if (entry=="quit") break;
         if (entry=="dict") {
             cout<<"Locale: "; PrntLocale(a.locale);
-            for(std::map<Tag,infon*>::iterator tagPtr=tag2Ptr.begin(); tagPtr!=tag2Ptr.end(); tagPtr++){
-                std::cout<<tagPtr->first.tag<< ":" << tagPtr->first.locale << "\t= " <<printInfon(tagPtr->second)<<"\n";
+            for(map<Tag,infon*>::iterator tagPtr=tag2Ptr.begin(); tagPtr!=tag2Ptr.end(); tagPtr++){
+                cout<<tagPtr->first.tag<< ":" << tagPtr->first.locale << "\t= " <<printInfon(tagPtr->second)<<"\n";
             }
             continue;
         } else if (entry.substr(0,7)=="locale=") {
@@ -94,7 +94,7 @@ int main(int argc, char **argv){
         if (Entry) try{
             //a.normalize(Entry); // cout << "Normalizd\n";
             Entry=a.append(Entry, a.world);
-        } catch (char const* errMsg){std::cout<<errMsg<<"\n";}
+        } catch (char const* errMsg){cout<<errMsg<<"\n";}
 
         if (Entry) cout<<"\n"<<printInfon(Entry)<<"\n\n";
         else {cout<<"\nError: "<<q.buf<<"\n\n";}

@@ -144,7 +144,7 @@ gpt2: //if ((((VsFlag(*p)&mFlags1)>>8)&rType)==rList)
 
 //////////// Routines for copying infon data to C formats:
 BigInt agent::gIntNxt(infon** ItmPtr){
-    UInt sign; BigInt num;
+    int sign; BigInt num;
     getInt(*ItmPtr,&num,&sign);
     getNextTerm(ItmPtr);
     return num; //(sign)?-num:num;

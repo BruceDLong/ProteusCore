@@ -9,9 +9,9 @@
 #define MAX_PORTALS 24
 
 #include <time.h>
-#include <SDL/SDL.h>
-#include <SDL/SDL_thread.h>
-#include <SDL/SDL_image.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_thread.h>
+#include <SDL2/SDL_image.h>
 
 #include <pango/pangocairo.h>
 
@@ -136,10 +136,10 @@ static inline SDL_Surface *load_image(const char *filename){
     SDL_Surface* optimizedImage = NULL;
 
     if((loadedImage = IMG_Load(filename))) {
-        optimizedImage = SDL_DisplayFormat(loadedImage);
-        SDL_FreeSurface(loadedImage);
+       // optimizedImage = SDL_DisplayFormat(loadedImage);
+      //  SDL_FreeSurface(loadedImage);
     }
-    return optimizedImage;
+    return loadedImage; //optimizedImage;
 }
 
 SDL_Texture *LoadTexture(SDL_Renderer *renderer, char *file, SDL_bool transparent){
@@ -231,7 +231,7 @@ enum dTools{rectangle=1, curvedRect, circle, lineTo, lineRel, moveTo, moveRel, c
 
 void DrawProteusDescription(InfonPortal* portal, infon* ProteusDesc){
     cairo_surface_t* surface=portal->cairoSurf;
-    if (surface==0 || ProteusDesc==0 || ProteusDesc->getSize()==0) ERRl("Missing description."<<ProteusDesc);
+    if (surface==0 || ProteusDesc==0 || ProteusDesc->getSize()==0) ERRl("Description Flag Raised."<<ProteusDesc); // Missing description.
     //DEBl("DISPLAY:["<<printInfon(ProteusDesc));
     int count=0; int EOT_d2; char txtBuff[1024];
     infon *i, *ItemPtr, *OldItmPtr, *subItem;
@@ -335,9 +335,10 @@ void CloseTurbulanceViewport(InfonViewPort* viewPort){
         // Remove this portal from parent
         InfonViewPort *currP, *prevP=0;
         for(currP=portal->viewPorts; currP != NULL; prevP=currP, currP=currP->next) {
-            if (currP == viewPort)
+            if (currP == viewPort) {
                 if (prevP == NULL) portal->viewPorts = currP->next;
                 else prevP->next = currP->next;
+            }
         }
         delete(viewPort);
         if (portal->viewPorts==0){
@@ -486,7 +487,6 @@ static int SimThread(void *nothing){
             nextFrame=new infon;
             theAgent.deepCopy(portal->stuff, nextFrame);
             theAgent.normalize(nextFrame);
-
             ev.user.data1 = (void *)i;
             ev.user.data2 = nextFrame;
             SDL_PushEvent(&ev);
@@ -504,10 +504,10 @@ void InitializePortalSystem(int argc, char** argv){
         int consumed = 0;
         if (consumed == 0) {
             consumed = -1;
-            if (SDL_strcasecmp(argv[i], "--world") == 0) if (argv[i + 1]) {worldFile=argv[i+1]; consumed = 2;}
-            if (SDL_strcasecmp(argv[i], "--theme") == 0) if (argv[i + 1]) {theme=argv[i+1]; consumed = 2;}
-            if (SDL_strcasecmp(argv[i], "--user") == 0) if (argv[i + 1]) {username=argv[i+1]; consumed = 2;}
-            if (SDL_strcasecmp(argv[i], "--pass") == 0) if (argv[i + 1]) {password=argv[i+1]; consumed = 2;}
+            if (SDL_strcasecmp(argv[i], "--world") == 0) {if (argv[i + 1]) {worldFile=argv[i+1]; consumed = 2;}}
+            else if (SDL_strcasecmp(argv[i], "--theme") == 0) {if (argv[i + 1]) {theme=argv[i+1]; consumed = 2;}}
+            else if (SDL_strcasecmp(argv[i], "--user") == 0) {if (argv[i + 1]) {username=argv[i+1]; consumed = 2;}}
+            else if (SDL_strcasecmp(argv[i], "--pass") == 0) {if (argv[i + 1]) {password=argv[i+1]; consumed = 2;}}
             else if (SDL_isdigit(*argv[i])) {secondsToRun = SDL_atoi(argv[i]); consumed = 1;}
         }
         if (consumed < 0) {
@@ -615,7 +615,8 @@ void StreamEvents(){
                 case SDLK_d: if (IS_CTRL) {
                     CreateTurbulancePortal(windowTitle, 100,1300,1024,768, portalView->parentPortal->user,
                         portalView->parentPortal->theme, portalView->parentPortal->crntFrame);} break;       // New Portal
-                case SDLK_RETURN: break;
+                case SDLK_RETURN: doneYet=true; break;
+                case SDL_SCANCODE_ESCAPE:
                 case SDLK_ESCAPE: doneYet=true; break;
                 }
                 break;

@@ -147,7 +147,7 @@
 // user's books, documents
 // user's devices
 
-    &desktop={?|...};
+    &desktop={?|...}
 
     &HIGH_NUM = _
     &LOW_NUM = _

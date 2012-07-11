@@ -32,7 +32,7 @@ enum InfonFlags {  // Currently called 'pureInfon'
     dDecimal=1<<8, dHex=2<<8, dBinary=3<<8
     };
 
-enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,iHardFunc,iGetSize,iGetType,iAssocNxt,iGetLast,iGetFirst,iGetMiddle};
+enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,iHardFunc=0x9,iGetSize,iGetType,iAssocNxt,iGetLast,iGetFirst,iGetMiddle};
 enum seeds {mSeed=0x30, sNone=0x00, sUseAsFirst=0x10, sUseAsList=0x20, sUseAsLast=0x30};
 enum wMasks {mFindMode = 0x0f, mIsTopRefNode = 0x1000, mIsHeadOfGetLast=0x2000, mAsProxie=0x4000, mAssoc=0x8000};
 enum masks {mMode=0x080000, isNormed=0x100000, asDesc=0x200000, toExec=0x400000, asNot=0x40, sizeIndef=0x80, mListPos=0xff000000};
@@ -179,7 +179,7 @@ struct agent {
     infon *world, context;
     icu::Locale locale;
     void* utilField; // Field for application specific use.
-    void deepCopyPure(pureInfon* from, pureInfon* to);
+    void deepCopyPure(pureInfon* from, pureInfon* to, int flags);
     void deepCopy(infon* from, infon* to, PtrMap* ptrs=0, int flags=0);
     int loadInfon(const char* filename, infon** inf, bool normIt=true);
 
@@ -228,6 +228,7 @@ enum WorkItemResults {DoNothing, BypassDeadEnd, DoNext, DoNextBounded};
 //extern fstream log;
 #define OUT(msg) {cout<< msg;}
 #define Debug(msg) /*{cout<< msg << "\n";}*/
+#define ImAt(loc,parm) {cout<<"####### At:"<<(loc)<<"  "<<(parm)<<"\n";}
 #define isEq(L,R) (L && R && strcmp(L,R)==0)
 
 inline void getInt(infon* inf, BigInt* num, int* sign) {
@@ -237,11 +238,13 @@ inline void getInt(infon* inf, BigInt* num, int* sign) {
  }
 
 inline double getReal(infon* inf) {
+    double ret=0;
     UInt format=InfsFormat(inf);
     if(InfsType(inf)!=tNum || format==fUnknown) throw "Can't get real value from infon.";
-    if(format==fFract || format==fLiteral) return inf->value.dataHead->get_d();
-    else if(format==fFloat) return inf->value.listHead->value.dataHead->get_d() + inf->value.listHead->next->value.dataHead->get_d();
-    return 0;
+    if(format==fFract || format==fLiteral) ret=inf->value.dataHead->get_d();
+    else if(format==fFloat) ret=inf->value.listHead->value.dataHead->get_d() + inf->value.listHead->next->value.dataHead->get_d();
+    if(inf->value.flags & fInvert) ret=-ret;
+    return ret;
 }
 
 inline bool getStng(infon* i, string* str) {

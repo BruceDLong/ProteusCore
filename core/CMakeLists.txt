@@ -12,5 +12,5 @@ link_directories(../builds/libs/GMP_BigInts/gmp-5.0.4/lib/ ../builds/libs/unicod
 #add_library(Proteus SHARED ${PROTEUS_SRCS})
 add_executable(ptest ptest.cpp ${PROTEUS_SRCS})
 add_executable(clip clip.cpp ${PROTEUS_SRCS})
-target_link_libraries(clip readline gmp gmpxx ${UNICODE_LIBS})
+target_link_libraries(clip readline gmpxx gmp ${UNICODE_LIBS})
 target_link_libraries(ptest gmp gmpxx ${UNICODE_LIBS})

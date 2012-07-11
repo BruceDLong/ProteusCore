@@ -169,7 +169,7 @@ int AutoEval(infon* CI, agent* a){
                 break;
             }
         }
-        cout << "majorType="<<majorType<<"\n";
+ //       cout << "majorType="<<majorType<<"\n";
         if (foundMajorType == 0) {cout<<"Error: majorType '"<<majorType<<"' not found in Theme\n";  exit (0);  return 0;}
         i=0;
         for (EOT=a->StartTerm(foundMajorType, &i); !EOT; EOT=a->getNextTerm(&i)) {
@@ -181,7 +181,7 @@ int AutoEval(infon* CI, agent* a){
             }
         }
         if (foundMinorType == 0) {cout<<"Error: no associated minorType ("<<minorType<<") found in Theme\n"; exit (0);  return 0;}
-        UInt tmpFlags=(CI->wFlag&mListPos); a->deepCopy(foundMinorType->value.listHead->next, CI); CI->wFlag=(CI->wFlag& (~mListPos))+tmpFlags;
+        UInt tmpFlags=(CI->wFlag&mListPos); a->deepCopy(foundMinorType->value.listHead->next, CI,0,0); CI->wFlag=(CI->wFlag& (~mListPos))+tmpFlags;
         CI->spec2=args;
     } else if (funcName=="loadInfon"){
         string fileName; infon* I;

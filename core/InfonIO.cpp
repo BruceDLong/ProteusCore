@@ -289,7 +289,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
             if (!(VsFlag(head)&fIncomplete) && stay) head->prev->wFlag|=isLast;
         }
         check(rchr);
-        if(nxtTok("~"))  (*wFlag)|=mAssoc;
+        if(nxtTok("~"))  {(*wFlag)|=mAssoc;}
     } else if (nxtTok("0X") || nxtTok("0x")) { // read hex number
         if( nxtTok("0x#")){ size=1; numberFromString(buf, pInf, 16); *flags|=((tNum+dHex)|pInf->flags); } else throw "Hex number expected after '0x'";
     } else if (nxtTok("0B") || nxtTok("0b")) { // read binary number

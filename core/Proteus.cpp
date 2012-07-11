@@ -9,7 +9,7 @@
 #include "Proteus.h"
 #include "remiss.h"
 
-const int ListBuffCutoff=2;
+const int ListBuffCutoff=200;  // TODO: make this two to show a bug.
 
 typedef map<dblPtr,UInt>::iterator altIter;
 map<Tag,infon*> tag2Ptr;
@@ -159,7 +159,7 @@ double agent::gRealNxt(infon** ItmPtr){
 char* agent::gStrNxt(infon** ItmPtr, char*txtBuff){
     if(InfsType(*ItmPtr)==tString && ValueIsKnown(*ItmPtr)) {
         UInt strLen=(*ItmPtr)->getSize().get_ui();
-//UNDO:        memcpy(txtBuff, (*ItmPtr)->value.dataHead., strLen);
+        memcpy(txtBuff, (*ItmPtr)->value.toString((*ItmPtr)->getSize().get_ui()).c_str(), strLen);
         txtBuff[strLen]=0;
     }
     getNextTerm(ItmPtr);
@@ -189,21 +189,6 @@ infon* agent::append(infon* i, infon* list){ // appends an item to the end of a 
     return q;
 }
 
-infon* agent::copyList(infon* from, int flags){
-    infon* top=0; infon* follower; infon* q, *p=from;
-    if(from==0)return 0;
-    do {
-        q=new infon;
-        deepCopy(p,q, 0, flags); q->pos=p->pos;
-        if (top==0) follower=top=q;
-        q->prev=follower; q->top=top; follower=follower->next=q;
-        p=p->next;
-    } while(p!=from);
-    top->prev=follower; top->wFlag|=from->wFlag & mListPos;
-    follower->next=top;
-    return top;
-}
-
 infon* getVeryTop(infon* i){
     infon* j=i;
     while(i!=0) {j=i; i=getTop(i);}
@@ -227,21 +212,36 @@ void deTagWrkList(infon* i){ // After a tag is derefed, move any c1Left wrkList 
     } while (p!=i->wrkList);
 }
 
-void agent::deepCopyPure(pureInfon* from, pureInfon* to){
+infon* agent::copyList(infon* from, int flags){
+    infon* top=0; infon* follower; infon* q, *p=from;
+    if(from==0)return 0;
+    do {
+        q=new infon;
+        deepCopy(p,q, 0, flags); q->pos=p->pos;
+        if (top==0) follower=top=q;
+        q->prev=follower; q->top=top; follower=follower->next=q;
+        p=p->next;
+    } while(p!=from);
+    top->prev=follower; top->wFlag|=from->wFlag & mListPos;
+    follower->next=top;
+    return top;
+}
+
+void agent::deepCopyPure(pureInfon* from, pureInfon* to, int flags){
     to->flags=from->flags;
     to->offset=from->offset;
-    if(PureIsInListMode(*from)) to->listHead=copyList(from->listHead, from->flags);
+    if(PureIsInListMode(*from)) to->listHead=copyList(from->listHead, flags);
     else {to->listHead=0; to->dataHead=from->dataHead;}
 }
 
 void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags){
     UInt fm=from->wFlag&mFindMode; infon* tmp;
-    to->wFlag=(from->wFlag&0x0fffffff);
+    to->wFlag=(from->wFlag&0xffffffff);
     //to->wFlag=from->wFlag;
     if(to->type==0) to->type=from->type; // TODO: We should merge types, not just copy over.
 
-    deepCopyPure(&from->size, &to->size);  if(to->size.listHead) to->size.listHead->top=to;
-    deepCopyPure(&from->value,&to->value); if(to->value.listHead)to->value.listHead->top=to;
+    deepCopyPure(&from->size, &to->size, flags);  if(to->size.listHead) to->size.listHead->top=to;
+    deepCopyPure(&from->value,&to->value, flags); if(to->value.listHead)to->value.listHead->top=to;
 
     if(from->wFlag&mIsHeadOfGetLast) to->top2=(*ptrs)[from->top2];
     if(fm==iToPath || fm==iToPathH || fm==iToArgs || fm==iToVars) {
@@ -250,11 +250,11 @@ void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags){
     } else if((fm==iGetFirst || fm==iGetLast || fm==iGetMiddle) && from->spec1) {
         PtrMap *ptrMap = (ptrs)?ptrs:new PtrMap;
         if ((to->prev) && (tmp=to->prev->spec1) && (tmp->wFlag&mIsHeadOfGetLast) && (tmp=tmp->next)) to->spec1=tmp;
-        else to->spec1=new infon;
+        else {to->spec1=new infon; }
         (*ptrMap)[from]=to;
         deepCopy (from->spec1, to->spec1, ptrMap, flags);
         if(ptrs==0) delete ptrMap;
-        if (flags && from->wFlag&mAssoc) {// cout<<"Initializing ASSOC\n";
+        if (flags && from->wFlag&mAssoc) {
             from->wFlag&= ~(mAssoc+mFindMode); from->wFlag|=iAssocNxt;
             SetValueFormat(from, fUnknown); SetSizeFormat(from, fUnknown);
         }
@@ -267,7 +267,7 @@ void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags){
     infNode *p=from->wrkList, *q;  // Merge Identity Lists
     if(p) do {
         q=new infNode; q->idFlags=p->idFlags;
-        if((p->item->wFlag&mFindMode)==iNone || true) {q->item=new infon; q->idFlags=p->idFlags; deepCopy (p->item, q->item, ptrs);}
+        if((p->item->wFlag&mFindMode)<iAssocNxt && (p->item->wFlag&mFindMode)>iNone) {q->item=new infon; q->idFlags=p->idFlags; deepCopy (p->item, q->item, ptrs, flags);}
         else {q->item=p->item;}
         prependID(&to->wrkList, q);
         p=p->next;
@@ -442,20 +442,21 @@ int agent::compute(infon* i){
         normalize(p); // TODO: appending inline rather than here would allow streaming.
         if(SizeType(p)==tNum && InfsType(p)==tNum){
             if (SizeIsUnknown(p)) return 0;
-            if (ValueIsConcat(p)) compute(p->size.listHead);
+            if (SizeIsConcat(p)) compute(p->size.listHead);
             if (SizeType(p)!=tNum) return 0;
             if (ValueIsUnknown(p)) return 0;
-            if (InfsType(p)==tList) compute(p->value.listHead);
+            if (InfsFormat(p)>=fConcat) compute(p->value.listHead);
             if (InfsType(p)!=tNum) return 0;
-            BigInt val= *p->value.dataHead; //( (p)->value.flags & fInvert)?-p->value:p->value;
+            BigInt val;
+            if((p)->value.flags & fInvert) {val=-(*p->value.dataHead);} else {val=(*p->value.dataHead);}
             if(SizeIsInverted(p)){
                 if (++count==1){sAcc= *p->size.dataHead; vAcc=val;}
-                    else {sAcc/= *p->size.dataHead; vAcc=(vAcc/ *p->size.dataHead)+val;}
-                } else {
+                else {sAcc/= *p->size.dataHead; vAcc=(vAcc/ *p->size.dataHead)+val;}
+            } else {
                 if (++count==1){sAcc= *p->size.dataHead; vAcc=val;}
-                    else {sAcc*= *p->size.dataHead; vAcc=(vAcc*(*p->size.dataHead))+val;}
-                    }
-            } else return 0;
+                else {sAcc*= *p->size.dataHead; vAcc=(vAcc*(*p->size.dataHead))+val;}
+            }//cout<<"V:"<<vAcc.get_str()<<"\n";
+        } else return 0;
         p=p->next;
     } while (p!= i->value.listHead);
     i->value=(mpq_class)vAcc; i->size=(mpq_class)sAcc;

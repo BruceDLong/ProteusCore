@@ -16,6 +16,7 @@
 #include "Proteus.h"
 #include "remiss.h"
 #include <ctime>
+#include <sys/time.h>
 
 #define pi 3.14159
 #define Zto1(gInt) (float)(((float)gInt)  /* / 1024.0*/)
@@ -120,10 +121,10 @@ int AutoEval(infon* CI, agent* a){
  //  cout << "EVAL:"<<funcName.S<<"\n";
     if (funcName=="sin"){
         if (!getRealArg(CI, &bigFrac, a)) {CI->wFlag=iNone; return 0;}
- //UNDO:       setRealVal(CI, mp_sin(bigFrac));  // *pi/180
+        setRealVal(CI, sin(bigFrac.get_d()));  // *pi/180
     } else if (funcName=="cos"){
         if (!getRealArg(CI, &bigFrac, a)) {CI->wFlag=iNone; return 0;}
- //UNDO:       setRealVal(CI, mp_cos(bigFrac));  // *pi/180
+        setRealVal(CI, cos(bigFrac.get_d()));  // *pi/180
     } else if (funcName=="time"){
         tm now;
         time_t rawtime;
@@ -142,7 +143,7 @@ int AutoEval(infon* CI, agent* a){
         UInt argsSize=args->getSize().get_ui();
         if (InfsType(args) != tList) {cout<<"Error: Argument to imageOf is not a list\n";  exit (0); return 0;}
         objectToImage=args=args->value.listHead;
- //     cout << printInfon(objectToImage) << "---[" << args->type << "]\n";
+      //cout << printInfon(objectToImage) << " [" << args->type << "]\n";
         if(objectToImage->type==0){
             switch(InfsType(objectToImage)){
                 case tNum: majorType="tNum";         break;
@@ -189,7 +190,10 @@ int AutoEval(infon* CI, agent* a){
         a->loadInfon(fileName.c_str(), &I, 1);
         copyTo(I,CI);
     } else if (funcName=="timestr"){ //cout << "DOING TIME\n";
-        string s="Time:"; char l[30]; itoa(time(0),l); s+=l;
+        timeval t; gettimeofday(&t,0);
+        char Time[50]; char uSec[30]; strftime(Time, 50, " %H:%M:%S:", localtime(&t.tv_sec));
+        itoa(t.tv_usec/1000,uSec);
+        string s="Time:"+string(Time)+string(uSec);
         setString(CI, s);
     } else if (funcName=="infonToText"){
         infon* inf1;

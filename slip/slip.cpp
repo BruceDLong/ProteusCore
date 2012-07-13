@@ -133,7 +133,7 @@ static inline uint32_t map_value(uint32_t val, uint32_t max, uint32_t tomax){
 
 static inline SDL_Surface *load_image(const char *filename){
     SDL_Surface* loadedImage = NULL;
-    SDL_Surface* optimizedImage = NULL;
+  //  SDL_Surface* optimizedImage = NULL;
 
     if((loadedImage = IMG_Load(filename))) {
        // optimizedImage = SDL_DisplayFormat(loadedImage);
@@ -225,9 +225,12 @@ enum dTools{rectangle=1, curvedRect, circle, lineTo, lineRel, moveTo, moveRel, c
             lineWidth=40, lineStyle, fontFace, fontSize,
             drawToScrnN=50, drawToWindowN, drawToMemory, drawToPDF, drawToPS, drawToSVG, drawToPNG,
             shiftTo=60, scaleTo, rotateTo,
-            loadImage=70, setBackgndImg, dispBackgnd,
+            loadImage=70, setBackgndImg, dispBackgnd, cachePic, dispPic,
             drawItem=100
 };
+
+typedef map<string, cairo_surface_t*> picCache_t;
+picCache_t picCache;
 
 void DrawProteusDescription(InfonPortal* portal, infon* ProteusDesc){
     cairo_surface_t* surface=portal->cairoSurf;
@@ -312,6 +315,31 @@ DEB("\n-----------------\n")
                 cairo_paint(cr);
                 cairo_restore(cr);
                 } break;
+            case cachePic:{ S1
+                picCache_t::iterator picPtr=picCache.find(Sa);
+                if (picPtr==picCache.end()) {picCache[Sa]=cairo_image_surface_create_from_png(Sa);}
+            } break;
+            case dispPic:{ S1 Z3
+           // cout << Sa <<a<<" "<<b<<" "<<c<<"\n";
+                cairo_surface_t* pic=0;
+                picCache_t::iterator picPtr=picCache.find(Sa);
+                if (picPtr==picCache.end()) {picCache[Sa]=pic=cairo_image_surface_create_from_png(Sa);}
+                else pic=picPtr->second;
+                {//pic=cairo_image_surface_create_from_png(Sa);
+                    double scale=c;
+                    int w = cairo_image_surface_get_width (pic);
+                    int h = cairo_image_surface_get_height (pic);
+                    double pw = portal->surface->w;
+                    double ph = portal->surface->h;
+                    cairo_save(cr);
+                    cairo_move_to(cr, a*scale,b*scale);
+                    cairo_scale(cr,1/scale,1/scale);
+
+                    cairo_set_source_surface(cr,pic,a,b);
+                    cairo_paint(cr);
+                    cairo_restore(cr);
+                }
+            }break;
             case drawItem: DEB(">");
                 subItem=theAgent.gListNxt(&ItemPtr);
          //       cairo_new_sub_path(cr); //cairo_push_group(cr);
@@ -321,7 +349,7 @@ DEB("\n-----------------\n")
 
             default: {ERRl("Invalid Drawing Command:"<<cmd<<"\n"); exit(2);}
         }
-    if (++count==200) break;
+    if (++count==2000) break;
     }
  //   cairo_destroy (cr);
     DEBl("\nCount: " << count << "\n======================");
@@ -440,6 +468,7 @@ bool CreateTurbulancePortal(char* title, int x, int y, int w, int h, User* user,
     portal->theme=theme;
 
     portals[numPortals++]=portal;
+    return 0;
 }
 
 void DestroyTurbulancePortal(InfonPortal *portal){
@@ -452,7 +481,7 @@ void DestroyTurbulancePortal(InfonPortal *portal){
 
 //////////////////// End of Slip Specific Code, Begin Rendering Code
 
-int secondsToRun=120; // time until the program exits automatically. 0 = don't exit.
+int secondsToRun=1200; // time until the program exits automatically. 0 = don't exit.
 void EXIT(char* errmsg){ERRl(errmsg << "\n"); exit(1);}
 void cleanup(void){SDL_Quit();}   //TODO: Add items to cleanup routine
 
@@ -543,7 +572,8 @@ exit(2);
 */
 
 
-    CreateTurbulancePortal(windowTitle, 100,1300,1024,768, portalUser, themeInfon, stuffInfon);
+    //CreateTurbulancePortal(windowTitle, 100,1300,1024,768, portalUser, themeInfon, stuffInfon);
+    CreateTurbulancePortal(windowTitle, 150,100,800,600, portalUser, themeInfon, stuffInfon);
 }
 
 #define IS_CTRL (ev.key.keysym.mod&KMOD_CTRL)
@@ -613,7 +643,8 @@ void StreamEvents(){
                     }
                     break;
                 case SDLK_d: if (IS_CTRL) {
-                    CreateTurbulancePortal(windowTitle, 100,1300,1024,768, portalView->parentPortal->user,
+                    //CreateTurbulancePortal(windowTitle, 100,1300,1024,768, portalView->parentPortal->user,
+                    CreateTurbulancePortal(windowTitle, 150,90,800,600, portalView->parentPortal->user,
                         portalView->parentPortal->theme, portalView->parentPortal->crntFrame);} break;       // New Portal
                 case SDLK_RETURN: doneYet=true; break;
                 case SDL_SCANCODE_ESCAPE:

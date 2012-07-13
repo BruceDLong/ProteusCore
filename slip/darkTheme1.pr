@@ -9,7 +9,7 @@
             {{setBackgndImg 'AbstractBkgnd.png'} {dispBackgnd}}
             {
                 {fontFace 'sans bold 12'}
-                {inkColorAlpha 0.5 0.5 0.8 0.3} //1.0 0.5 0.8 0.8}
+                {inkColorAlpha 0.5 0.5 0.8 0.3}
                 {lineWidth 3}
                 {moveTo 0 50}
                 {lineRel 200 0}
@@ -24,6 +24,7 @@
             {
                 {fillPath}
             }
+            { {dispPic "ColorfulPath.png" 1500 200 5}}
         )
        }
       ]
@@ -66,6 +67,19 @@
       [ ?
         {drawItem {
             {text textInfon<:(%A:[_])}
+          }
+        }
+       ]
+    }
+
+}
+
+///////////////  tUnknown theme
+  {'tUnknowns',
+    {'default'
+      [ ?
+        {drawItem {
+            {text "?"}
           }
         }
        ]
@@ -133,6 +147,41 @@
 
   }
 
+///////////////  photo theme
+  {'photo',
+    {'default'
+      [ ?
+        {drawItem {
+            {text textInfon<:(%A:[_])}
+          }
+        }
+       ]
+    }
+
+}
+
+///////////////  photos theme
+ {'photos',
+    {'default',
+      [ ?
+       {5.0 42.0 12.0 25.0 56.0} // ({0.0} {+(+40.0 (%\\\\:[_]~)) | ...})  // Y-values
+
+       { drawItem
+        { {drawItem {{moveRel 20.0 0.0 }   imageOf <: {%A:[?]~}  {moveRel -20.0 20.0} }} |...} //(%V:[_]~)
+       }
+      ]
+    }
+
+    {'simple2',
+      [ ?
+       {5.0 42.0 12.0 25.0 56.0} // ({0.0} {+(+40.0 (%\\\\:[_]~)) | ...})  // Y-values
+
+       { drawItem
+        { {drawItem {{moveRel 50.0 40.0 }   imageOf <: {%A:[?]~}   }} |...} //(%V:[_]~)
+       }
+      ]
+    }
+}
 ////////////////////////////////////////////////
 
   {'weather_report',
@@ -140,7 +189,7 @@
       [ ?
         {drawItem {
             {text timestr<:1} {moveRel 0 20}
-            {text textLine<:{{"Today: Temp=" %A:[{_|...} NOW_VAL]  }}  } {moveRel 10 20}
+            {text textLine<:{{"Today: Temp=" %A:[{!NOW_VAL|...} NOW_VAL]  }}  } {moveRel 10 20}
             {fontFace 'sans normal 11'}
             {text textLine<:{{"  High=" %A:[_] "   Low=" %A:[_ _] }}  } {moveRel -10 20}
             }

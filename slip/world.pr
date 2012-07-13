@@ -147,7 +147,7 @@
 // user's books, documents
 // user's devices
 
-    &desktop={?|...}
+    &desktop=?
 
     &HIGH_NUM = _
     &LOW_NUM = _
@@ -226,6 +226,8 @@
     &loadImage      = 70
     &setBackgndImg  = 71
     &dispBackgnd    = 72
+    &cachePic       = 73
+    &dispPic        = 74
 
     &drawItem       = 100
 

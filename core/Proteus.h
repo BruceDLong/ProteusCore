@@ -34,10 +34,10 @@ enum InfonFlags {  // Currently called 'pureInfon'
 
 enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,iHardFunc=0x9,iGetSize,iGetType,iAssocNxt,iGetLast,iGetFirst,iGetMiddle};
 enum seeds {mSeed=0x30, sNone=0x00, sUseAsFirst=0x10, sUseAsList=0x20, sUseAsLast=0x30};
-enum wMasks {mFindMode = 0x0f, mIsTopRefNode = 0x1000, mIsHeadOfGetLast=0x2000, mAsProxie=0x4000, mAssoc=0x8000};
-enum masks {mMode=0x080000, isNormed=0x100000, asDesc=0x200000, toExec=0x400000, asNot=0x40, sizeIndef=0x80, mListPos=0xff000000};
 enum colonFlags {c1Left=0x100, c2Left=0x200, c1Right=0x400, c2Right=0x800};
-enum normState {mnStates=0x1f0000, nsListInited=0x10000, nsNormBegan=0x20000, nsPreNormed=0x40000, nsWorkListDone=0x80000, nsNormComplete=0x100000, nsBottomNotLast=0x200000};
+enum wMasks {mFindMode = 0x0f, mIsTopRefNode = 0x1000, mIsHeadOfGetLast=0x2000, mAsProxie=0x4000, mAssoc=0x8000};
+enum masks {mMode=0x080000, isNormed=0x200000, asDesc=0x400000, toExec=0x800000, asNot=0x40, sizeIndef=0x80, mListPos=0xff000000};
+enum normState {mnStates=0x2f0000, nsListInited=0x10000, nsNormBegan=0x20000, nsPreNormed=0x40000, nsWorkListDone=0x80000, nsBottomNotLast=0x100000, nsNormComplete=0x200000};
 enum listPos {isFirst=0x01000000, isLast=0x02000000, isTop=0x04000000, isBottom=0x08000000};
 enum wMisc {noAlts=0, hasAlts=0x10000000, noMoreAlts=0x20000000, isTentative=0x40000000, isVirtual=0x80000000};
 

@@ -23,7 +23,7 @@ infon::infon(UInt wf, pureInfon* s, pureInfon* v, infNode*ID,infon*s1,infon*s2,i
 
 BigInt& infon::getSize(){
     if(size.offset!=0) throw "Size needs updateing. Account for offset.";
-    if((size.flags&(tNum+fLiteral))!=(tNum+fLiteral)) cout<< "Size needs updating. Account for non-literal sizes.\n\n";
+    if((size.flags&(tNum+fLiteral))!=(tNum+fLiteral)) {};//cout<< "Size needs updating. Account for non-literal sizes.\n\n";
     if(size.dataHead->get_den().get_ui()!=1) throw "Size needs updating. Account for fractional sizes.";
     return size.dataHead->get_num();
 }

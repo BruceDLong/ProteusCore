@@ -9,7 +9,7 @@
 #include "Proteus.h"
 #include "remiss.h"
 
-const int ListBuffCutoff=200;  // TODO: make this two to show a bug.
+const int ListBuffCutoff=20;  // TODO: make this '2' to show a bug.
 
 typedef map<dblPtr,UInt>::iterator altIter;
 map<Tag,infon*> tag2Ptr;
@@ -338,7 +338,6 @@ void agent::processVirtual(infon* v){
 void agent::InitList(infon* item) {
     infon* tmp;
     if(!(item->wFlag&nsListInited) && item->value.listHead && (((tmp=item->value.listHead->prev)->wFlag)&isVirtual)){
-//cout<<"INITLIST ("<<item<<")\n";
         item->wFlag|=nsListInited;
         tmp->spec2=item->spec2;
     //    if(tmp->spec2 && ((tmp->spec2->pFlag&mRepMode)==asFunc)) // Remove this after testing an argument as a function
@@ -525,7 +524,13 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
                 if(CI->type == 0) throw ("A tag was null which is a bug");
                 // OUT("Recalling: "<<CI->type->tag<<":"<<CI->type->locale);
                 map<Tag,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
-                if (tagPtr!=tag2Ptr.end()) {UInt tmpFlags=CI->wFlag&mListPos; deepCopy(tagPtr->second,CI); CI->wFlag|=tmpFlags; deTagWrkList(CI);} // TODO B4: move this flag stuff into deepCopy.
+                if (tagPtr!=tag2Ptr.end()) {
+                    bool asNotFlag=((CI->wFlag&asNot)==asNot);
+                    UInt tmpFlags=CI->wFlag&mListPos; deepCopy(tagPtr->second,CI); CI->wFlag|=tmpFlags; // TODO B4: move this flag stuff into deepCopy.
+                    if(CI->wFlag&asNot) asNotFlag = !asNotFlag;
+                    SetBits(CI->wFlag, asNot, (asNotFlag)?asNot:0);
+                    deTagWrkList(CI);
+                    }
                 else{OUT("\nBad tag:'"<<CI->type->tag<<"'\n");throw("A tag was used but never defined");}
                 break;}
             case iGetFirst:      StartTerm (CI, &newID); break;

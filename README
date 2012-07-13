@@ -1,23 +1,37 @@
-There are two projects here, the Proteus language engine (core) and the Slipstream program which uses Proteus (slyp).
+BUILDING THE TOP LEVEL PROJECT
+##############################
 
-In ./core, run 
+There are two projects here, the Proteus language engine (core) and the Slipstream program which uses Proteus (slip).
 
-cd core
+To download or unpack important dependancies into ./deps then install them in ./builds run:
+
+   cd SlipstreamCore
+   cmake .
+   make
+
+NOTE: This script (./CMakeLists.txt) needs some love. There are 3 or 4 places where it breaks in practice. Please send back any fixes made.
+
+
+
+BUILDING amd RUNNING clip -- The Proteus engine and CLI for Proteus
+#######################################################
+
+cd ./SlipstreamCore/core
 cmake .
-
-No need to run cmake again. To builf and run just do:
-
 make
 ./clip
 
-clip is the CLI.
+TESTING THE BUILD:
 
-This will also make ptest which is used to test the build. To test the build see the file ./core/README_TO_TEST_BUILDS.
+    To test the build see the file ./core/README_TO_TEST_BUILDS.
 
-------
-To run the Slipstream engine 
 
-cd slyp
+
+BUILDING slip -- The Slipstream engine (GUI)
+############################################
+
+cd slip
+cmake .
 make
-./slyp
+./slip
 

@@ -22,15 +22,20 @@ using namespace icu;
 
 #define Indent {for (int x=0;x<indent;++x) s+=" ";}
 string printPure (pureInfon* i, UInt wSize, infon* CI){
-    string s; UInt f=i->flags;
+    string s, tmp; UInt f=i->flags;
     if (((f&(fIncomplete+mFormat))==(fIncomplete+fUnknown)) && ((f&mType)!=tNum)) s+="?";
-    UInt type=f&mType;
+    UInt type=f&mType; bool doAsList=false;
     if (type==tNum){
-        if (FormatIsUnknown(f)) s+='_';
-        else if(FormatIs(f,fFloat)){s.append(i->listHead->value.dataHead->get_str()); s+='.'; s.append(i->listHead->next->value.dataHead->get_num().get_str());}
+        if (FormatIsUnknown(f)) s+="_";
+        else if(FormatIs(f,fFloat)){s.append(i->listHead->value.dataHead->get_str()); s+="."; s.append(i->listHead->next->value.dataHead->get_num().get_str());}
         else if(FormatIs(f,fLiteral)){s.append(i->dataHead->get_str());}
-    } else if(type==tString){s+="\"";s.append(i->toString(wSize));s+="\""; }
-    else if(type==tList || FormatIsConcat(f)){
+        else doAsList=true;
+    } else if(type==tString){
+        if (FormatIsUnknown(f)) s+="$";
+        else if(try2CatStr(&tmp, i, wSize)) {s+="\""; s+=tmp; s+="\"";}
+        else doAsList=true;
+    }
+    if(type==tList || doAsList){
         s+=(FormatIsConcat(f))?"(":"{";
         for(infon* p=i->listHead;p;) {
            // if(p==i->listHead && f&fLoop && ((infon*)i)->spec2){printInfon(((infon*)i)->spec2,CI); s+=" | ";} // TODO: when overhauling printing, use this.
@@ -279,7 +284,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                     *s2=j; *flags|=fLoop; size=0; foundBar=1; RmvWSC(); continue;
                 }
                 pInf->listHead=j; head=prev=j; head->wFlag|=isFirst+isTop;
-                if(FormatIsConcat(*flags)) *flags|=(InfsType(j));
+                if(FormatIsConcat(*flags) && (InfsType(j)!=tUnknown)) {SetBits((*flags), mType, InfsType(j));}
             }
             if (foundRet==1) {check('>'); pInf->listHead=j; foundRet++; /* *pFlag|=intersect; */}  // TODO: when repairing Middle-Indexing, repair 'intersect'
             j->top=head; j->next=head; prev->next=j; j->prev=prev; head->prev=j; prev=j; RmvWSC();

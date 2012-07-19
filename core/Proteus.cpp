@@ -144,14 +144,15 @@ gpt2: //if ((((VsFlag(*p)&mFlags1)>>8)&rType)==rList)
 
 //////////// Routines for copying infon data to C formats:
 BigInt agent::gIntNxt(infon** ItmPtr){
-    int sign; BigInt num;
-    getInt(*ItmPtr,&num,&sign);
+    BigInt num;
+    (*ItmPtr)->getInt(&num);
     getNextTerm(ItmPtr);
     return num; //(sign)?-num:num;
 }
 
 double agent::gRealNxt(infon** ItmPtr){
-    double ret=getReal(*ItmPtr);
+    double ret;
+    (*ItmPtr)->getReal(&ret);
     getNextTerm(ItmPtr);
     return ret;
 }
@@ -824,15 +825,20 @@ int agent::fetch_NodesNormalForm(QitemPtr cn){
 }
 
 infon* agent::normalize(infon* i, infon* firstID){
-        if (i==0) return 0;
-        QitemPtr Qi(new Qitem(i,firstID,(firstID)?1:0,0));
-        infQ ItmQ; ItmQ.push(Qi);
-        while (!ItmQ.empty()){
-            QitemPtr cn=ItmQ.front(); ItmQ.pop(); infon* CI=cn->item;
-            fetch_NodesNormalForm(cn);
-            //wait?
-            pushNextInfon(CI, cn, ItmQ);
+    infon* parent;
+    if (i==0) return 0;
+    QitemPtr Qi(new Qitem(i,firstID,(firstID)?1:0,0));
+    infQ ItmQ; ItmQ.push(Qi);
+    while (!ItmQ.empty()){
+        QitemPtr cn=ItmQ.front(); ItmQ.pop(); infon* CI=cn->item;
+        fetch_NodesNormalForm(cn);
+        if((CI != i) && (parent=getTop(CI)) && (InfsType(parent)==tNum) && (InfsFormat(parent)==fConcat) && !InfIsTop(CI) && InfIsLiteralNum(CI) && InfIsLiteralNum(CI->prev) ){
+            {}// combine with prev...
+            // if(InfIsTop(Currnt) && InfIsBottom(Crrnt)) {/* Remove one layer */}
         }
+        //wait?
+        pushNextInfon(CI, cn, ItmQ);
+    }
     return 0;
 }
 

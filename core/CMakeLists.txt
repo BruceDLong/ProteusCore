@@ -3,7 +3,7 @@ cmake_policy(SET CMP0015 NEW)
 
 add_definitions(-Wno-deprecated -Wno-write-strings -fpermissive -g -Wall)
 
-set(PROTEUS_SRCS Proteus.cpp Infon.cpp InfonIO.cpp Functions.cpp)
+set(PROTEUS_SRCS Proteus.cpp convs.cpp InfonIO.cpp Functions.cpp)
 set(UNICODE_LIBS icuio icui18n icutu icuuc icudata icule iculx icutest dl)
 
 include_directories( ../builds/libs/GMP_BigInts/gmp-5.0.4/include/ ../builds/libs/unicode/release-49-1-1/include/)

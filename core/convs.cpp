@@ -28,6 +28,42 @@ BigInt& infon::getSize(){
     return size.dataHead->get_num();
 }
 
+
+bool infon::getInt(BigInt* num) {
+  if(!InfIsLiteralNum(this)) return 0;
+  (*num)=*this->value.dataHead;
+  if(value.flags & fInvert) *num =- *num;
+  return 1;
+ }
+
+bool infon::getReal(double* d) {
+    *d=0;
+    UInt format=InfsFormat(this);
+    if(InfsType(this)!=tNum || format==fUnknown || format==fConcat) return 0;
+    if(format==fFract || format==fLiteral) *d=value.dataHead->get_d();
+    else if(format==fFloat) *d=value.listHead->value.dataHead->get_d() + value.listHead->next->value.dataHead->get_d();
+    if(value.flags & fInvert) *d =- *d;
+    return 1;
+}
+
+bool try2CatStr(string* s, pureInfon* i, UInt wSize){  // returns true if s was set to the string of i.
+    string tmp;
+    if((i->flags&mType)!=tString) return 0;
+    if((i->flags&mFormat)==fLiteral) {s->append(i->toString(wSize)); return true;}
+    if(((i->flags&mFormat)!=fConcat) || InfIsTentative(i->listHead->prev)) return false;
+    for(infon* p=i->listHead;p;) {
+        if(!try2CatStr(&tmp, &p->value, p->getSize().get_ui())) return false;
+        if (InfIsBottom(p)) p=0; else p=p->next;
+    }
+    s->append(tmp);
+    return true;
+}
+
+bool infon::getStng(string* str) {
+    *str="";
+    return try2CatStr(str, &value, getSize().get_ui());
+}
+
 int infonSizeCmp(infon* left, infon* right) { // -1: L<R,  0: L=R, 1: L>R. Infons must have fLiteral, numeric sizes
     UInt leftType=InfsType(left), rightType=InfsType(right);
     if(leftType==0 || SizeIsUnknown(left) || SizeIsUnknown(right)) return 2; // Let's say '2' is an error.

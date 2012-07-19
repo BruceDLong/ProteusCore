@@ -33,7 +33,7 @@ bool IsHardFunc(string tag){
 int getStrArg(infon* i, string* str, agent* a){
     i->spec2->top=i;
     a->normalize(i->spec2);
-    getStng(i->spec2, str);
+    i->getStng(str);
     return 1;
 }
 
@@ -44,19 +44,17 @@ void setString(infon* CI, string &s){
 }
 
 int getIntArg(infon* i, BigInt* Int1, agent* a){
-    int sign;
     i->spec2->top=i;
     a->normalize(i->spec2);
-    getInt(i->spec2, Int1, &sign);
-    if(sign) *Int1 = -*Int1;
+    i->spec2->getInt(Int1);
     return 1;
 }
 
-int getRealArg(infon* i, BigFrac* frac, agent* a){
+int getRealArg(infon* i, double* frac, agent* a){
     i->spec2->top=i;
     a->normalize(i->spec2);
     if(!(InfsType(i->spec2)==tNum && FormatIs(i->spec2->value.flags,fLiteral))) return 0;
-    *frac=getReal(i->spec2);
+    i->spec2->getReal(frac);
     return 1;
 }
 
@@ -115,16 +113,16 @@ int LoadFromSystemCmd(agent* a, infon* type, string cmd){
 
 int AutoEval(infon* CI, agent* a){
     int EOT;
-    BigFrac bigFrac;
+    double frac;
     BigInt bigNum;
     string funcName=CI->type->tag;
  //  cout << "EVAL:"<<funcName.S<<"\n";
     if (funcName=="sin"){
-        if (!getRealArg(CI, &bigFrac, a)) {CI->wFlag=iNone; return 0;}
-        setRealVal(CI, sin(bigFrac.get_d()));  // *pi/180
+        if (!getRealArg(CI, &frac, a)) {CI->wFlag=iNone; return 0;}
+        setRealVal(CI, sin(frac));  // *pi/180
     } else if (funcName=="cos"){
-        if (!getRealArg(CI, &bigFrac, a)) {CI->wFlag=iNone; return 0;}
-        setRealVal(CI, cos(bigFrac.get_d()));  // *pi/180
+        if (!getRealArg(CI, &frac, a)) {CI->wFlag=iNone; return 0;}
+        setRealVal(CI, cos(frac));  // *pi/180
     } else if (funcName=="time"){
         tm now;
         time_t rawtime;

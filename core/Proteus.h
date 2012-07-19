@@ -127,6 +127,9 @@ struct infon {
     infon(UInt wf=0, pureInfon* s=0, pureInfon* v=0, infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0);
     infon* isntLast(); // 0=this is the last one. >0 = pointer to predecessor of the next one.
     BigInt& getSize();
+    bool getInt(BigInt* num);
+    bool getReal(double* d);
+    bool getStng(string* str);
     UInt wFlag;
     uint64_t pos;
     UInt wSize; // get rid if this. disallow strings and lists in "size"
@@ -224,34 +227,12 @@ struct QParser{
 };
 
 enum WorkItemResults {DoNothing, BypassDeadEnd, DoNext, DoNextBounded};
-
+extern bool try2CatStr(string* s, pureInfon* i, UInt wSize);
 //extern fstream log;
 #define OUT(msg) {cout<< msg;}
 #define Debug(msg) /*{cout<< msg << "\n";}*/
 #define ImAt(loc,parm) {cout<<"####### At:"<<(loc)<<"  "<<(parm)<<"\n";}
 #define isEq(L,R) (L && R && strcmp(L,R)==0)
-
-inline void getInt(infon* inf, BigInt* num, int* sign) {
-  UInt f=inf->wFlag;
-  if(InfIsLiteralNum(inf)) (*num)=*inf->value.dataHead; else (*num)=0;
-  *sign=f&fInvert;
- }
-
-inline double getReal(infon* inf) {
-    double ret=0;
-    UInt format=InfsFormat(inf);
-    if(InfsType(inf)!=tNum || format==fUnknown) throw "Can't get real value from infon.";
-    if(format==fFract || format==fLiteral) ret=inf->value.dataHead->get_d();
-    else if(format==fFloat) ret=inf->value.listHead->value.dataHead->get_d() + inf->value.listHead->next->value.dataHead->get_d();
-    if(inf->value.flags & fInvert) ret=-ret;
-    return ret;
-}
-
-inline bool getStng(infon* i, string* str) {
-    if(InfsType(i)!=tString || !ValueIsKnown(i)) return 0;
-    *str=i->value.toString(i->getSize().get_ui());
-    return 1;
-}
 
 #define prependID(list, node){infNode *IDp=(*list); if(IDp){node->next=IDp->next; IDp->next=node;} else {(*list)=node; node->next=node;}}
 #define appendID(list, node) {infNode *IDp=(*list); (*list)=node; if(IDp){(*list)->next=IDp->next; IDp->next=(*list);} else (*list)->next=(*list);}

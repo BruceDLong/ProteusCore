@@ -51,6 +51,7 @@ def test_engine():
    # TESTS OF SIMPLE UN-TYPED MERGE: "=="
 
    # TESTS OF MISC
+   ('1', 'Test string concatenation', '("Hello" " THere!" (" How" " are" (" you" " Doing") "?"))', '"Hello THere! How are you Doing?"'),
    ('1', 'Parse: 3 char then 4 char strings', '+{*3+$ *4+$} == "CatDogs"', '<{"Cat" "Dogs" }>'),
    ('1', 'test anon functions', '[_,456,789,] <: +123', '<*1+789>'),
    ('1', 'Try a bigger function', r'[+_ ({555, 444, [_] := %\\\},)] <: +7000', r'<{*1+555 *1+444 *1+7000 }>'),

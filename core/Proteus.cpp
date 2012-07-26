@@ -12,11 +12,10 @@
 const int ListBuffCutoff=20;  // TODO: make this '2' to show a bug.
 
 typedef map<dblPtr,UInt>::iterator altIter;
-map<Tag,infon*> tag2Ptr;
+TagMap topTag2Ptr;
 map<infon*,Tag> ptr2Tag;
 
 #define recAlts(lval, rval) {if(InfsType(rval)==tString) alts[dblPtr((char*)rval->value.dataHead->get_num_mpz_t()->_mp_d,lval)]++;}
-#define getTop(item) ((InfIsTop(item)||item->top==0)? item->top : item->top->top)
 #define fetchLastItem(lval, item) {for(lval=item; InfsType(lval)==tList;lval=lval->value->prev);}
 #define fetchFirstItem(lval, item) {for(lval=item; InfsTYpe(lval)==tList;lval=lval->value){};}
 
@@ -213,12 +212,12 @@ void deTagWrkList(infon* i){ // After a tag is derefed, move any c1Left wrkList 
     } while (p!=i->wrkList);
 }
 
-infon* agent::copyList(infon* from, int flags){
+infon* agent::copyList(infon* from, int flags, infon* tagCtxt){
     infon* top=0; infon* follower; infon* q, *p=from;
     if(from==0)return 0;
     do {
         q=new infon;
-        deepCopy(p,q, 0, flags); q->pos=p->pos;
+        deepCopy(p,q, 0, flags, tagCtxt); q->pos=p->pos;
         if (top==0) follower=top=q;
         q->prev=follower; q->top=top; follower=follower->next=q;
         p=p->next;
@@ -228,21 +227,26 @@ infon* agent::copyList(infon* from, int flags){
     return top;
 }
 
-void agent::deepCopyPure(pureInfon* from, pureInfon* to, int flags){
+void agent::deepCopyPure(pureInfon* from, pureInfon* to, int flags, infon* tagCtxt){
     to->flags=from->flags;
     to->offset=from->offset;
-    if(PureIsInListMode(*from)) to->listHead=copyList(from->listHead, flags);
+    if(PureIsInListMode(*from)) to->listHead=copyList(from->listHead, flags, tagCtxt);
     else {to->listHead=0; to->dataHead=from->dataHead;}
 }
 
-void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags){
+void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags, infon* tagCtxt){
     UInt fm=from->wFlag&mFindMode; infon* tmp;
     to->wFlag=(from->wFlag&0xffffffff);
-    //to->wFlag=from->wFlag;
-    if(to->type==0) to->type=from->type; // TODO: We should merge types, not just copy over.
+    to->tag2Ptr=from->tag2Ptr;
+    if(to->type==0) {  // TODO: We should merge types, not just copy over.
+        if(from->type){ cout<<"TAG:"<<from->type->tag<<"--"<<tagCtxt<<"\n";
+            if(tagCtxt) if(!tagCtxt->findTag(from->type)) throw "Nested tag not found when copying.";
+            to->type=from->type;
+        }
+    }
 
-    deepCopyPure(&from->size, &to->size, flags);  if(to->size.listHead) to->size.listHead->top=to;
-    deepCopyPure(&from->value,&to->value, flags); if(to->value.listHead)to->value.listHead->top=to;
+    deepCopyPure(&from->size, &to->size, flags, tagCtxt);  if(to->size.listHead) to->size.listHead->top=to;
+    deepCopyPure(&from->value,&to->value,flags, tagCtxt); if(to->value.listHead)to->value.listHead->top=to;
 
     if(from->wFlag&mIsHeadOfGetLast) to->top2=(*ptrs)[from->top2];
     if(fm==iToPath || fm==iToPathH || fm==iToArgs || fm==iToVars) {
@@ -253,7 +257,7 @@ void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags){
         if ((to->prev) && (tmp=to->prev->spec1) && (tmp->wFlag&mIsHeadOfGetLast) && (tmp=tmp->next)) to->spec1=tmp;
         else {to->spec1=new infon; }
         (*ptrMap)[from]=to;
-        deepCopy (from->spec1, to->spec1, ptrMap, flags);
+        deepCopy (from->spec1, to->spec1, ptrMap, flags, tagCtxt);
         if(ptrs==0) delete ptrMap;
         if (flags && from->wFlag&mAssoc) {
             from->wFlag&= ~(mAssoc+mFindMode); from->wFlag|=iAssocNxt;
@@ -263,12 +267,12 @@ void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags){
 
     if ((from->wFlag&mFindMode)==iAssocNxt) {to->spec2=from;}  // Breadcrumbs to later find next associated item.
     else if(!from->spec2) to->spec2=0;
-    else {to->spec2=new infon; deepCopy(from->spec2, to->spec2,0,flags);}
+    else {to->spec2=new infon; deepCopy(from->spec2, to->spec2,0,flags,tagCtxt);}
 
     infNode *p=from->wrkList, *q;  // Merge Identity Lists
     if(p) do {
         q=new infNode; q->idFlags=p->idFlags;
-        if((p->item->wFlag&mFindMode)<iAssocNxt && (p->item->wFlag&mFindMode)>iNone) {q->item=new infon; q->idFlags=p->idFlags; deepCopy (p->item, q->item, ptrs, flags);}
+        if((p->item->wFlag&mFindMode)<iAssocNxt && (p->item->wFlag&mFindMode)>iNone) {q->item=new infon; q->idFlags=p->idFlags; deepCopy(p->item,q->item,ptrs,flags,tagCtxt);}
         else {q->item=p->item;}
         prependID(&to->wrkList, q);
         p=p->next;
@@ -524,18 +528,17 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
             case iTagUse: {
                 if(CI->type == 0) throw ("A tag was null which is a bug");
                 // OUT("Recalling: "<<CI->type->tag<<":"<<CI->type->locale);
-                map<Tag,infon*>::iterator tagPtr=tag2Ptr.find(*CI->type);
-                if (tagPtr!=tag2Ptr.end()) {
+                infon* found=CI->findTag(CI->type);
+                if (found) {
                     bool asNotFlag=((CI->wFlag&asNot)==asNot);
-                    UInt tmpFlags=CI->wFlag&mListPos; deepCopy(tagPtr->second,CI); CI->wFlag|=tmpFlags; // TODO B4: move this flag stuff into deepCopy.
+                    UInt tmpFlags=CI->wFlag&mListPos; deepCopy(found,CI,0,0,CI->type->tagCtxt); CI->wFlag|=tmpFlags; // TODO B4: move this flag stuff into deepCopy.
                     if(CI->wFlag&asNot) asNotFlag = !asNotFlag;
                     SetBits(CI->wFlag, asNot, (asNotFlag)?asNot:0);
                     deTagWrkList(CI);
-                    }
-                else{OUT("\nBad tag:'"<<CI->type->tag<<"'\n");throw("A tag was used but never defined");}
+                } else{OUT("\nBad tag:'"<<CI->type->tag<<"'\n");throw("A tag was used but never defined");}
                 break;}
-            case iGetFirst:      StartTerm (CI, &newID); break;
-            case iGetMiddle:  break; // TODO: iGetMiddle
+            case iGetFirst:  StartTerm (CI, &newID); break;
+            case iGetMiddle: break; // TODO: iGetMiddle
             case iGetLast:
                 if (SizeIsInverted(CI->spec1)){ // TODO: This block is a hack to make simple backward references work. Fix for full back-parsing.
                     newID=CI;

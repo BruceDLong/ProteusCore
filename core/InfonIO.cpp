@@ -240,7 +240,7 @@ infon* grok(infon* item, UInt tagCode, int* code){
 }
 
 char errMsg[100];
-UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2){
+UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2, TagMap** tag2Ptr){
     UInt p=0, size=0, stay=1; char rchr, tok; infon *head=0, *prev; infon* j;
     infDataPtr* i=&(pInf)->dataHead;
     if(nxtTok("(") || nxtTok("{") || nxtTok("[")){
@@ -253,22 +253,24 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                 streamGet();
                 Tag* tag=0; Tag* prevTag=0; bool done=false;
                 do{ // Here we process tag definitions
-                tag=new Tag; tag->definition=(infon*)prevTag; prevTag=tag;
-                if (!nxtTok("unicodeTok")) throw "Expected a tag after '&'";
-                tag->tag=buf; tag->locale=locale.getBaseName();
-                tagNormer->normalize(UnicodeString::fromUTF8(tag->tag), err).toUTF8String(tag->norm);
-                if(tagIsBad(tag->norm, tag->locale.c_str())) throw "Illegal tag being defined";
-                if(nxtTok(":")){if(nxtTok("cTok")) {icu::Locale tmp; tag->locale=(tmp.createCanonical(buf)).getBaseName();}}
-                if(nxtTok(":")){if(nxtTok("<abc>")) tag->pronunciation=buf;}
-                if(nxtTok("=")){done=true;}
-                else if(!nxtTok("&")) throw "Expected &tag or tag locale, pronunciation or definition";
+                    tag=new Tag; tag->definition=(infon*)prevTag; prevTag=tag;
+                    if (!nxtTok("unicodeTok")) throw "Expected a tag after '&'";
+                    tag->tag=buf; tag->locale=locale.getBaseName();
+                    tagNormer->normalize(UnicodeString::fromUTF8(tag->tag), err).toUTF8String(tag->norm);
+                    if(tagIsBad(tag->norm, tag->locale.c_str())) throw "Illegal tag being defined";
+                    if(nxtTok(":")){if(nxtTok("cTok")) {icu::Locale tmp; tag->locale=(tmp.createCanonical(buf)).getBaseName();}}
+                    if(nxtTok(":")){if(nxtTok("<abc>")) tag->pronunciation=buf;}
+                    if(nxtTok("=")){done=true;}
+                    else if(!nxtTok("&")) throw "Expected &tag or tag locale, pronunciation or definition";
                 } while (!done);
                 infon* definition=ReadInfon();
+                if (*tag2Ptr==0) *tag2Ptr=new TagMap;
                 for(Tag* t=tag; t; t=prevTag){
                     prevTag=(Tag*)t->definition; t->definition=definition;
-                    map<Tag,infon*>::iterator tagPtr=tag2Ptr.find(*t);
-                    if (tagPtr==tag2Ptr.end()) {tag2Ptr[*t]=definition; ptr2Tag[definition]=*t;}
+                    TagMap::iterator tagPtr= (*tag2Ptr)->find(*t);
+                    if (tagPtr==(*tag2Ptr)->end()) {(**tag2Ptr)[*t]=definition; ptr2Tag[definition]=*t; cout << t<<" "<<t->tag << "\n";}
                     else{throw("A tag is being redefined, which isn't allowed");}
+                    topTag2Ptr[*t] = definition;
                 }
                 continue;
             }
@@ -313,7 +315,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
 
 infon* QParser::ReadInfon(int noIDs){
     char op=0; UInt size=0; pureInfon iSize, iVal; infon *s1=0,*s2=0; UInt wFlag=0,fs=0,fv=0;
-    Tag* tags=0; const char* cTok, *eTok, *cTok2; /*int textEnd=0; int textStart=textParsed.size();*/
+    Tag* tags=0; const char* cTok, *eTok, *cTok2; TagMap* tag2Ptr=0; /*int textEnd=0; int textStart=textParsed.size();*/
     if(nxtTok("@")){wFlag|=toExec;}
     if(nxtTok("#")){wFlag|=asDesc;}
     if(nxtTok("!")){wFlag|=asNot;}
@@ -338,7 +340,7 @@ infon* QParser::ReadInfon(int noIDs){
         wFlag|=iNone;
         if(nxtTok("+") || nxtTok("-")) op='+'; else if(nxtTok("*") || nxtTok("/")) op='*';
         if( nTok=='-' || nTok=='/') fs|=fInvert;
-        size=ReadPureInfon(&iSize, &fs, &wFlag, &s2);
+        size=ReadPureInfon(&iSize, &fs, &wFlag, &s2, &tag2Ptr);
         if(op=='+'){
             iVal=iSize; iSize=pureInfon(size); fv=iVal.flags&(mFormat+mType); // use identity term '1'
             if (size==0 && (fv==(fUnknown+tNum) || fv==(fUnknown+tString))) {iSize.flags=fUnknown+tNum;}
@@ -346,7 +348,7 @@ infon* QParser::ReadInfon(int noIDs){
         }else if(op=='*'){
             if((fs&mType)==tString || (fs&mType)==tList) throw("Terms cannot be strings or lists");
             if(nxtTok("+")) op='+'; else if(nxtTok("-")) {op='+'; fv|=fInvert;}
-            if (op=='+'){size=ReadPureInfon(&iVal,&fv,&wFlag,&s2);}
+            if (op=='+'){size=ReadPureInfon(&iVal,&fv,&wFlag,&s2, &tag2Ptr);}
             else {iVal=0; fv=tNum+fLiteral;}    // use identity summand '0'
         } else { // no operator
             if(nxtTok(";")){iVal=0; SetBits(iVal.flags, (mFormat), fUnknown)}
@@ -358,7 +360,7 @@ infon* QParser::ReadInfon(int noIDs){
             }
         }
     }
-    infon* i=new infon(wFlag, &iSize,&iVal,0,s1,s2); i->wSize=size; i->type=tags;
+    infon* i=new infon(wFlag, &iSize,&iVal,0,s1,s2,0,tag2Ptr); i->wSize=size; i->type=tags;
     if(ValueIsConcat(i) && (*i->size.dataHead)==1){infon* ret=i->value.listHead; delete(i); ret->top=ret->next=ret->prev=0; return ret;} // BUT we lose i's idents and some flags (desc, ...)
     if (i->size.listHead) i->size.listHead->top=i;
     if (i->value.listHead)i->value.listHead->top=i;

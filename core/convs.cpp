@@ -14,8 +14,8 @@
 
 using namespace std;
 
-infon::infon(UInt wf, pureInfon* s, pureInfon* v, infNode*ID,infon*s1,infon*s2,infon*n):
-        wFlag(wf), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {
+infon::infon(UInt wf, pureInfon* s, pureInfon* v, infNode*ID,infon*s1,infon*s2,infon*n,TagMap* tagMap):
+        wFlag(wf), wSize(0), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID), tag2Ptr(tagMap) {
     prev=0; top=0; top2=0; type=0; pos=0;
     if(s) size=*s;
     if(v) value=*v;
@@ -62,6 +62,26 @@ bool try2CatStr(string* s, pureInfon* i, UInt wSize){  // returns true if s was 
 bool infon::getStng(string* str) {
     *str="";
     return try2CatStr(str, &value, getSize().get_ui());
+}
+
+infon* infon::findTag(Tag* tag){
+    if(tag->definition) return tag->definition;
+    for(infon* scope=this; scope; scope=getTop(scope)){
+        if(scope->tag2Ptr){
+            TagMap::iterator tagPtr=scope->tag2Ptr->find(*tag);
+            if (tagPtr!=tag2Ptr->end()) {
+                tag->definition=tagPtr->second;
+                tag->tagCtxt=scope;
+                return tag->definition;
+            }
+        }
+    }
+    TagMap::iterator tagPtr=topTag2Ptr.find(*tag);
+    if (tagPtr!=tag2Ptr->end()) {
+        tag->definition=tagPtr->second;
+        return tag->definition;
+    }
+    return 0;
 }
 
 int infonSizeCmp(infon* left, infon* right) { // -1: L<R,  0: L=R, 1: L>R. Infons must have fLiteral, numeric sizes

@@ -75,7 +75,7 @@ int main(int argc, char **argv){
         if (entry=="quit") break;
         if (entry=="dict") {
             cout<<"Locale: "; PrntLocale(a.locale);
-            for(map<Tag,infon*>::iterator tagPtr=tag2Ptr.begin(); tagPtr!=tag2Ptr.end(); tagPtr++){
+            for(TagMap::iterator tagPtr=a.world->tag2Ptr->begin(); tagPtr!=a.world->tag2Ptr->end(); tagPtr++){
                 cout<<tagPtr->first.tag<< ":" << tagPtr->first.locale << "\t= " <<printInfon(tagPtr->second)<<"\n";
             }
             continue;
@@ -87,13 +87,26 @@ int main(int argc, char **argv){
         } if (entry=="") continue;
         //char ch='x', pr; do {pr=ch; ch=getCH(); entry+=ch;} while (!(pr=='%' && ch=='>'));
         //cout << "Parsing ["<<entry<<"]\n";
-        entry="<%" + entry + "%>";
+        entry="<% { " + entry + " } %>";
         istrstream fin(entry.c_str());
         QParser q(fin); q.locale=a.locale;
         Entry=q.parse(); // cout <<"Parsed.\n";
         if (Entry) try{
-            //a.normalize(Entry); // cout << "Normalizd\n";
-            Entry=a.append(Entry, a.world);
+
+{ // This functionality would be better implemented by streamed parsing of world.
+            infon* outerList=Entry;
+            if(Entry->tag2Ptr){
+                if (a.world->tag2Ptr==0) a.world->tag2Ptr=new TagMap;
+                a.world->tag2Ptr->insert(Entry->tag2Ptr->begin(), Entry->tag2Ptr->end());
+                delete Entry->tag2Ptr;
+            }
+            Entry=Entry->value.listHead; outerList->value.listHead=0; delete outerList;
+}
+            if(Entry){
+                Entry->top=0; Entry->next=Entry->prev=0;
+                //a.normalize(Entry); // cout << "Normalizd\n";
+                Entry=a.append(Entry, a.world);
+            } else continue;
         } catch (char const* errMsg){cout<<errMsg<<"\n";}
 
         if (Entry) cout<<"\n"<<printInfon(Entry)<<"\n\n";

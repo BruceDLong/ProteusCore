@@ -88,10 +88,12 @@ enum wMisc {noAlts=0, hasAlts=0x10000000, noMoreAlts=0x20000000, isTentative=0x4
 
 struct infon;
 
-struct Tag {string tag, locale, pronunciation, norm; infon* definition;};
+struct Tag {string tag, locale, pronunciation, norm; infon *definition, *tagCtxt;    Tag(){definition=0; tagCtxt=0;}};
 inline bool operator< (const Tag& a, const Tag& b) {int c=strcmp(a.norm.c_str(), b.norm.c_str()); if(c==0) return (a.locale.substr(0,2)<b.locale.substr(0,2)); else return (c<0);}
 inline bool operator==(const Tag& a, const Tag& b) {if(a.norm==b.norm) return (a.locale.substr(0,2)==b.locale.substr(0,2)); else return false;}
-extern map<Tag,infon*> tag2Ptr;
+
+typedef map<Tag,infon*> TagMap;
+extern TagMap topTag2Ptr;
 extern map<infon*,Tag> ptr2Tag;
 
 struct infNode {infon* item; infon* slot; UInt idFlags; infNode* next; infNode(infon* itm=0, UInt f=0):item(itm),idFlags(f){};};
@@ -124,12 +126,13 @@ struct pureInfon {
 };
 
 struct infon {
-    infon(UInt wf=0, pureInfon* s=0, pureInfon* v=0, infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0);
+    infon(UInt wf=0, pureInfon* s=0, pureInfon* v=0, infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0,TagMap* tagMap=0);
     infon* isntLast(); // 0=this is the last one. >0 = pointer to predecessor of the next one.
     BigInt& getSize();
     bool getInt(BigInt* num);
     bool getReal(double* d);
     bool getStng(string* str);
+    infon* findTag(Tag* tag);
     UInt wFlag;
     uint64_t pos;
     UInt wSize; // get rid if this. disallow strings and lists in "size"
@@ -138,6 +141,7 @@ struct infon {
     infon *next, *prev, *top, *top2, *pred;
     infon *spec1, *spec2;   // Used to store indexes, functions args, etc.
     infNode* wrkList;
+    TagMap *tag2Ptr;
     Tag* type;
 };
 int infValueCmp(infon* A, infon* B);
@@ -182,8 +186,8 @@ struct agent {
     infon *world, context;
     icu::Locale locale;
     void* utilField; // Field for application specific use.
-    void deepCopyPure(pureInfon* from, pureInfon* to, int flags);
-    void deepCopy(infon* from, infon* to, PtrMap* ptrs=0, int flags=0);
+    void deepCopyPure(pureInfon* from, pureInfon* to, int flags, infon* tagCtxt=0);
+    void deepCopy(infon* from, infon* to, PtrMap* ptrs=0, int flags=0, infon* tagCtxt=0);
     int loadInfon(const char* filename, infon** inf, bool normIt=true);
 
     int fetch_NodesNormalForm(QitemPtr cn);
@@ -193,7 +197,7 @@ struct agent {
         int (*autoEval)(infon*, agent*);
         map<dblPtr,UInt> alts;
         void InitList(infon* item);
-        infon* copyList(infon* from, int flags);
+        infon* copyList(infon* from, int flags, infon* tagCtxt=0);
         void processVirtual(infon* v);
         int getFollower(infon** lval, infon* i);
         void AddSizeAlternate(infon* Lval, infon* Rval, infon* Pred, UInt Size, infon* Last, UInt Flags);
@@ -207,7 +211,7 @@ const int bufmax=1024*32;
 struct QParser{
     QParser(istream& _stream):stream(_stream){};
     infon* parse(); // if there is an error it is returned in buf as a char* string.
-    UInt ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2);
+    UInt ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2, TagMap** tag2Ptr);
     infon* ReadInfon(int noIDs=0);
     char streamGet();
     void scanPast(char* str);
@@ -234,6 +238,7 @@ extern bool try2CatStr(string* s, pureInfon* i, UInt wSize);
 #define ImAt(loc,parm) {cout<<"####### At:"<<(loc)<<"  "<<(parm)<<"\n";}
 #define isEq(L,R) (L && R && strcmp(L,R)==0)
 
+#define getTop(item) ((InfIsTop(item)||item->top==0)? item->top : item->top->top)
 #define prependID(list, node){infNode *IDp=(*list); if(IDp){node->next=IDp->next; IDp->next=node;} else {(*list)=node; node->next=node;}}
 #define appendID(list, node) {infNode *IDp=(*list); (*list)=node; if(IDp){(*list)->next=IDp->next; IDp->next=(*list);} else (*list)->next=(*list);}
 #define insertID(list, itm, flag) {appendID(list, new infNode(itm,flag));}

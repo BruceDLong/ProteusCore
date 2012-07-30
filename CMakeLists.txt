@@ -81,7 +81,7 @@ ExternalProject_Add(
   URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/mpfr-3.1.0.tar.bz2"
 
   SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/MPFA_Floats/src/mpfr-3.1.0/
-  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/deps/MPFA_Floats/src/mpfr-3.1.0/configure --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/MPFA_Floats/mpfr-3.1.0/
+  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/deps/MPFA_Floats/src/mpfr-3.1.0/configure --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/MPFA_Floats/mpfr-3.1.0/ --with-gmp=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/GMP_BigInts/gmp-5.0.4/
 
   BUILD_COMMAND  $(MAKE)
   INSTALL_COMMAND  $(MAKE) install

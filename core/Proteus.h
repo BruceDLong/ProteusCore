@@ -18,6 +18,7 @@
 #include <boost/intrusive_ptr.hpp>
 #include <gmp.h>
 #include <gmpxx.h>
+#include "xlate.h"
 
 using namespace std;
 

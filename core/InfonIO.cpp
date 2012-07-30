@@ -81,7 +81,7 @@ string printInfon(infon* i, infon* CI){
     }
     if (!InfIsNormed(i) && i->wrkList) {
         infNode* k=i->wrkList;
-        do {k=k->next; s+="="; s+="<ID> "; /*printInfon(k->item,CI);*/} while(k!=i->wrkList);
+        do {k=k->next; s+="="; s+=printInfon(k->item,CI);} while(k!=i->wrkList);
     }
     if (i==CI) s+="</font>";
     return s;
@@ -268,7 +268,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                 for(Tag* t=tag; t; t=prevTag){
                     prevTag=(Tag*)t->definition; t->definition=definition;
                     TagMap::iterator tagPtr= (*tag2Ptr)->find(*t);
-                    if (tagPtr==(*tag2Ptr)->end()) {(**tag2Ptr)[*t]=definition; ptr2Tag[definition]=*t; cout << t<<" "<<t->tag << "\n";}
+                    if (tagPtr==(*tag2Ptr)->end()) {(**tag2Ptr)[*t]=definition; ptr2Tag[definition]=*t;}
                     else{throw("A tag is being redefined, which isn't allowed");}
                     topTag2Ptr[*t] = definition;
                 }

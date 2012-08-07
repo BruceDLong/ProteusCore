@@ -19,6 +19,35 @@ map<infon*,Tag> ptr2Tag;
 #define fetchLastItem(lval, item) {for(lval=item; InfsType(lval)==tList;lval=lval->value->prev);}
 #define fetchFirstItem(lval, item) {for(lval=item; InfsTYpe(lval)==tList;lval=lval->value){};}
 
+#include "xlater.h"
+#include "XlaterENGLISH.h"
+XlaterENGLISH EnglishXLater;
+
+LanguageExtentions langExtentions; // This map stores valid locales and their xlater if available.
+void populateLangExtentions(){     // Use this to load available language modules before normalizing any infons.
+    int numLocales=0;
+    const icu::Locale* locale = icu::Locale::getAvailableLocales(numLocales);
+    for(int loc=0; loc<numLocales; ++loc){
+        string localeID=locale[loc].getBaseName();
+        string localeLanguage=locale[loc].getLanguage();
+        if     (localeLanguage=="en") langExtentions[localeID]=&EnglishXLater;   // English
+        else if(localeLanguage=="fr") langExtentions[localeID]=0;  // French
+        else if(localeLanguage=="de") langExtentions[localeID]=0;  // German
+        else if(localeLanguage=="ja") langExtentions[localeID]=0;  // Japanese
+        else if(localeLanguage=="es") langExtentions[localeID]=0;  // Spanish
+        else if(localeLanguage=="zh") langExtentions[localeID]=0;  // Chinese
+        else if(localeLanguage=="ru") langExtentions[localeID]=0;  // Russian
+        else if(localeLanguage=="it") langExtentions[localeID]=0;  // Italian
+        else if(localeLanguage=="hi") langExtentions[localeID]=0;  // Hindi
+        else if(localeLanguage=="he") langExtentions[localeID]=0;  // Hebrew
+        else if(localeLanguage=="ar") langExtentions[localeID]=0;  // Arabic
+        else if(localeLanguage=="eu") langExtentions[localeID]=0;  // Basque
+        else if(localeLanguage=="pt") langExtentions[localeID]=0;  // Portuguese
+        else if(localeLanguage=="bn") langExtentions[localeID]=0;  // Bengali
+        else langExtentions[localeID]=0;
+    }
+}
+
 infon* infon::isntLast(){ // 0=this is the last one. >0 = pointer to predecessor of the next one.
     if (!InfIsLast(this)) return this;
     infon* parent=getTop(this); infon* gParent=getTop(parent);

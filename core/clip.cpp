@@ -53,10 +53,6 @@ infon *topInfon, *Entry;
 int AutoEval(infon* CI, agent* a);
 bool IsHardFunc(string tag);
 
-#include <unicode/putil.h>
-#include <unicode/ustream.h>
-#define PrntLocale(L) {icu::UnicodeString lang,country; cout<<L.getDisplayLanguage(L, lang) <<"-"<< L.getDisplayCountry(L, country) <<" (" << L.getBaseName()<<")\n"; }
-
 int main(int argc, char **argv){
     u_setDataDirectory("/home/bruce/proteus/unicode/install/share/icu/49.1.1");
     rl_init();
@@ -64,6 +60,7 @@ int main(int argc, char **argv){
 
     // Load World
     agent a(0, IsHardFunc, AutoEval);
+    populateLangExtentions();
     a.locale.createCanonical(locale("").name().c_str());
     cout<<"Locale: "; PrntLocale(a.locale);
     if(a.loadInfon("world.pr", &a.world, true)) exit(1);

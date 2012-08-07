@@ -15,16 +15,17 @@
 #include <stddef.h>
 #include <unicode/locid.h>
 #include <unicode/unistr.h>
+#include <unicode/putil.h>
+#include <unicode/ustream.h>
 #include <boost/intrusive_ptr.hpp>
 #include <gmp.h>
 #include <gmpxx.h>
-#include "xlate.h"
+
+#include "xlater.h"
 
 using namespace std;
 
-typedef ptrdiff_t UInt;
-typedef mpz_class BigInt;
-typedef mpq_class BigFrac;
+///////////////////  FLAG MASKS, VALUES AND DEFINES  ///////////////////
 
 enum InfonFlags {  // Currently called 'pureInfon'
     mType=3, tUnknown=0, tNum=1, tString=2, tList=3,
@@ -89,13 +90,57 @@ enum wMisc {noAlts=0, hasAlts=0x10000000, noMoreAlts=0x20000000, isTentative=0x4
 
 struct infon;
 
-struct Tag {string tag, locale, pronunciation, norm; infon *definition, *tagCtxt;    Tag(){definition=0; tagCtxt=0;}};
-inline bool operator< (const Tag& a, const Tag& b) {int c=strcmp(a.norm.c_str(), b.norm.c_str()); if(c==0) return (a.locale.substr(0,2)<b.locale.substr(0,2)); else return (c<0);}
-inline bool operator==(const Tag& a, const Tag& b) {if(a.norm==b.norm) return (a.locale.substr(0,2)==b.locale.substr(0,2)); else return false;}
+///////////////////  TAG RELATED ITEMS  ///////////////////
+
+struct Tag {string tag, locale, pronunciation, norm; infon *definition, *tagCtxt; Tag* next; Tag* prev;    Tag(){definition=0; tagCtxt=0;}};
+
+inline bool operator==(const Tag& a, const Tag& b) {
+    Tag *aStart=a.prev->next, *bStart=b.prev->next;
+    Tag *aIter=aStart, *bIter=bStart;
+    do{
+        if(a.norm!=b.norm || aIter->locale.substr(0,2)!=bIter->locale.substr(0,2)) return false;
+        aIter=aIter->next; bIter=bIter->next;
+        if((aIter==aStart) != (bIter==bStart)) return false;
+    } while(aIter!=aStart);
+    return true;
+}
+
+inline bool operator<(const Tag& a, const Tag& b) {
+    Tag *aStart=a.prev->next, *bStart=b.prev->next;
+    Tag *aIter=aStart, *bIter=bStart;
+    do{
+        int c=strcmp(aIter->norm.c_str(), bIter->norm.c_str());
+        if(c<0) return true;
+        if(c>0) return false;
+        c=strcmp(aIter->locale.substr(0,2).c_str(), bIter->locale.substr(0,2).c_str());
+        if(c<0) return true;
+        if(c>0) return false;
+        aIter=aIter->next; bIter=bIter->next;
+        if(aIter==aStart && bIter!=bStart) return true;
+        if(aIter==bStart && bIter!=aStart) return false;
+        cout<<"aI:"<<aIter<<"  bI:"<<bIter<<"\n";
+    } while(aIter != aStart);
+    return false;
+}
+
+extern bool iscsymOrUni (char nTok);
+extern bool isTagStart(char nTok);
+extern bool tagIsBad(string tag, const char* locale);
+extern const icu::Normalizer2 *tagNormer;
 
 typedef map<Tag,infon*> TagMap;
 extern TagMap topTag2Ptr;
 extern map<infon*,Tag> ptr2Tag;
+
+typedef map<string, xlater*> LanguageExtentions;
+extern LanguageExtentions langExtentions;
+extern void populateLangExtentions(); // Use this to load available language modules before normalizing any infons.
+
+///////////////////  INFON RELATED ITEMS  ///////////////////
+
+typedef ptrdiff_t UInt;
+typedef mpz_class BigInt;
+typedef mpq_class BigFrac;
 
 struct infNode {infon* item; infon* slot; UInt idFlags; infNode* next; infNode(infon* itm=0, UInt f=0):item(itm),idFlags(f){};};
 enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, InitSearchList=2, SetComplete=3, NodeDoneFlag=8, NoMatch=16,isRawFlag=32, skipFollower=64, mLooseType=128};
@@ -217,6 +262,8 @@ struct QParser{
     char streamGet();
     void scanPast(char* str);
     bool chkStr(const char* tok);
+    xlater* chkLocale(icu::Locale* locale);
+    Tag* ReadTagChain(icu::Locale* locale);
     const char* nxtTokN(int n, ...);
     void RmvWSC ();
     char peek(); // Returns next char.
@@ -246,5 +293,8 @@ extern bool try2CatStr(string* s, pureInfon* i, UInt wSize);
 #define cpType(from, to) {if(to->type==0) to->type=from->type;}
 #define cpFlags(from, to, mask) {(to)->wFlag=(((to)->wFlag& ~(mask))+(((from)->wFlag)&mask)); cpType(from,to);}
 #define copyTo(from, to) {if((from)!=(to)){(to)->size=(from)->size; (to)->value=(from)->value; cpFlags((from),(to),0x00ffffff);}}
+
+#define PrntLocale(L) {icu::UnicodeString lang,country; cout<<L.getDisplayLanguage(L, lang) <<"-"<< L.getDisplayCountry(L, country) <<" (" << L.getBaseName()<<")\n"; }
+
 
 #endif

@@ -1,3 +1,6 @@
+#ifndef _remiss
+#define _remiss
+
 // fix g++ deficiencies
 inline char* itoa(unsigned int n, char str[]){
   int len=0; int i;
@@ -45,4 +48,7 @@ inline int iscsym(int ch){
 #define reendian32(A) (A)
 #define reendian64(A) (A)
 #define doCopy(mode,to,from) to=from;
+#endif
+
+
 #endif

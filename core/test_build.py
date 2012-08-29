@@ -68,7 +68,6 @@ def test_engine():
    ('1', 'Two item parse, get first option', r'{[...] :== {"ARON" "BOBO" "AARON" "CeCe"}   "dac"} ==  "ARONdacks"', '{"ARON" "dac" }'),
    #('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \\[?]}]<:{"slothe", "Hello", "bob", 65432}|...}', '{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } }'),  #FAIL
    # Add the above test but with a list in the comprehension yeild.
-   #('1', "Adding prep for 'reduce'", r'{[ ? {%\\:[?] (%\\:[?] *1+22)}]<: {*1+5 *2+7 *3+9 *4+13}|...}', '{ | {*1+5 *1+27 } {*2+7 *2+29 } {*3+9 *3+31 } {*4+13 *4+35 } }'),
 
     ('1', 'Simple Parsing', r'{*3+$|...}=="CatHatBatDog" ','{"Cat" "Hat" "Bat" "Dog" }'),
     ('1', 'Inner parsing 1', r'{ {*3+$}|...}="CatHatBatDog" ','{{"Cat" } {"Hat" } {"Bat" } {"Dog" } }'),
@@ -93,11 +92,11 @@ def test_engine():
     ('1', "Test external find-&-write", r'{4 5 _ 7} =: ([???]=6)', '{*1+4 *1+5 *1+6 *1+7 }'),
     ('2', "Test tagged find-&-write", r'&setTo6=([???]=6)', '{; }', r'{4 5 _ 7} =: setTo6', '{*1+4 *1+5 *1+6 *1+7 }')
 
-#***  ('2', "Find nth item based on tag", r'{%testTag=[{?|...} <TAG>]}', '<{; }>', 'testTag := {8 7 6 5 4 3}', '*1+7'),
-#***  (find all of <tag>): filtering with a tag as descriptor: {[_ TAG]|...} ::= {8 7 6 5 4 3}
+    # TEST: Find (big red bike)
+    # TEST: Find (very red bike)
 
-    # TEST: Find an item based on 2+ tags (big red bike)
-    # TEST: Complex Repeats // These work but have no test.
+    # TEST: ('2', "Find nth item based on tag", r'{%testTag=[{?|...} <TAG>]}', '<{; }>', 'testTag := {8 7 6 5 4 3}', '*1+7'),
+    # TEST: (find all of <tag>): filtering with a tag as descriptor: {[_ TAG]|...} ::= {8 7 6 5 4 3}
 
     # TEST: [5 _ <sum-of-those-two>] :=: ([_ _]=6)   ==> 11
     # TEST: Like the previous but tag :=: tag

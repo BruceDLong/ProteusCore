@@ -24,7 +24,7 @@ using namespace std;
 #define getBufs(c,parser) {ChkNEOFs(parser->stream); int p=0; for(;(c);parser->buf[p++]=parser->streamGet()){if (p>=bufmax) throw "String Overflow";} parser->buf[p]=0;}
 #define check(ch) {RmvWSC(); ChkNEOF; tok=streamGet(); if(tok != ch) {cout<<"Expected "<<ch<<"\n"; throw "Unexpected character";}}
 
-struct Tag;
+struct WordS;
 struct infon;
 struct QParser;
 
@@ -51,7 +51,7 @@ public:
      *  This function works when loading an infon and won't have access to the tag library.
      */
 
-    virtual Tag* ReadLanguageWord(QParser *parser, icu::Locale &locale)=0;
+    virtual WordS* ReadLanguageWord(QParser *parser, icu::Locale &locale)=0;
 
     //////////////////////////////////////////////////////////
     /* ReadTagChain() extends a QParser to read a phrase in some language (possibly a natural language).
@@ -61,25 +61,20 @@ public:
      *   This function works when loading an infon and won't have access to the tag library.
      */
 
-    virtual Tag* ReadTagChain(QParser *parser, icu::Locale &locale)=0;
+    virtual WordS* ReadTagChain(QParser *parser, icu::Locale &locale)=0;
 
     //////////////////////////////////////////////////////////
     /* Tags2Proteus() converts a list of tags read by ReadTagChain() into an infon and returns a pointer to it.
      */
 
-    virtual infon* tags2Proteus(Tag* tags)=0;
-    virtual Tag* proteus2Tags(infon* proteus)=0;
+    virtual infon* tags2Proteus(WordS* tags)=0;
+    virtual WordS* proteus2Tags(infon* proteus)=0;
 
 
     // Implementations initialize the language (i.e., load any lists or structures) in loadLanguageData(). Free them in unloadLanguageData();
     virtual bool loadLanguageData(string dataFilename)=0;
     virtual bool unloadLanguageData()=0;
     virtual ~xlater(){}; // Implementeations should call unloadLanguageData()
-
-private:
-    // Implementations may use these functions to remove suffixes and prefixes one at a time.
-    virtual bool deWordPrefix()=0;
-    virtual bool deSuffix()=0;
 };
 
 #endif

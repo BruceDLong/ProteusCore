@@ -12,8 +12,8 @@
 const int ListBuffCutoff=20;  // TODO: make this '2' to show a bug.
 
 typedef map<dblPtr,UInt>::iterator altIter;
-TagMap topTag2Ptr;
-map<infon*,Tag> ptr2Tag;
+WordSMap topTag2Def;
+multimap<infon*,WordS*> DefPtr2Tag;
 
 #define recAlts(lval, rval) {if(InfsType(rval)==tString) alts[dblPtr((char*)rval->value.dataHead->get_num_mpz_t()->_mp_d,lval)]++;}
 #define fetchLastItem(lval, item) {for(lval=item; InfsType(lval)==tList;lval=lval->value->prev);}
@@ -26,21 +26,22 @@ XlaterENGLISH EnglishXLater;
 LanguageExtentions langExtentions; // This map stores valid locales and their xlater if available.
 void populateLangExtentions(){     // Use this to load available language modules before normalizing any infons.
     int numLocales=0;
+    EnglishXLater.loadLanguageData("");
     const icu::Locale* locale = icu::Locale::getAvailableLocales(numLocales);
     for(int loc=0; loc<numLocales; ++loc){
         string localeID=locale[loc].getBaseName();
         string localeLanguage=locale[loc].getLanguage();
         if     (localeLanguage=="en") langExtentions[localeID]=&EnglishXLater;   // English
         else if(localeLanguage=="fr") langExtentions[localeID]=0;  // French
-        else if(localeLanguage=="de") langExtentions[localeID]=0;  // German
-        else if(localeLanguage=="ja") langExtentions[localeID]=0;  // Japanese
         else if(localeLanguage=="es") langExtentions[localeID]=0;  // Spanish
         else if(localeLanguage=="zh") langExtentions[localeID]=0;  // Chinese
+        else if(localeLanguage=="ar") langExtentions[localeID]=0;  // Arabic
         else if(localeLanguage=="ru") langExtentions[localeID]=0;  // Russian
+        else if(localeLanguage=="de") langExtentions[localeID]=0;  // German
+        else if(localeLanguage=="ja") langExtentions[localeID]=0;  // Japanese
         else if(localeLanguage=="it") langExtentions[localeID]=0;  // Italian
         else if(localeLanguage=="hi") langExtentions[localeID]=0;  // Hindi
         else if(localeLanguage=="he") langExtentions[localeID]=0;  // Hebrew
-        else if(localeLanguage=="ar") langExtentions[localeID]=0;  // Arabic
         else if(localeLanguage=="eu") langExtentions[localeID]=0;  // Basque
         else if(localeLanguage=="pt") langExtentions[localeID]=0;  // Portuguese
         else if(localeLanguage=="bn") langExtentions[localeID]=0;  // Bengali
@@ -465,7 +466,7 @@ inline infon* getMasterList(infon* item){
     return 0;
 }
 
-int agent::checkTypeMatch(Tag* LType, Tag* RType){
+int agent::checkTypeMatch(WordS* LType, WordS* RType){
     return (*LType)==(*RType);
 }
 
@@ -557,7 +558,7 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
             case iTagUse: {
                 if(CI->type == 0) throw ("A tag was null which is a bug");
                 // OUT("Recalling: "<<CI->type->tag<<":"<<CI->type->locale);
-                infon* found=CI->findTag(CI->type);
+                infon* found= /*CI->type->xLater->tags2Proteus(CI->type); // */ CI->findTag(CI->type);
                 if (found) {
                     bool asNotFlag=((CI->wFlag&asNot)==asNot);
                     UInt tmpFlags=CI->wFlag&mListPos; deepCopy(found,CI,0,0,CI->type->tagCtxt); CI->wFlag|=tmpFlags; // TODO B4: move this flag stuff into deepCopy.
@@ -666,7 +667,15 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                 QitemPtr Qi(new Qitem(item));
                 fetch_NodesNormalForm(Qi);
                 if(Qi->whatNext!=DoNextBounded) noNewContent=false;
-                if (item->wFlag&mAsProxie) item=item->value.proxie;
+                if (item->wFlag&mAsProxie) {item=item->value.proxie;}
+                else if(wrkNode->idFlags&c1Right){
+                    cout<<"ciRight\n";
+                    SetBits(ci->value.flags, 0xf, item->value.flags);
+                    ci->size=item->size;
+                   // if((ci->wFlag&mFindMode)>=iGetLast) {
+                   //     item=item->spec1;}
+                   // else throw "Tag wasn't a reference ";
+                }
             }
             UInt CIsType=InfsType(ci), ItemsType=InfsType(item);
             if(CIsType==tUnknown && !invertAcceptance) {

@@ -36,7 +36,6 @@ enum InfonFlags {  // Currently called 'pureInfon'
 
 enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,iHardFunc=0x9,iGetSize,iGetType,iAssocNxt,iGetLast,iGetFirst,iGetMiddle};
 enum seeds {mSeed=0x30, sNone=0x00, sUseAsFirst=0x10, sUseAsList=0x20, sUseAsLast=0x30};
-enum colonFlags {c1Left=0x100, c2Left=0x200, c1Right=0x400, c2Right=0x800};
 enum wMasks {mFindMode = 0x0f, mIsTopRefNode = 0x1000, mIsHeadOfGetLast=0x2000, mAsProxie=0x4000, mAssoc=0x8000};
 enum masks {mMode=0x080000, isNormed=0x200000, asDesc=0x400000, toExec=0x800000, asNot=0x40, sizeIndef=0x80, mListPos=0xff000000};
 enum normState {mnStates=0x2f0000, nsListInited=0x10000, nsNormBegan=0x20000, nsPreNormed=0x40000, nsWorkListDone=0x80000, nsBottomNotLast=0x100000, nsNormComplete=0x200000};
@@ -92,11 +91,74 @@ struct infon;
 
 ///////////////////  TAG RELATED ITEMS  ///////////////////
 
-struct Tag {string tag, locale, pronunciation, norm; infon *definition, *tagCtxt; Tag* next; Tag* prev;    Tag(){definition=0; tagCtxt=0;}};
+enum WordSystemTypes {
+    wstUnknown, wstUnparsed, wstAlternates,
+    wstFunctionWord,                    // A function word for the given language.
+    wstFullDescription,                 // A complete description: selects an item and constrains or defines its states.
+    wstDescriptionalSelector,           // Narrow possibilities using a description
+    wstNounSelector,                    // Narrow possibilities by constraining existing state (* __)
+    wstVerbSelector,                    // Narrow possibilities in a sequence
+    wstAdjSelector,                     // Narrow possibiites by the value of a state (+ __)
+    wstAdvSelector,                     // Misc selectors.
+    wstRelationalSelector,              // Narrow possibilities by relationship to another item.
+    wstNumOrd, wstNumCard, wstNumNominal, wstNumInfonic,
+    wstLastEnum         // Language modules can use this to extend the types of word-systems.
+};
 
-inline bool operator==(const Tag& a, const Tag& b) {
-    Tag *aStart=a.prev->next, *bStart=b.prev->next;
-    Tag *aIter=aStart, *bIter=bStart;
+enum DescriptionTypes {
+    dtMonation_shortForm,       // Sara laughed
+    dtMonation,                 // Sara is laughing
+    dtRelation,                 // Ryan dyed the shirt
+    dtRelation_constraint,      // Ryan dyed the shirt blue
+    dtTrilation                 // Ryan gave Sara the shirt
+};
+
+enum WordClass {cUnknown, cNoun, cVerb, cAdj, cAdv, cDeterminer, cVerbHelper, cPronoun, cPreposition, cConjunction, cNumberOrd, cNumberCard, cNegotiator};
+enum WordGender {gMasc, gFem, gNeut};
+enum WordDegree {dComparative, dSuperlative};  // more, most
+enum WordPositionStyle {sBeforeNoun, sAfterBoBo};
+
+typedef string wordKey;
+typedef deque<WordS> WordList;
+typedef WordList::iterator WordListItr;
+
+struct WordS {  // Word System
+    string tag, locale, pronunciation, norm, baseForm;
+    infon *definition, *tagCtxt;  // if sysType indicates this is number-like, definition should be cast to BigNum*.
+    xlater *xLater;
+    wordKey key;
+    WordSystemTypes sysType;
+    WordS *next, *prev;
+
+    UnicodeString *sourceStr;
+    int offsetInSource;  // position of this word in the sourceStr.
+
+    WordList words;
+    WordS *item, *itemsConstraints, *metaConstraints;
+
+    bool isPlural;
+    bool isMarkedPossessive;
+    bool isProperNoun;
+    bool isCountable;
+    bool isGradable; // applies to nouns and adjectives/adverbs
+    bool isParticipialAdj;
+    bool isLyAdverb;
+    WordClass wordClass; // Type of function word
+    WordGender wordGender;
+    WordDegree wordDegree;
+    WordPositionStyle PositionStyle;
+
+    WordS(){
+        definition=0; tagCtxt=0; xLater=0; sysType=wstUnparsed; offsetInSource=0; wordClass=cUnknown;
+        isPlural=isMarkedPossessive=isProperNoun=isCountable=isGradable=isParticipialAdj=isLyAdverb=0;
+        item = itemsConstraints = metaConstraints=0;
+    }
+    ~WordS();
+};
+
+inline bool operator==(const WordS& a, const WordS& b) {
+    WordS *aStart=a.prev->next, *bStart=b.prev->next;
+    WordS *aIter=aStart, *bIter=bStart;
     do{
         if(a.norm!=b.norm || aIter->locale.substr(0,2)!=bIter->locale.substr(0,2)) return false;
         aIter=aIter->next; bIter=bIter->next;
@@ -105,32 +167,14 @@ inline bool operator==(const Tag& a, const Tag& b) {
     return true;
 }
 
-inline bool operator<(const Tag& a, const Tag& b) {
-    Tag *aStart=a.prev->next, *bStart=b.prev->next;
-    Tag *aIter=aStart, *bIter=bStart;
-    do{
-        int c=strcmp(aIter->norm.c_str(), bIter->norm.c_str());
-        if(c<0) return true;
-        if(c>0) return false;
-        c=strcmp(aIter->locale.substr(0,2).c_str(), bIter->locale.substr(0,2).c_str());
-        if(c<0) return true;
-        if(c>0) return false;
-        aIter=aIter->next; bIter=bIter->next;
-        if(aIter==aStart && bIter!=bStart) return true;
-        if(aIter==bStart && bIter!=aStart) return false;
-        cout<<"aI:"<<aIter<<"  bI:"<<bIter<<"\n";
-    } while(aIter != aStart);
-    return false;
-}
-
 extern bool iscsymOrUni (char nTok);
 extern bool isTagStart(char nTok);
 extern bool tagIsBad(string tag, const char* locale);
 extern const icu::Normalizer2 *tagNormer;
 
-typedef map<Tag,infon*> TagMap;
-extern TagMap topTag2Ptr;
-extern map<infon*,Tag> ptr2Tag;
+typedef map<wordKey, WordS*> WordSMap;
+extern WordSMap topTag2Def;
+extern multimap<infon*,WordS*> DefPtr2Tag;
 
 typedef map<string, xlater*> LanguageExtentions;
 extern LanguageExtentions langExtentions;
@@ -144,6 +188,7 @@ typedef mpq_class BigFrac;
 
 struct infNode {infon* item; infon* slot; UInt idFlags; infNode* next; infNode(infon* itm=0, UInt f=0):item(itm),idFlags(f){};};
 enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, InitSearchList=2, SetComplete=3, NodeDoneFlag=8, NoMatch=16,isRawFlag=32, skipFollower=64, mLooseType=128};
+enum colonFlags {c1Left=0x100, c2Left=0x200, c1Right=0x400, c2Right=0x800};
 
 struct infonData :BigFrac {
     UInt refCnt;
@@ -172,13 +217,13 @@ struct pureInfon {
 };
 
 struct infon {
-    infon(UInt wf=0, pureInfon* s=0, pureInfon* v=0, infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0,TagMap* tagMap=0);
+    infon(UInt wf=0, pureInfon* s=0, pureInfon* v=0, infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0,WordSMap* tagMap=0);
     infon* isntLast(); // 0=this is the last one. >0 = pointer to predecessor of the next one.
     BigInt& getSize();
     bool getInt(BigInt* num);
     bool getReal(double* d);
     bool getStng(string* str);
-    infon* findTag(Tag* tag);
+    infon* findTag(WordS* tag);
     UInt wFlag;
     uint64_t pos;
     UInt wSize; // get rid if this. disallow strings and lists in "size"
@@ -187,8 +232,8 @@ struct infon {
     infon *next, *prev, *top, *top2, *pred;
     infon *spec1, *spec2;   // Used to store indexes, functions args, etc.
     infNode* wrkList;
-    TagMap *tag2Ptr;
-    Tag* type;
+    WordSMap *tag2Ptr;
+    WordS* type;
 };
 int infValueCmp(infon* A, infon* B);
 int infonSizeCmp(infon* left, infon* right); // -1: L<R,  0: L=R, 1: L>R. Infons must have fLiteral, numeric sizes
@@ -223,7 +268,7 @@ struct agent {
     char* gStrNxt(infon** ItmPtr, char*txtBuff);
     infon* gListNxt(infon** ItmPtr);
     infon* append(infon* i, infon* list);
-    int checkTypeMatch(Tag* LType, Tag* RType);
+    int checkTypeMatch(WordS* LType, WordS* RType);
     int compute(infon* i);
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
     void prepWorkList(infon* CI, Qitem *cn);
@@ -257,13 +302,13 @@ const int bufmax=1024*32;
 struct QParser{
     QParser(istream& _stream):stream(_stream){};
     infon* parse(); // if there is an error it is returned in buf as a char* string.
-    UInt ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2, TagMap** tag2Ptr);
+    UInt ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2, WordSMap** tag2Ptr);
     infon* ReadInfon(int noIDs=0);
     char streamGet();
     void scanPast(char* str);
     bool chkStr(const char* tok);
     xlater* chkLocale(icu::Locale* locale);
-    Tag* ReadTagChain(icu::Locale* locale);
+    WordS* ReadTagChain(icu::Locale* locale);
     const char* nxtTokN(int n, ...);
     void RmvWSC ();
     char peek(); // Returns next char.

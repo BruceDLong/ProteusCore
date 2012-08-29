@@ -14,7 +14,7 @@
 
 using namespace std;
 
-infon::infon(UInt wf, pureInfon* s, pureInfon* v, infNode*ID,infon*s1,infon*s2,infon*n,TagMap* tagMap):
+infon::infon(UInt wf, pureInfon* s, pureInfon* v, infNode*ID,infon*s1,infon*s2,infon*n,WordSMap* tagMap):
         wFlag(wf), wSize(0), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID), tag2Ptr(tagMap) {
     prev=0; top=0; top2=0; type=0; pos=0;
     if(s) size=*s;
@@ -27,7 +27,6 @@ BigInt& infon::getSize(){
     if(size.dataHead->get_den().get_ui()!=1) throw "Size needs updating. Account for fractional sizes.";
     return size.dataHead->get_num();
 }
-
 
 bool infon::getInt(BigInt* num) {
   if(!InfIsLiteralNum(this)) return 0;
@@ -64,24 +63,17 @@ bool infon::getStng(string* str) {
     return try2CatStr(str, &value, getSize().get_ui());
 }
 
-infon* infon::findTag(Tag* tag){
-    if(tag->definition) return tag->definition;
-    for(infon* scope=this; scope; scope=getTop(scope)){
-        if(scope->tag2Ptr){
-            TagMap::iterator tagPtr=scope->tag2Ptr->find(*tag);
-            if (tagPtr!=tag2Ptr->end()) {
-                tag->definition=tagPtr->second;
-                tag->tagCtxt=scope;
-                return tag->definition;
-            }
-        }
-    }
-    TagMap::iterator tagPtr=topTag2Ptr.find(*tag);
-    if (tagPtr!=tag2Ptr->end()) {
-        tag->definition=tagPtr->second;
-        return tag->definition;
-    }
+infon* infon::findTag(WordS* word){
+    if(word->definition) return word->definition;
+    infon* def=word->xLater->tags2Proteus(word);
+    if(def) return def;
     return 0;
+/*
+    WordSMap::iterator tagPtr=topTag2Def.find(word->key);
+    if (tagPtr!=tag2Ptr->end()) {
+        word->definition=tagPtr->second->definition;
+        return word->definition;
+    } */
 }
 
 int infonSizeCmp(infon* left, infon* right) { // -1: L<R,  0: L=R, 1: L>R. Infons must have fLiteral, numeric sizes
@@ -182,3 +174,5 @@ pureInfon::pureInfon(char* str, int base):listHead(0) {
 }
 
 pureInfon::~pureInfon(){if(PureIsInListMode(*this)) recover(listHead);}
+
+WordS::~WordS(){if(sysType>=wstNumOrd && sysType<=wstNumInfonic) delete definition;};

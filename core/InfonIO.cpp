@@ -127,7 +127,7 @@ void QParser::RmvWSC (){ // Remove whitespace and comments.
 #include "unicode/unorm.h"
 #define U8_IS_SINGLE(c) (((c)&0x80)==0)
 UErrorCode err=U_ZERO_ERROR;
-const UnicodeSet TagChars(UnicodeString("[:XID_Continue:]"), err);
+const UnicodeSet TagChars(UnicodeString("[[:XID_Continue:]']"), err);
 const UnicodeSet TagStarts(UnicodeString("[:XID_Start:]"), err);
 bool iscsymOrUni (char nTok) {return (iscsym(nTok) || (nTok&0x80));}
 bool isTagStart(char nTok) {return (iscsymOrUni(nTok)&&!isdigit(nTok)&&(nTok!='_'));}
@@ -188,13 +188,14 @@ xlater* QParser::chkLocale(icu::Locale* locale){
     return 0;
 }
 
-Tag* QParser::ReadTagChain(icu::Locale* locale){
-    icu::Locale tmpLoc= *locale;
-    xlater* Xlater = chkLocale(&tmpLoc);
-    if(Xlater){
-        return Xlater->ReadTagChain(this, tmpLoc);
-    }
-    return 0;
+WordS* QParser::ReadTagChain(icu::Locale* locale){
+    icu::Locale tmpLocale= *locale;
+    xlater* Xlater = chkLocale(&tmpLocale);
+    if(Xlater==0) throw "Words read with unsupported or no locale";
+    WordS *result=Xlater->ReadTagChain(this, tmpLocale);
+    result->key=(string)tmpLocale.getLanguage() + "%" + result->norm;
+    result->xLater=Xlater;
+    return result;
 }
 
 #include <cstdarg>
@@ -267,7 +268,7 @@ infon* grok(infon* item, UInt tagCode, int* code){
 }
 
 char errMsg[100];
-UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2, TagMap** tag2Ptr){
+UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2, WordSMap** tag2Def){
     UInt p=0, size=0, stay=1; char rchr, tok; infon *head=0, *prev; infon* j;
     infDataPtr* i=&(pInf)->dataHead;
     if(nxtTok("(") || nxtTok("{") || nxtTok("[")){
@@ -278,24 +279,24 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
         for(tok=peek(); tok != rchr && stay; tok=peek()){
             if(tok=='&') { // This is a definition, not an element
                 streamGet();
-                Tag* tag=0; Tag* prevTag=0; bool done=false;
+                WordS* tag=0; WordS* prevTag=0; bool done=false;
                 do{ // Here we process tag definitions
                     tag=ReadTagChain(&locale); if (tag==0) throw "Null tag was read";
                     tag->definition=(infon*)prevTag; prevTag=tag;
                     if(tag->next != tag) {} // TODO: verify all sub-tags are defined.
-                    if(nxtTok(":")){if(nxtTok("cTok")) {icu::Locale tmp; tag->locale=(tmp.createCanonical(buf)).getBaseName();}}
+                    //if(nxtTok(":")){if(nxtTok("cTok")) {icu::Locale tmp; tag->locale=(tmp.createCanonical(buf)).getBaseName();}}
                     if(nxtTok(":")){if(nxtTok("<abc>")) tag->pronunciation=buf;}
                     if(nxtTok("=")){done=true;}
                     else if(!nxtTok("&")) throw "Expected &tag or tag locale, pronunciation or definition";
                 } while (!done);
                 infon* definition=ReadInfon();
-                if (*tag2Ptr==0) *tag2Ptr=new TagMap;
-                for(Tag* t=tag; t; t=prevTag){
-                    prevTag=(Tag*)t->definition; t->definition=definition;
-                    TagMap::iterator tagPtr= (*tag2Ptr)->find(*t);
-                    if (tagPtr==(*tag2Ptr)->end()) {(**tag2Ptr)[*t]=definition; ptr2Tag[definition]=*t;}
+                if (*tag2Def==0) *tag2Def=new WordSMap;
+                for(WordS* t=tag; t; t=prevTag){
+                    prevTag=(WordS*)t->definition; t->definition=definition;
+                    WordSMap::iterator tagPtr= (*tag2Def)->find(t->key);
+                    if (tagPtr==(*tag2Def)->end()) {(**tag2Def)[t->key]=t; DefPtr2Tag.insert(pair<infon*,WordS*>(definition,t));}
                     else{throw("A tag is being redefined, which isn't allowed");}
-                    topTag2Ptr[*t] = definition;
+                    topTag2Def[t->key] = t;
                 }
                 continue;
             }
@@ -340,7 +341,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
 
 infon* QParser::ReadInfon(int noIDs){
     char op=0; UInt size=0; pureInfon iSize, iVal; infon *s1=0,*s2=0; UInt wFlag=0,fs=0,fv=0;
-    Tag* tags=0; const char* cTok, *eTok, *cTok2; TagMap* tag2Ptr=0; /*int textEnd=0; int textStart=textParsed.size();*/
+    WordS* tags=0; const char* cTok, *eTok, *cTok2; WordSMap* tag2Ptr=0; /*int textEnd=0; int textStart=textParsed.size();*/
     if(nxtTok("@")){wFlag|=toExec;}
     if(nxtTok("#")){wFlag|=asDesc;}
     if(nxtTok("!")){wFlag|=asNot;}
@@ -357,7 +358,7 @@ infon* QParser::ReadInfon(int noIDs){
             if (nTok=='^') wFlag|=iToPath; else {wFlag|=iToPathH; streamPut(1);}
         }
     }else if(isTagStart(Peek())){
-        wFlag|=iTagUse; if(!(tags=ReadTagChain(&locale))) throw "Null Tags found. Shouldn't happen";
+        wFlag|=iTagUse; if(!(tags=ReadTagChain(&locale))) throw "Null Words found. Shouldn't happen";
     }else{  // OK, then we're parsing some form of *... +...
         wFlag|=iNone;
         if(nxtTok("+") || nxtTok("-")) op='+'; else if(nxtTok("*") || nxtTok("/")) op='*';
@@ -388,17 +389,17 @@ infon* QParser::ReadInfon(int noIDs){
     if (i->value.listHead)i->value.listHead->top=i;
     if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~(mFindMode+mAssoc); i->wFlag|=mIsHeadOfGetLast; i=new infon(wFlag,0,0,0,i); i->spec1->top2=i;}
     for(char c=Peek(); !(noIDs&1) && (c==':' || c=='='); c=Peek()){
-        infon *R, *toSet=0, *toRef=0; int code=0;
+        infon *R, *toSet=0, *toRef=0; int idFlags=0;
         cTok=nxtTokN(2,"::",":");
         eTok=nxtTokN(2,"==","=");
         if(isEq(cTok,":") && (eTok==0)){
             if(peek()=='>') {streamPut(1); break;}
-            toRef=i; i=ReadInfon(0); toSet=grok(i,c1Left,&code);
+            toRef=i; i=ReadInfon(0); toSet=grok(i,c1Left,&idFlags);
             if((toRef->wFlag&mFindMode)!=iTagUse) toRef->top=i;
         } else {
             cTok2=nxtTokN(2,"::",":");
             if(isEq(cTok,":")){
-                toSet=grok(i,c1Left,&code); R=ReadInfon(4);
+                toSet=grok(i,c1Left,&idFlags); R=ReadInfon(4);
                 if((i->wFlag&mFindMode)>=iGetLast) {
                     i->spec1->top=R;
                     if((noIDs&4)==0){ //  set 'top' for any \\^, etc.
@@ -410,17 +411,17 @@ infon* QParser::ReadInfon(int noIDs){
                 }
             } else if(isEq(cTok,"::")){
                 // Add a new head to the spec list.
-                toSet=grok(i,c2Left,&code); code=InitSearchList; R=ReadInfon(4);
+                toSet=grok(i,c2Left,&idFlags); idFlags|=InitSearchList; R=ReadInfon(4);
             } else {toSet=i; R=ReadInfon(1);}
-            if(isEq(eTok,"==")) {code|=mLooseType;}
-            if(isEq(cTok2,":")){toRef=grok(R,c1Right,&code);}
-            else if(isEq(cTok2,"::")){toRef=grok(R,c2Right,&code);}
+            if(isEq(eTok,"==")) {idFlags|=mLooseType;}
+            if(isEq(cTok2,":")){toRef=grok(R,c1Right,&idFlags);}
+            else if(isEq(cTok2,"::")){toRef=grok(R,c2Right,&idFlags);}
             else toRef=R;
         }
         if(toSet==0) throw ":= operator requires [....] on the left side";
         if(toRef==0) throw "=: operator requires [....] on the right side";
-        if((toRef->type==0) && !(code&mLooseType)) toRef->type=toSet->type;
-        insertID(&toSet->wrkList, toRef, code);
+        if((toRef->type==0) && !(idFlags&mLooseType)) toRef->type=toSet->type;
+        insertID(&toSet->wrkList, toRef, idFlags);
     }
     if(!(noIDs&2)){  // Load function "calls"
         if(nxtTok(":>" )) {infon* j=ReadInfon(1); j->wFlag|=sUseAsFirst; j->spec2=i; i=j; chk4HardFunc(i);}

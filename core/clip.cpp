@@ -84,7 +84,7 @@ int main(int argc, char **argv){
         } if (entry=="") continue;
         //char ch='x', pr; do {pr=ch; ch=getCH(); entry+=ch;} while (!(pr=='%' && ch=='>'));
         //cout << "Parsing ["<<entry<<"]\n";
-        entry="<% { " + entry + " } %>";
+        entry="<% { " + entry + " \n} %>";
         istrstream fin(entry.c_str());
         QParser q(fin); q.locale=a.locale;
         Entry=q.parse(); // cout <<"Parsed.\n";

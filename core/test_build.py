@@ -59,7 +59,7 @@ def test_engine():
    ('2', 'define and use a tag', '&color=#{*_+_ *_+_ *_+_}  &size=#*_+_', '<{}>', 'color', '#{_, _, _, }'),
    ('2', "nested empty tags", r'&frame = {?|...}  &portal = {frame|...}', '<{}>', 'portal=*4+{frame|...}', '{{...} {...} {...} {...} }'),
    ('2', 'Two argument function defined with a tag', r'&func={+{_, _} +{%\\:[_] %\\:[_, _]  %\\:[_]}}  ', '<{}>', 'func<: +{9,4}', '{*1+9 *1+4 *1+9 }'),
-   ('1', 'Simple parsing', r'{*_ +{"A"|...} "AARON"} ==  "AAAARON" // This is a comment', '{{"A" "A" } "AARON" }'),
+   ('1', 'Simple parsing 1', r'{*_ +{"A"|...} "AARON"} ==  "AAAARON" // This is a comment', '{{"A" "A" } "AARON" }'),
    ('1', 'Parse & select option 2', r'[...]="ARONdacks" :== {"AARON" "ARON"} ', '"ARON"'),
    ('1', 'Parse & select option 1', r'[...]="AARONdacks" :== {"AARON" "ARON"} ', '"AARON"'),
    ('1', 'Two item parse', r'{[...] :== {"AARON" "BOBO" "ARON" "AAAROM"}   "dac"} ==  "ARONdacks"', '{"ARON" "dac" }'),
@@ -69,7 +69,7 @@ def test_engine():
    #('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \\[?]}]<:{"slothe", "Hello", "bob", 65432}|...}', '{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } }'),  #FAIL
    # Add the above test but with a list in the comprehension yeild.
 
-    ('1', 'Simple Parsing', r'{*3+$|...}=="CatHatBatDog" ','{"Cat" "Hat" "Bat" "Dog" }'),
+    ('1', 'Simple Parsing 2', r'{*3+$|...}=="CatHatBatDog" ','{"Cat" "Hat" "Bat" "Dog" }'),
     ('1', 'Inner parsing 1', r'{ {*3+$}|...}="CatHatBatDog" ','{{"Cat" } {"Hat" } {"Bat" } {"Dog" } }'),
     ('1', 'Parse a concatenated string', r'[*4+$ *10+$] :== ("DO" "gsTin" "tinabulation")','"Tintinabul"'), # FAILS until better concat support
 

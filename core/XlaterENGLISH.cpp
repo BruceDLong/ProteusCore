@@ -26,12 +26,13 @@ bool validNumberSyntax(string* n){
 }
 
 void tagChainToString(WordS* tags, UnicodeString &strOut){
-    strOut=""; WordS* t=tags;
-    do{
-        t->sourceStr = &strOut; t->offsetInSource=strOut.length();
-        strOut+= strOut.fromUTF8(t->norm+" ");
-        t=t->next;
-    } while(t!=tags);
+    strOut="";
+    for(WordListItr itr=tags->words.begin(); itr!=tags->words.end(); ++itr){
+        if(strOut!="") strOut+=" ";
+        (*itr)->sourceStr = &strOut;
+        (*itr)->offsetInSource=strOut.length();
+        strOut+= strOut.fromUTF8((*itr)->norm);
+    }
 }
 
 WordS* XlaterENGLISH::ReadLanguageWord(QParser *parser, icu::Locale &locale){ // Reads a 'word' consisting of a number or an alphabetic+hyphen+appostrophies tag
@@ -41,25 +42,29 @@ WordS* XlaterENGLISH::ReadLanguageWord(QParser *parser, icu::Locale &locale){ //
     else return 0;
     if(parser->buf[0]==0) return 0;
     WordS* tag=new WordS;
-    tag->tag=parser->buf; tag->locale=locale.getBaseName();
+    tag->asRead=parser->buf; tag->locale=locale.getBaseName();
     if(isalpha(tok)){
-        tagNormalizer->normalize(UnicodeString::fromUTF8(tag->tag), uErr).toUTF8String(tag->norm);
+        tagNormalizer->normalize(UnicodeString::fromUTF8(tag->asRead), uErr).toUTF8String(tag->norm);
         if(tagIsBad(tag->norm, tag->locale.c_str())) throw "Illegal tag being defined";
+        if(tag->norm.at(0)=='-'){tag->wordFlags|=wfAsSuffix; tag->norm=tag->norm.substr(1);}
+        if(tag->norm.at(tag->norm.length()-1)=='-'){tag->wordFlags|=wfAsPrefix; tag->norm=tag->norm.substr(0,tag->norm.length()-1);}
+        if(tag->norm.find('-')!=string::npos) {tag->wordFlags|=wfWasHyphenated;}
     } else {
         tag->sysType=wstNumCard;
-        if(!validNumberSyntax(&tag->tag)) throw "Invalid number syntax";
+        if(!validNumberSyntax(&tag->asRead)) throw "Invalid number syntax";
     }
     return tag;
 }
 
 WordS* XlaterENGLISH::ReadTagChain(QParser *parser, icu::Locale &locale){ // Reads a phrase that ends at a non-matching character or a period that isn't in a number.
-    WordS *topTag=0, *nxtTag=0;
+    WordS *head=0, *nxtTag;
     while((nxtTag=ReadLanguageWord(parser, locale))){
-        if(topTag==0) {topTag = nxtTag->next = nxtTag->prev = nxtTag;}
-        else {nxtTag->next=topTag; nxtTag->prev=topTag->prev; topTag->prev->next=nxtTag; topTag->prev=nxtTag;}
+        if(head==0) {head = new WordS;} else head->norm+=" ";
+        head->words.push_back(nxtTag);
+        head->norm+=nxtTag->norm;
     }
     parser->nxtTokN(1,".");
-    return topTag;
+    return head;
 }
 
 infon* XlaterENGLISH::tags2Proteus(WordS* words){   // Converts a list of words read by ReadTagChain() into an infon and returns a pointer to it.
@@ -266,10 +271,10 @@ bool tagIsMarkedPossessive(WordS *tag){
             if(w->second==amEndingInApostrophieS){return false;}
             else if(w->second==amEndsInS_MayBePossessive){return false;} // These could be possessives. TODO: try using grammer/models to decide.
             tag->baseForm=tag->baseForm.substr(0,tagLen-2);
-            tag->isMarkedPossessive=true;
+            tag->wordFlags|=wfIsMarkedPossessive;
         }else if(ending=="s'"){
             tag->baseForm=tag->baseForm.substr(0,tagLen-1);
-            tag->isMarkedPossessive=true;
+            tag->wordFlags|=wfIsMarkedPossessive;
         }
     }
     return true;
@@ -284,58 +289,52 @@ int FunctionWordClass(WordS *tag){
 void XlaterENGLISH::findDefinitions(WordS *tags){
     UnicodeString txt=""; // UErrorCode err=U_ZERO_ERROR; int32_t Result=0;
     UnicodeString ChainText; tagChainToString(tags, ChainText);
-//    RuleBasedNumberFormat parser(URBNF_SPELLOUT, Locale::getEnglish(), err);
-//    Formattable result(Result);
- //   ParsePosition cursor=0, last=txt.length();
-    WordS* crntTag=tags;
-    do{
-        crntTag->baseForm = crntTag->norm;
-        if(tagIsMarkedPossessive(crntTag)){}
-cout<< crntTag->baseForm << "-";
 
-        string strToParse=crntTag->baseForm;
+    for(WordListItr crntTag=tags->words.begin(); crntTag!=tags->words.end(); ++crntTag){
+        (*crntTag)->baseForm = (*crntTag)->norm;
+        if(tagIsMarkedPossessive(*crntTag)){}
+
+        string strToParse=(string)"en%"+(*crntTag)->baseForm;
+cout<< strToParse << " => ";
+
+        WordSMap::iterator candidate = topTag2Def.lower_bound(strToParse);
+        if(candidate!=topTag2Def.end()){
+            cout << candidate->first << " = " <<  printInfon(candidate->second->definition)<<"\n";
+            tags->definition=candidate->second->definition;
+        }
+
         int tagLen=strToParse.length();
         int endPos=1;
 
-        while(endPos<=tagLen){
+        while(0 && endPos<=tagLen){
             string strPart=strToParse.substr(0,endPos);
         }
 
-        int funcWordClass=FunctionWordClass(crntTag);
+   /*     int funcWordClass=FunctionWordClass(crntTag);
         if(funcWordClass>0){
             if(funcWordClass==cardinalNum){
-             /*   ParsePosition prevCursor=cursor;
+                //    RuleBasedNumberFormat parser(URBNF_SPELLOUT, Locale::getEnglish(), err);
+                //    Formattable result(Result);
+                //   ParsePosition cursor=0, last=txt.length();
+                ParsePosition prevCursor=cursor;
                 parser.parse(txt, result, cursor);
                 if(cursor != prevCursor){
                     // package result into tag,
                     // delete other tags.
                     // update crntTag;
                     continue;
-                }*/
+                }
             } else { // Handle the function word
             }
         } else { // Check if it is a content word?
-            ////// Try compound word meanings
-            // if whole tag-string is found
-            // while(){tag-string+=tag->next->norm; try that.}
 
-            //if not found, do this:
-            ////// Try sub-word meanings
-            // list prefixes + null
-            // list null + suffixes
-            // set rootWord // may be null
-            // for each prefix+null
-            //    for each suffix+null
-            //       if(prefix-root-suffix is found) save this if it is larger than previous item saved.
-        }
-        crntTag=crntTag->next;
-// In this function: mark plurals, possessive markers, POS, isName
-    } while(crntTag!=tags);
-} // TODO: validate apostrophie usage. Handle hyphens. Unspaced compounds like superman.
+        } */
+    }
+}
 
 void XlaterENGLISH::stitchAndDereference(WordS *text){
 }
 
 infon* XlaterENGLISH::infonate(WordS *text){
-    return 0;
+    return text->definition;
 }

@@ -117,18 +117,18 @@ enum WordClass {cUnknown, cNoun, cVerb, cAdj, cAdv, cDeterminer, cVerbHelper, cP
 enum WordGender {gMasc, gFem, gNeut};
 enum WordDegree {dComparative, dSuperlative};  // more, most
 enum WordPositionStyle {sBeforeNoun, sAfterBoBo};
+enum WordFlags {wfIsPlural=1, wfIsMarkedPossessive=2, wfIsProperNoun=4, wfIsCountable=8, wfIsGradable=16, wfIsParticipialAdj=32, wfIsLyAdverb=64, wfWasHyphenated=128, wfAsPrefix=256, wfAsSuffix=512};
 
 typedef string wordKey;
-typedef deque<WordS> WordList;
+typedef deque<WordS*> WordList;
 typedef WordList::iterator WordListItr;
 
 struct WordS {  // Word System
-    string tag, locale, pronunciation, norm, baseForm;
+    string asRead, locale, pronunciation, norm, baseForm;
     infon *definition, *tagCtxt;  // if sysType indicates this is number-like, definition should be cast to BigNum*.
     xlater *xLater;
     wordKey key;
     WordSystemTypes sysType;
-    WordS *next, *prev;
 
     UnicodeString *sourceStr;
     int offsetInSource;  // position of this word in the sourceStr.
@@ -136,36 +136,18 @@ struct WordS {  // Word System
     WordList words;
     WordS *item, *itemsConstraints, *metaConstraints;
 
-    bool isPlural;
-    bool isMarkedPossessive;
-    bool isProperNoun;
-    bool isCountable;
-    bool isGradable; // applies to nouns and adjectives/adverbs
-    bool isParticipialAdj;
-    bool isLyAdverb;
+    int wordFlags;      // See Word Flags enum for bit meanings
     WordClass wordClass; // Type of function word
     WordGender wordGender;
     WordDegree wordDegree;
     WordPositionStyle PositionStyle;
 
     WordS(){
-        definition=0; tagCtxt=0; xLater=0; sysType=wstUnparsed; offsetInSource=0; wordClass=cUnknown;
-        isPlural=isMarkedPossessive=isProperNoun=isCountable=isGradable=isParticipialAdj=isLyAdverb=0;
-        item = itemsConstraints = metaConstraints=0;
+        definition=0; tagCtxt=0; xLater=0; wordFlags=0; sysType=wstUnparsed; offsetInSource=0; wordClass=cUnknown;
+        item = itemsConstraints = metaConstraints = 0;
     }
     ~WordS();
 };
-
-inline bool operator==(const WordS& a, const WordS& b) {
-    WordS *aStart=a.prev->next, *bStart=b.prev->next;
-    WordS *aIter=aStart, *bIter=bStart;
-    do{
-        if(a.norm!=b.norm || aIter->locale.substr(0,2)!=bIter->locale.substr(0,2)) return false;
-        aIter=aIter->next; bIter=bIter->next;
-        if((aIter==aStart) != (bIter==bStart)) return false;
-    } while(aIter!=aStart);
-    return true;
-}
 
 extern bool iscsymOrUni (char nTok);
 extern bool isTagStart(char nTok);

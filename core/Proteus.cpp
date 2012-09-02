@@ -269,7 +269,7 @@ void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags, infon* tag
     to->wFlag=(from->wFlag&0xffffffff);
     to->tag2Ptr=from->tag2Ptr;
     if(to->type==0) {  // TODO: We should merge types, not just copy over.
-        if(from->type){ cout<<"TAG:"<<from->type->tag<<"--"<<tagCtxt<<"\n";
+        if(from->type){ //cout<<"TAG:"<<from->type->tag<<"--"<<tagCtxt<<"\n";
             if(tagCtxt) if(!tagCtxt->findTag(from->type)) throw "Nested tag not found when copying.";
             to->type=from->type;
         }
@@ -467,7 +467,7 @@ inline infon* getMasterList(infon* item){
 }
 
 int agent::checkTypeMatch(WordS* LType, WordS* RType){
-    return (*LType)==(*RType);
+    return LType->key==RType->key;
 }
 
 int agent::compute(infon* i){
@@ -558,14 +558,14 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
             case iTagUse: {
                 if(CI->type == 0) throw ("A tag was null which is a bug");
                 // OUT("Recalling: "<<CI->type->tag<<":"<<CI->type->locale);
-                infon* found= /*CI->type->xLater->tags2Proteus(CI->type); // */ CI->findTag(CI->type);
+                infon* found=CI->findTag(CI->type);
                 if (found) {
                     bool asNotFlag=((CI->wFlag&asNot)==asNot);
                     UInt tmpFlags=CI->wFlag&mListPos; deepCopy(found,CI,0,0,CI->type->tagCtxt); CI->wFlag|=tmpFlags; // TODO B4: move this flag stuff into deepCopy.
                     if(CI->wFlag&asNot) asNotFlag = !asNotFlag;
                     SetBits(CI->wFlag, asNot, (asNotFlag)?asNot:0);
                     deTagWrkList(CI);
-                } else{OUT("\nBad tag:'"<<CI->type->tag<<"'\n");throw("A tag was used but never defined");}
+                } else{OUT("\nBad tag:'"<<CI->type->norm<<"'\n");throw("A tag was used but never defined");}
                 break;}
             case iGetFirst:  StartTerm (CI, &newID); break;
             case iGetMiddle: break; // TODO: iGetMiddle

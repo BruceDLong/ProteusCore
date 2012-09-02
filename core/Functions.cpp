@@ -26,8 +26,8 @@
 using namespace std;
 
 bool IsHardFunc(string tag){
-    return((tag=="addOne") || (tag=="loadInfon") || (tag=="imageOf") || (tag=="textInfon")
-        || (tag=="time") || (tag=="cos") || (tag=="sin") || (tag=="textLine") || (tag=="timestr"));
+    return((tag=="addone") || (tag=="loadinfon") || (tag=="imageif") || (tag=="textinfon")
+        || (tag=="time") || (tag=="cos") || (tag=="sin") || (tag=="textline") || (tag=="timestr"));
 }
 
 int getStrArg(infon* i, string* str, agent* a){
@@ -115,7 +115,7 @@ int AutoEval(infon* CI, agent* a){
     int EOT;
     double frac;
     BigInt bigNum;
-    string funcName=CI->type->tag;
+    string funcName=CI->type->norm;
  //  cout << "EVAL:"<<funcName.S<<"\n";
     if (funcName=="sin"){
         if (!getRealArg(CI, &frac, a)) {CI->wFlag=iNone; return 0;}
@@ -130,7 +130,7 @@ int AutoEval(infon* CI, agent* a){
         now=*localtime(&rawtime);
         if (!getIntArg(CI, &bigNum, a)) return 0;
         if (bigNum==0)  setIntVal(CI, now.tm_sec);
-    } else if (funcName=="imageOf"){
+    } else if (funcName=="imageof"){
         string majorType, minorType;
         infon* args=CI->spec2;
         args->top=CI;
@@ -149,7 +149,7 @@ int AutoEval(infon* CI, agent* a){
                 case tList: majorType="tList";       break;
                 case tUnknown: majorType="tUnknown"; break;
             }
-        } else {majorType=objectToImage->type->tag;}
+        } else {majorType=objectToImage->type->norm;}
         if(argsSize>1){
             args=args->next;
             if (InfsType(args) != tString) {cout<<"Error: minorType in imageOf is not a string\n"; exit (0); return 0;}
@@ -182,7 +182,7 @@ int AutoEval(infon* CI, agent* a){
         if (foundMinorType == 0) {cout<<"Error: no associated minorType ("<<minorType<<") found in Theme\n"; exit (0);  return 0;}
         UInt tmpFlags=(CI->wFlag&mListPos); a->deepCopy(foundMinorType->value.listHead->next, CI,0,0); CI->wFlag=(CI->wFlag& (~mListPos))+tmpFlags;
         CI->spec2=args;
-    } else if (funcName=="loadInfon"){
+    } else if (funcName=="loadinfon"){
         string fileName; infon* I;
         if (!getStrArg(CI, &fileName, a)) return 0;
         a->loadInfon(fileName.c_str(), &I, 1);
@@ -193,17 +193,17 @@ int AutoEval(infon* CI, agent* a){
         itoa(t.tv_usec/1000,uSec);
         string s="Time:"+string(Time)+string(uSec);
         setString(CI, s);
-    } else if (funcName=="infonToText"){
+    } else if (funcName=="infontotext"){
         infon* inf1;
         getInfonArg(CI, &inf1, a);
         string s=printInfon(inf1);
         setString(CI, s);
-    } else if (funcName=="textInfon"){
+    } else if (funcName=="textinfon"){
         infon* inf1;
         getInfonArg(CI, &inf1, a);
         string s=printPure(&inf1->value, 0, 0);
         setString(CI, s);
-    } else if (funcName=="textLine"){
+    } else if (funcName=="textline"){
         infon* inf1, *i; string s="";
         getInfonArg(CI, &inf1, a);
         for (EOT=a->StartTerm(inf1->value.listHead, &i); !EOT; EOT=a->getNextTerm(&i)){
@@ -211,7 +211,7 @@ int AutoEval(infon* CI, agent* a){
             else if (InfsType(i) == tNum) s+=printPure(&i->value, 0, 0);
         }
         setString(CI, s);
-    } else if (funcName=="addOne"){
+    } else if (funcName=="addone"){
         if (!getIntArg(CI, &bigNum, a)) return 0;
         setIntVal(CI, bigNum+1);
     } else return 0;

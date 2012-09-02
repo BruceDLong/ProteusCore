@@ -57,7 +57,7 @@ string printInfon(infon* i, infon* CI){
     if(InfAsDesc(i)) s+="#";
     if(i->wFlag & asNot) s+="!";
     if (mode==iTagUse) {
-        s+=i->type->tag; s+=" ";
+        s+=i->type->norm; s+=" ";
     } else if(InfIsNormed(i) || mode==iNone /* || VsFlag(i)&notParent */){
         if (SizeIsUnknown(i)) {s+=printPure(&i->value, i->wSize, CI); if(InfsType(i) != tList) s+=",";}
         else if (ValueIsUnknown(i)) {s+=printPure(&i->size, i->wSize, CI); s+=";";}
@@ -220,7 +220,7 @@ const char* QParser::nxtTokN(int n, ...){
 
 bool IsHardFunc(string tag);
 void chk4HardFunc(infon* i){
-    if((i->wFlag&mFindMode)==iTagUse && IsHardFunc(i->type->tag)){i->wFlag&=~iTagUse; i->wFlag|=iHardFunc;}
+    if((i->wFlag&mFindMode)==iTagUse && IsHardFunc(i->type->norm)){i->wFlag&=~iTagUse; i->wFlag|=iHardFunc;}
 }
 
 string sizeFromExp(int exp){
@@ -283,7 +283,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                 do{ // Here we process tag definitions
                     tag=ReadTagChain(&locale); if (tag==0) throw "Null tag was read";
                     tag->definition=(infon*)prevTag; prevTag=tag;
-                    if(tag->next != tag) {} // TODO: verify all sub-tags are defined.
+               //     if(tag->next != tag) {} // TODO: verify all sub-tags are defined.
                     //if(nxtTok(":")){if(nxtTok("cTok")) {icu::Locale tmp; tag->locale=(tmp.createCanonical(buf)).getBaseName();}}
                     if(nxtTok(":")){if(nxtTok("<abc>")) tag->pronunciation=buf;}
                     if(nxtTok("=")){done=true;}
@@ -293,10 +293,11 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                 if (*tag2Def==0) *tag2Def=new WordSMap;
                 for(WordS* t=tag; t; t=prevTag){
                     prevTag=(WordS*)t->definition; t->definition=definition;
-                    WordSMap::iterator tagPtr= (*tag2Def)->find(t->key);
-                    if (tagPtr==(*tag2Def)->end()) {(**tag2Def)[t->key]=t; DefPtr2Tag.insert(pair<infon*,WordS*>(definition,t));}
-                    else{throw("A tag is being redefined, which isn't allowed");}
-                    topTag2Def[t->key] = t;
+                    WordSMap::iterator tagPtr=topTag2Def.find(t->key);
+                    if (tagPtr==topTag2Def.end()) {
+                        topTag2Def[t->key]=t;
+                        DefPtr2Tag.insert(pair<infon*,WordS*>(definition,t));
+                    }else{throw("A tag is being redefined, which isn't allowed");}
                 }
                 continue;
             }

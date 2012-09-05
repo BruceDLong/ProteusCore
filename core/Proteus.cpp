@@ -12,7 +12,6 @@
 const int ListBuffCutoff=20;  // TODO: make this '2' to show a bug.
 
 typedef map<dblPtr,UInt>::iterator altIter;
-WordSMap topTag2Def;
 multimap<infon*,WordS*> DefPtr2Tag;
 
 #define recAlts(lval, rval) {if(InfsType(rval)==tString) alts[dblPtr((char*)rval->value.dataHead->get_num_mpz_t()->_mp_d,lval)]++;}
@@ -22,6 +21,12 @@ multimap<infon*,WordS*> DefPtr2Tag;
 #include "xlater.h"
 #include "XlaterENGLISH.h"
 XlaterENGLISH EnglishXLater;
+
+xlater* fetchXlater(icu::Locale *locale){
+    LanguageExtentions::iterator lang = langExtentions.find(locale->getBaseName());
+    if (lang != langExtentions.end()) return lang->second;
+    return 0;
+}
 
 LanguageExtentions langExtentions; // This map stores valid locales and their xlater if available.
 void populateLangExtentions(){     // Use this to load available language modules before normalizing any infons.

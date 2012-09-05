@@ -72,7 +72,10 @@ int main(int argc, char **argv){
         if (entry=="quit") break;
         if (entry=="dict") {
             cout<<"Locale: "; PrntLocale(a.locale);
-            for(WordSMap::iterator tagPtr=topTag2Def.begin(); tagPtr!=topTag2Def.end(); tagPtr++){
+            xlater* Xlater = fetchXlater(&a.locale);
+            if(!Xlater) {cout<<"Translater for this locale wasn't found.\n"; continue;}
+            WordSMap *wordLib=&Xlater->wordLibrary;
+            for(WordSMap::iterator tagPtr=wordLib->begin(); tagPtr!=wordLib->end(); tagPtr++){
                 cout<<tagPtr->second->locale<< ":" << tagPtr->second->norm << "\t= " <<printInfon(tagPtr->second->definition)<<"\n";
             }
             continue;
@@ -111,4 +114,3 @@ int main(int argc, char **argv){
     }
  return 0;
 }
-

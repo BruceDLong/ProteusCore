@@ -10,6 +10,7 @@
 #ifndef _xlater
 #define _xlater
 
+#include <map>
 #include <string.h>
 #include <unicode/locid.h>
 #include <unicode/unistr.h>
@@ -28,6 +29,8 @@ struct WordS;
 struct infon;
 struct QParser;
 
+typedef string wordKey;
+typedef map<wordKey, WordS*> WordSMap;
 
 /* The class xlater is used to translate a (possibly) natural language to and from infons.
  * Subclass xlater for each language. Languages are identified by locale identifiers.
@@ -39,6 +42,7 @@ public:
     xlater(){language.createCanonical("");} //locale("").name().c_str());;}
 
     icu::Locale language;   // In constructor, implementations set this to the locale ID (e.g., en or jp) for the language being provided.
+    WordSMap wordLibrary;   // Here is where the tags to models for this language are stored
 
     //////////////////////////////////////////////////////////
     /* ReadLanguageWord() extends a QParser to read a 'word' in some language (possibly a natural language).

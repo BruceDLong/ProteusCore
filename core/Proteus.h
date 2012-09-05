@@ -119,7 +119,6 @@ enum WordDegree {dComparative, dSuperlative};  // more, most
 enum WordPositionStyle {sBeforeNoun, sAfterBoBo};
 enum WordFlags {wfIsPlural=1, wfIsMarkedPossessive=2, wfIsProperNoun=4, wfIsCountable=8, wfIsGradable=16, wfIsParticipialAdj=32, wfIsLyAdverb=64, wfWasHyphenated=128, wfAsPrefix=256, wfAsSuffix=512};
 
-typedef string wordKey;
 typedef deque<WordS*> WordList;
 typedef WordList::iterator WordListItr;
 
@@ -154,10 +153,8 @@ extern bool isTagStart(char nTok);
 extern bool tagIsBad(string tag, const char* locale);
 extern const icu::Normalizer2 *tagNormer;
 
-typedef map<wordKey, WordS*> WordSMap;
-extern WordSMap topTag2Def;
 extern multimap<infon*,WordS*> DefPtr2Tag;
-
+xlater* fetchXlater(icu::Locale *locale);
 typedef map<string, xlater*> LanguageExtentions;
 extern LanguageExtentions langExtentions;
 extern void populateLangExtentions(); // Use this to load available language modules before normalizing any infons.
@@ -284,13 +281,13 @@ const int bufmax=1024*32;
 struct QParser{
     QParser(istream& _stream):stream(_stream){};
     infon* parse(); // if there is an error it is returned in buf as a char* string.
-    UInt ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2, WordSMap** tag2Ptr);
-    infon* ReadInfon(int noIDs=0);
+    UInt ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2, string &scopeID);
+    infon* ReadInfon(string &scopeID, int noIDs=0);
     char streamGet();
     void scanPast(char* str);
     bool chkStr(const char* tok);
     xlater* chkLocale(icu::Locale* locale);
-    WordS* ReadTagChain(icu::Locale* locale);
+    WordS* ReadTagChain(icu::Locale* locale, xlater **XL_return, string scopeID);
     const char* nxtTokN(int n, ...);
     void RmvWSC ();
     char peek(); // Returns next char.

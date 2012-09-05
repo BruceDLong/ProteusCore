@@ -68,12 +68,6 @@ infon* infon::findTag(WordS* word){
     infon* def=word->xLater->tags2Proteus(word);
     if(def) return def;
     return 0;
-/*
-    WordSMap::iterator tagPtr=topTag2Def.find(word->key);
-    if (tagPtr!=tag2Ptr->end()) {
-        word->definition=tagPtr->second->definition;
-        return word->definition;
-    } */
 }
 
 int infonSizeCmp(infon* left, infon* right) { // -1: L<R,  0: L=R, 1: L>R. Infons must have fLiteral, numeric sizes

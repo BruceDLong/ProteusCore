@@ -6,6 +6,9 @@
     The Proteus Engine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
     You should have received a copy of the GNU General Public License along with the Proteus Engine.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+const int maxWordsInCompound=10;
+
 #include "XlaterENGLISH.h"
 #include <unicode/rbnf.h>
 
@@ -59,7 +62,7 @@ WordS* XlaterENGLISH::ReadLanguageWord(QParser *parser, icu::Locale &locale){ //
 WordS* XlaterENGLISH::ReadTagChain(QParser *parser, icu::Locale &locale){ // Reads a phrase that ends at a non-matching character or a period that isn't in a number.
     WordS *head=0, *nxtTag;
     while((nxtTag=ReadLanguageWord(parser, locale))){
-        if(head==0) {head = new WordS;} else head->norm+=" ";
+        if(head==0) {head = new WordS;} else head->norm+="-";
         head->words.push_back(nxtTag);
         head->norm+=nxtTag->norm;
     }
@@ -286,49 +289,43 @@ int FunctionWordClass(WordS *tag){
     return 0;
 }
 
-void XlaterENGLISH::findDefinitions(WordS *tags){
+void XlaterENGLISH::findDefinitions(WordS *words){
     UnicodeString txt=""; // UErrorCode err=U_ZERO_ERROR; int32_t Result=0;
-    UnicodeString ChainText; tagChainToString(tags, ChainText);
+    UnicodeString ChainText; tagChainToString(words, ChainText);
+    WordS* crntChoice=0;
+    for(WordListItr crntWrd=words->words.begin(); crntWrd!=words->words.end(); ++crntWrd){
+        WordListItr tmpWrd=crntWrd;
+        int numWordsInCompound=0;
+        string trial="", wordKey="en%"; // start the search in the English section.
+        while(tmpWrd!=words->words.end() && numWordsInCompound++ < maxWordsInCompound){
+            if(numWordsInCompound>1) wordKey.append("-");
+            wordKey.append((*tmpWrd)->norm); tmpWrd++;
+            cout << "#######>"<<wordKey<<"\t\t";
+            WordSMap::iterator trialItr=wordLibrary.lower_bound(wordKey);
+            if(trialItr==wordLibrary.end()) {cout<<"x\n"; continue;}
+            trial=trialItr->first;
+            int keyLen=wordKey.length();
 
-    for(WordListItr crntTag=tags->words.begin(); crntTag!=tags->words.end(); ++crntTag){
-        (*crntTag)->baseForm = (*crntTag)->norm;
-        if(tagIsMarkedPossessive(*crntTag)){}
-
-        string strToParse=(string)"en%"+(*crntTag)->baseForm;
-cout<< strToParse << " => ";
-
-        WordSMap::iterator candidate = topTag2Def.lower_bound(strToParse);
-        if(candidate!=topTag2Def.end()){
-            cout << candidate->first << " = " <<  printInfon(candidate->second->definition)<<"\n";
-            tags->definition=candidate->second->definition;
+            crntChoice=0;
+            if(trial.substr(0,keyLen) != wordKey){cout<<"o\n"; break;} // Break to choice
+            {cout<<"\t\t:"<<keyLen<<" "<<trial<<"\t\n"; }
+  //          while(trial.length()==wordKey.length()){
+                // record or choose model based on scope, country, etc.
+                //trial++;
+  //          }
         }
-
-        int tagLen=strToParse.length();
-        int endPos=1;
-
-        while(0 && endPos<=tagLen){
-            string strPart=strToParse.substr(0,endPos);
+     //   crntWrd+=numWordsInCompound;
+        if(crntChoice){
+         //   if(numberWord){
+         //   } else if(functionWord){
+         //   }
         }
+        else { // Try parsing inside the word for prefixes, suffixes, etc.
 
-   /*     int funcWordClass=FunctionWordClass(crntTag);
-        if(funcWordClass>0){
-            if(funcWordClass==cardinalNum){
-                //    RuleBasedNumberFormat parser(URBNF_SPELLOUT, Locale::getEnglish(), err);
-                //    Formattable result(Result);
-                //   ParsePosition cursor=0, last=txt.length();
-                ParsePosition prevCursor=cursor;
-                parser.parse(txt, result, cursor);
-                if(cursor != prevCursor){
-                    // package result into tag,
-                    // delete other tags.
-                    // update crntTag;
-                    continue;
-                }
-            } else { // Handle the function word
-            }
-        } else { // Check if it is a content word?
 
-        } */
+
+//        if(tagIsMarkedPossessive(*crntWrd)){}
+        }
     }
 }
 

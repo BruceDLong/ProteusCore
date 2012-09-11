@@ -19,18 +19,18 @@ struct WordChain;
 
 class XlaterENGLISH:public xlater{
 public:
-    WordS* ReadLanguageWord(QParser *parser, icu::Locale &language); // Reads a 'word' consisting of a number or an alphabetic+hyphen+appostrophies tag
-    WordS* ReadTagChain(QParser *parser, icu::Locale &language); // Reads a phrase that ends at a non-matching character or a period that isn't in a number.
-    infon* tags2Proteus(WordS* tags);     // Converts a list of tags read by ReadTagChain() into an infon and returns a pointer to it.
-    WordS* proteus2Tags(infon* proteus);  // Converts an infon to a tag chain.
+    WordSPtr ReadLanguageWord(QParser *parser, icu::Locale &language); // Reads a 'word' consisting of a number or an alphabetic+hyphen+appostrophies tag
+    WordSPtr ReadTagChain(QParser *parser, icu::Locale &language); // Reads a phrase that ends at a non-matching character or a period that isn't in a number.
+    infon* tags2Proteus(WordSPtr tags);     // Converts a list of tags read by ReadTagChain() into an infon and returns a pointer to it.
+    WordSPtr proteus2Tags(infon* proteus);  // Converts an infon to a tag chain.
     virtual bool loadLanguageData(string dataFilename);
     virtual bool unloadLanguageData();
     ~XlaterENGLISH(){unloadLanguageData();};
 
 private:
-    void findDefinitions(WordS *tags);
-    void stitchAndDereference(WordS *tags);
-    infon* infonate(WordS *tags);
+    void findDefinitions(WordSPtr tags);
+    void stitchAndDereference(WordSPtr tags);
+    infon* infonate(WordSPtr tags);
 };
 
 #endif

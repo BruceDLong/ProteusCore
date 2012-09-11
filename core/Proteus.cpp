@@ -12,7 +12,7 @@
 const int ListBuffCutoff=20;  // TODO: make this '2' to show a bug.
 
 typedef map<dblPtr,UInt>::iterator altIter;
-multimap<infon*,WordS*> DefPtr2Tag;
+multimap<infon*,WordSPtr> DefPtr2Tag;
 
 #define recAlts(lval, rval) {if(InfsType(rval)==tString) alts[dblPtr((char*)rval->value.dataHead->get_num_mpz_t()->_mp_d,lval)]++;}
 #define fetchLastItem(lval, item) {for(lval=item; InfsType(lval)==tList;lval=lval->value->prev);}
@@ -52,6 +52,19 @@ void populateLangExtentions(){     // Use this to load available language module
         else if(localeLanguage=="bn") langExtentions[localeID]=0;  // Bengali
         else langExtentions[localeID]=0;
     }
+}
+
+int calcScopeScore(string wrdS, string trialS){
+    int score=1;
+    uint wpStart=0, tpStart=0, wp, tp; // WordPos and trialPos
+    wrdS+='&'; trialS+='&';
+    for (wp=wrdS.find("&"),tp=trialS.find('&'); wp!=string::npos && tp!=string::npos; wp=wrdS.find("&",wp+1),tp=trialS.find('&',tp+1)){
+        string WrdScopeSeg=wrdS.substr(wpStart,wp-wpStart), trialScopeSeg=trialS.substr(tpStart, tp-tpStart);
+        if(WrdScopeSeg == trialScopeSeg) score+=2; else {return score-1;} // -1 if trial is defined in a sibling.
+        wpStart=wp+1; tpStart=tp+1;
+    }
+    if(wp == string::npos && tp != string::npos) score-=1;
+    return score;
 }
 
 infon* infon::isntLast(){ // 0=this is the last one. >0 = pointer to predecessor of the next one.
@@ -471,7 +484,7 @@ inline infon* getMasterList(infon* item){
     return 0;
 }
 
-int agent::checkTypeMatch(WordS* LType, WordS* RType){
+int agent::checkTypeMatch(WordSPtr LType, WordSPtr RType){
     return LType->key==RType->key;
 }
 

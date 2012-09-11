@@ -28,7 +28,7 @@ bool validNumberSyntax(string* n){
    return 0;
 }
 
-void tagChainToString(WordS* tags, UnicodeString &strOut){
+void tagChainToString(WordSPtr tags, UnicodeString &strOut){
     strOut="";
     for(WordListItr itr=tags->words.begin(); itr!=tags->words.end(); ++itr){
         if(strOut!="") strOut+=" ";
@@ -38,13 +38,13 @@ void tagChainToString(WordS* tags, UnicodeString &strOut){
     }
 }
 
-WordS* XlaterENGLISH::ReadLanguageWord(QParser *parser, icu::Locale &locale){ // Reads a 'word' consisting of a number or an alphabetic+hyphen+appostrophies tag
+WordSPtr XlaterENGLISH::ReadLanguageWord(QParser *parser, icu::Locale &locale){ // Reads a 'word' consisting of a number or an alphabetic+hyphen+appostrophies tag
     char tok=parser->Peek();
     if(isdigit(tok) || tok=='-') {getBufs(isCardinalOrOrdinal(parser->peek()),parser);}
     else if(isalpha(tok)){getBufs(isEngWordChar(parser->peek()),parser);}
     else return 0;
     if(parser->buf[0]==0) return 0;
-    WordS* tag=new WordS;
+    WordSPtr tag=WordSPtr(new WordS);
     tag->asRead=parser->buf; tag->locale=locale.getBaseName();
     if(isalpha(tok)){
         tagNormalizer->normalize(UnicodeString::fromUTF8(tag->asRead), uErr).toUTF8String(tag->norm);
@@ -59,10 +59,10 @@ WordS* XlaterENGLISH::ReadLanguageWord(QParser *parser, icu::Locale &locale){ //
     return tag;
 }
 
-WordS* XlaterENGLISH::ReadTagChain(QParser *parser, icu::Locale &locale){ // Reads a phrase that ends at a non-matching character or a period that isn't in a number.
-    WordS *head=0, *nxtTag;
+WordSPtr XlaterENGLISH::ReadTagChain(QParser *parser, icu::Locale &locale){ // Reads a phrase that ends at a non-matching character or a period that isn't in a number.
+    WordSPtr head=0, nxtTag;
     while((nxtTag=ReadLanguageWord(parser, locale))){
-        if(head==0) {head = new WordS;} else head->norm+="-";
+        if(head==0) {head = WordSPtr(new WordS);} else head->norm+="-";
         head->words.push_back(nxtTag);
         head->norm+=nxtTag->norm;
     }
@@ -70,45 +70,45 @@ WordS* XlaterENGLISH::ReadTagChain(QParser *parser, icu::Locale &locale){ // Rea
     return head;
 }
 
-infon* XlaterENGLISH::tags2Proteus(WordS* words){   // Converts a list of words read by ReadTagChain() into an infon and returns a pointer to it.
+infon* XlaterENGLISH::tags2Proteus(WordSPtr words){   // Converts a list of words read by ReadTagChain() into an infon and returns a pointer to it.
     findDefinitions(words);
     stitchAndDereference(words);
     infon* proteusCode = infonate(words);
     return proteusCode;
 }
 
-WordS* XlaterENGLISH::proteus2Tags(infon* proteus){  // Converts an infon to a tag chain.
+WordSPtr XlaterENGLISH::proteus2Tags(infon* proteus){  // Converts an infon to a tag chain.
     return 0;
 }
+
 typedef map<string, int> WordMap;
 typedef WordMap::iterator WordMapIter;
 
-enum funcWordFlags {cardinalNum=8};
+enum funcWordFlags {wcNumberStarter=8, wcVerbHelper=16, wcPronoun=32};
 WordMap functionWords = {   // int is a WordClass
     // Definite determiners
-        {"the", 0}, {"this", 0}, {"that", 0}, {"these", 0}, {"those", 0},   // These and Those are plural of this and that
-        {"which", 0}, {"whichever", 0}, {"what", 0}, {"whatever", 0},       // These usually start questions
+        {"the", 1}, {"this", 1}, {"that", 1}, {"these", 1}, {"those", 1},   // These and Those are plural of this and that
+        {"which", 1}, {"whichever", 1}, {"what", 1}, {"whatever", 1},       // These usually start questions
         // Other definite determiners are possessives inclusing possessive pronouns: my, your, his, her, its, our, their, whose.
 
     // Indefinite determiners
-        {"a", 0}, {"an", 0},       // Use with singular, countable nouns.
-        {"some", 0}, {"any", 0},   // Use with plural and non-countable nouns.
+        {"a", 1}, {"an", 1},       // Use with singular, countable nouns.
+        {"some", 1}, {"any", 1},   // Use with plural and non-countable nouns.
 
     // Quantifying determiners // I need to define a "quantifier phrase"
-        {"much", 0}, {"many", 0}, {"more", 0}, {"most", 0}, {"little", 0}, {"few", 0}, {"less", 0}, {"fewer", 0}, {"least", 0}, {"fewest", 0},
-        {"all", 0}, {"both", 0}, {"enough", 0}, {"no", 0},
+        {"much", 2}, {"many", 2}, {"more", 2}, {"most", 2}, {"little", 2}, {"few", 2}, {"less", 2}, {"fewer", 2}, {"least", 2}, {"fewest", 2},
+        {"all", 2}, {"both", 2}, {"enough", 2}, {"no", 2},
+        {"each", 2}, {"every", 2}, {"either", 2}, {"neither", 2},   // 'every' can be 'almost every' and some other forms.
 
         {"zero", 8}, {"one", 8}, {"two", 8}, {"three", 8}, {"four", 8}, {"five", 8}, {"six", 8}, {"seven", 8}, {"eight", 8}, {"nine", 8},
         {"ten", 8}, {"eleven", 8}, {"twelve", 8}, {"thirteen", 8}, {"fourteen", 8}, {"fifteen", 8}, {"sixteen", 8}, {"seventeen", 8}, {"eighteen", 8}, {"nineteen", 8},
         {"twenty", 8}, {"thirty", 8}, {"forty", 8}, {"fifty", 8}, {"sixty", 8}, {"seventy", 8}, {"eighty", 8}, {"ninety", 8},
 
-        {"each", 0}, {"every", 0}, {"either", 0}, {"neither", 0},   // 'every' can be 'almost every' and some other forms.
-
         // when compound function words are supported:
-        {"all the", 0}, {"some of the", 0}, {"some of the many", 0},  // also: "5 liters of"
-        {"a pair of", 0}, {"half", 0}, {"half of", 0}, {"double", 0}, {"more than", 0}, {"less than", 0}, // twice as many as... ,  a dozen,
-        {"a lot of", 0}, {"lots of", 0}, {"plenty of", 0}, {"a great deal of", 0}, {"tons of", 0}, {"a few", 0}, {"a little", 0},
-        {"several", 0}, {"a couple", 0}, {"a number of", 0}, {"a whole boat load of", 0}, //... I need to find a pattern for these
+        {"all the", 4}, {"some of the", 4}, {"some of the many", 4},  // also: "5 liters of"
+        {"a pair of", 4}, {"half", 4}, {"half of", 4}, {"double", 4}, {"more than", 4}, {"less than", 4}, // twice as many as... ,  a dozen,
+        {"a lot of", 4}, {"lots of", 4}, {"plenty of", 4}, {"a great deal of", 4}, {"tons of", 4}, {"a few", 4}, {"a little", 4},
+        {"several", 4}, {"a couple", 4}, {"a number of", 4}, {"a whole boat load of", 4}, //... I need to find a pattern for these
 
     // Verb Helpers
         {"be", 16}, {"am", 16}, {"are", 16}, {"aren't", 16}, {"is", 16}, {"isn't", 16}, {"was", 16}, {"wasn't", 16}, {"were", 16}, {"weren't", 16}, {"being", 16}, {"been", 16},
@@ -137,36 +137,36 @@ WordMap functionWords = {   // int is a WordClass
         // consider: one in "I ate one"
 
     // Prepositions
-    {"aboard", 0}, {"about", 0}, {"above", 0}, {"across", 0}, {"after", 0}, {"against", 0}, {"along", 0}, {"alongside", 0}, {"amid", 0}, {"amidst", 0},
-    {"among", 0}, {"amongst", 0}, {"anti", 0}, {"around", 0}, {"as", 0}, {"astride", 0}, {"at", 0}, {"atop", 0}, {"bar", 0}, {"barring", 0},
-    {"before", 0}, {"behind", 0}, {"below", 0}, {"beneath", 0}, {"beside", 0}, {"besides", 0}, {"between", 0}, {"beyond", 0}, {"but", 0}, {"by", 0},
-    {"circa", 0}, {"concerning", 0}, {"considering", 0}, {"counting", 0}, {"despite", 0}, {"down", 0}, {"during", 0}, {"except", 0}, {"excepting", 0}, {"excluding", 0},
-    {"following", 0}, {"for", 0}, {"from", 0}, {"given", 0}, {"gone", 0}, {"in", 0}, {"including", 0}, {"inside", 0}, {"into", 0}, {"like", 0},
-    {"near", 0}, {"of", 0}, {"off", 0}, {"on", 0}, {"onto", 0}, {"opposite", 0}, {"outside", 0}, {"over", 0}, {"past", 0}, {"since", 0},
-    {"than", 0}, {"through", 0}, {"thru", 0}, {"throughout", 0}, {"to", 0}, {"touching", 0}, {"toward", 0}, {"towards", 0}, {"under", 0}, {"underneath", 0},
-    {"unlike", 0}, {"until", 0}, {"up", 0}, {"upon", 0}, {"versus", 0}, {"via", 0}, {"with", 0}, {"within", 0}, {"without", 0}, {"worth", 0},
+    {"aboard", 64}, {"about", 64}, {"above", 64}, {"across", 64}, {"after", 64}, {"against", 64}, {"along", 64}, {"alongside", 64}, {"amid", 64}, {"amidst", 64},
+    {"among", 64}, {"amongst", 64}, {"anti", 64}, {"around", 64}, {"as", 64}, {"astride", 64}, {"at", 64}, {"atop", 64}, {"bar", 64}, {"barring", 64},
+    {"before", 64}, {"behind", 64}, {"below", 64}, {"beneath", 64}, {"beside", 64}, {"besides", 64}, {"between", 64}, {"beyond", 64}, {"but", 64}, {"by", 64},
+    {"circa", 64}, {"concerning", 64}, {"considering", 64}, {"counting", 64}, {"despite", 64}, {"down", 64}, {"during", 64}, {"except", 64}, {"excepting", 64}, {"excluding", 64},
+    {"following", 64}, {"for", 64}, {"from", 64}, {"given", 64}, {"gone", 64}, {"in", 64}, {"including", 64}, {"inside", 64}, {"into", 64}, {"like", 64},
+    {"near", 64}, {"of", 64}, {"off", 64}, {"on", 64}, {"onto", 64}, {"opposite", 64}, {"outside", 64}, {"over", 64}, {"past", 64}, {"since", 64},
+    {"than", 64}, {"through", 64}, {"thru", 64}, {"throughout", 64}, {"to", 64}, {"touching", 64}, {"toward", 64}, {"towards", 64}, {"under", 64}, {"underneath", 64},
+    {"unlike", 64}, {"until", 64}, {"up", 64}, {"upon", 64}, {"versus", 64}, {"via", 64}, {"with", 64}, {"within", 64}, {"without", 64}, {"worth", 64},
 
-    {"according to", 0}, {"ahead of", 0}, {"along with", 0}, {"apart from", 0}, {"as for", 0}, {"aside from", 0}, {"as per", 0}, {"as to", 0}, {"as well as", 0}, {"away from", 0},
-    {"because of", 0}, {"but for", 0}, {"by means of", 0}, {"close to", 0}, {"contrary to", 0}, {"depending on", 0}, {"due to", 0}, {"except for", 0}, {"forward of", 0}, {"further to", 0},
-    {"in addition to", 0}, {"in between", 0}, {"in case of", 0}, {"in face of", 0}, {"in favor of", 0}, {"in front of", 0}, {"in lieu of", 0}, {"in spite of", 0}, {"instead of", 0}, {"in view of", 0},
-    {"irrespective of", 0}, {"near to", 0}, {"next to", 0}, {"on account of", 0}, {"on behalf of", 0}, {"on board", 0}, {"on to", 0}, {"on top of", 0}, {"opposite to", 0}, {"opposite of", 0},
-    {"other than", 0}, {"out of", 0}, {"outside of", 0}, {"owing to", 0}, {"prior to", 0}, {"regardless of", 0}, {"thanks to", 0}, {"together with", 0}, {"up against", 0}, {"up to", 0},
-    {"up until", 0}, {"one", 0}, {"two", 0}, {"three", 0}, {"four", 0}, {"five", 0}, {"six", 0}, {"seven", 0}, {"eight", 0}, {"nine", 0},
-    {"zero", 0}, {"with reference to", 0}, {"with regard to", 0},
+    {"according to", 64}, {"ahead of", 64}, {"along with", 64}, {"apart from", 64}, {"as for", 64}, {"aside from", 64}, {"as per", 64}, {"as to", 64}, {"as well as", 64}, {"away from", 64},
+    {"because of", 64}, {"but for", 64}, {"by means of", 64}, {"close to", 64}, {"contrary to", 64}, {"depending on", 64}, {"due to", 64}, {"except for", 64}, {"forward of", 64}, {"further to", 64},
+    {"in addition to", 64}, {"in between", 64}, {"in case of", 64}, {"in face of", 64}, {"in favor of", 64}, {"in front of", 64}, {"in lieu of", 64}, {"in spite of", 64}, {"instead of", 64}, {"in view of", 64},
+    {"irrespective of", 64}, {"near to", 64}, {"next to", 64}, {"on account of", 64}, {"on behalf of", 64}, {"on board", 64}, {"on to", 64}, {"on top of", 64}, {"opposite to", 64}, {"opposite of", 64},
+    {"other than", 64}, {"out of", 64}, {"outside of", 64}, {"owing to", 64}, {"prior to", 64}, {"regardless of", 64}, {"thanks to", 64}, {"together with", 64}, {"up against", 64}, {"up to", 64},
+    {"up until", 64}, {"one", 64}, {"two", 64}, {"three", 64}, {"four", 64}, {"five", 64}, {"six", 64}, {"seven", 64}, {"eight", 64}, {"nine", 64},
+    {"zero", 64}, {"with reference to", 64}, {"with regard to", 64},
 
     // Conjunctions
-    {"and", 0}, {"but", 0}, {"or", 0},  // consider either/or, neither/nor
-    {"although", 0}, {"after", 0}, {"as", 0}, {"before", 0}, {"if", 0}, {"since", 0}, {"that", 0},
-    {"unless", 0}, {"until", 0}, {"when", 0}, {"whenever", 0}, {"whereas", 0}, {"while", 0},
+    {"and", 128}, {"but", 128}, {"or", 128},  // consider either/or, neither/nor
+    {"although", 128}, {"after", 128}, {"as", 128}, {"before", 128}, {"if", 128}, {"since", 128}, {"that", 128},
+    {"unless", 128}, {"until", 128}, {"when", 128}, {"whenever", 128}, {"whereas", 128}, {"while", 128},
 
-    {"as long as", 0}, {"as soon as", 0}, {"as though", 0}, {"except that", 0},
-    {"in order that", 0}, {"provided that", 0}, {"so long as", 0}, {"such that", 0}, {"four", 0}, {"five", 0}, {"six", 0}, {"seven", 0}, {"eight", 0}, {"nine", 0},
+    {"as long as", 128}, {"as soon as", 128}, {"as though", 128}, {"except that", 128},
+    {"in order that", 128}, {"provided that", 128}, {"so long as", 128}, {"such that", 128}, {"four", 128}, {"five", 128}, {"six", 128}, {"seven", 128}, {"eight", 128}, {"nine", 128},
 
     // Negotiators
-    {"hi", 0}, {"hey", 0}, {"hey there", 0}, {"greetings", 0}, {"good-morning", 0},
-    {"bye", 0}, {"bye-bye", 0}, {"goodbye", 0}, {"goodnight", 0}, {"see-ya", 0},
-    {"excuse me", 0}, {"sorry", 0}, {"thanks", 0}, {"no thank you", 0}, {"oops", 0}, {"wow", 0}, {"yeah", 0}, {"oh", 0}, {"pardon me", 0}, {"cheers", 0},
-    {"um", 0}, {"er", 0}, {"umm-hmm", 0}, {"ouch", 0}
+    {"hi", 256}, {"hey", 256}, {"hey there", 256}, {"greetings", 256}, {"good-morning", 256},
+    {"bye", 256}, {"bye-bye", 256}, {"goodbye", 256}, {"goodnight", 256}, {"see-ya", 256},
+    {"excuse me", 256}, {"sorry", 256}, {"thanks", 256}, {"no thank you", 256}, {"oops", 256}, {"wow", 256}, {"yeah", 256}, {"oh", 256}, {"pardon me", 256}, {"cheers", 256},
+    {"um", 256}, {"er", 256}, {"umm-hmm", 256}, {"ouch", 256}
 
 };
 
@@ -193,7 +193,7 @@ map<string, infon*> prefixes = {
 };
 
 // These are mostly from http://en.wiktionary.org/wiki/Appendix:English_suffixes
-map<string, infon*> suffixesFront = {  // non-plural-related suffixes
+WordSMap suffixesFront = {  // non-plural-related suffixes
     {"a", 0}, {"ability", 0}, {"able", 0}, {"ably", 0}, {"ac", 0}, {"acea", 0}, {"aceae", 0}, {"acean", 0}, {"aceous", 0}, {"ad", 0},
     {"ade", 0}, {"aemia", 0}, {"age", 0}, {"agog", 0}, {"agogue", 0}, {"aholic", 0}, {"al", 0}, {"ales", 0}, {"algia", 0}, {"amine", 0},
     {"an", 0}, {"ana", 0}, {"anae", 0}, {"ance", 0}, {"ancy", 0}, {"androus", 0}, {"andry", 0}, {"ane", 0}, {"ant", 0}, {"ar", 0}, {"arch", 0},
@@ -233,19 +233,27 @@ map<string, infon*> suffixesFront = {  // non-plural-related suffixes
     {"thermy", 0}, {"thon", 0}, {"thymia", 0}, {"tion", 0}, {"tome", 0}, {"tomy", 0}, {"tonia", 0}, {"trichous", 0}, {"trix", 0}, {"tron", 0},
     {"trophic", 0}, {"trophy", 0}, {"tropic", 0}, {"tropism", 0}, {"tropous", 0}, {"tropy", 0}, {"tude", 0}, {"ture", 0}, {"ty", 0}, {"ular", 0},
     {"ule", 0}, {"ure", 0}, {"urgy", 0}, {"uria", 0}, {"uronic", 0}, {"urous", 0}, {"valent", 0}, {"virile", 0}, {"vorous", 0}, {"ward", 0},
-    {"wards", 0}, {"ware", 0}, {"ways", 0}, {"wear", 0}, {"wide", 0}, {"wise", 0}, {"worthy", 0}, {"xor", 0}, {"y", 0}, {"yl", 0}, {"yne", 0},
+    {"wards", 0}, {"ware", 0}, {"ways", 0}, {"wear", 0}, {"wide", 0}, {"wise", 0}, {"worthy", 0}, {"xor", 0}, {"y", 0},
     {"zilla", 0}, {"zoic", 0}, {"zoon", 0}, {"zygous", 0}, {"zyme", 0}
 };
 
-map<string, infon*> EnglishSuffixes;
+WordSMap EnglishSuffixes;
 
 bool XlaterENGLISH::loadLanguageData(string dataFilename){
     string reversedKey;
     // Here we copy suffixes into a new map where they are spelled backwards.
     // This makes it faster to search for things at the end of the word because when backwards they are at the beginning.
     EnglishSuffixes.clear();
-    for(map<string, infon*>::iterator S = suffixesFront.begin(); S!=suffixesFront.end(); ++S){
-        EnglishSuffixes.insert(pair<string, infon*>(string(S->first.rbegin(), S->first.rend()), S->second));
+    for(WordSMap::iterator S = suffixesFront.begin(); S!=suffixesFront.end(); ++S){
+        string reversedKey=string(S->first.rbegin(), S->first.rend());
+        WordSPtr wsp=WordSPtr(new WordS(S->first, 0, 0, this));
+        EnglishSuffixes.insert(pair<string, WordSPtr>(reversedKey+"%U", wsp));
+        wordLibrary.insert(pair<wordKey, WordSPtr>(S->first+"%U", wsp));
+    }
+
+    for(map<string, infon*>::iterator S = prefixes.begin(); S!=prefixes.end(); ++S){
+        WordSPtr wsp=WordSPtr(new WordS(S->first, 0, 0, this));
+        wordLibrary.insert(pair<wordKey, WordSPtr>(S->first+"%U", wsp));
     }
     return 0;
 }
@@ -265,7 +273,10 @@ WordMap apostrophics = {
     {"'00s", 0}, {"'20s", 0}, {"'30s", 0}, {"'40s", 0}, {"'50s", 0}, {"'60s", 0}, {"'70s", 0}, {"'80s", 0}, {"'90s", 0}
 };
 
-bool tagIsMarkedPossessive(WordS *tag){
+typedef deque<WordSPtr> WordList;
+typedef WordList::iterator WordListItr;
+
+bool tagIsMarkedPossessive(WordSPtr &tag){
     int tagLen=tag->baseForm.length();
     if(tagLen>2){
         string ending=tag->baseForm.substr(tagLen-2, 2);
@@ -283,55 +294,139 @@ bool tagIsMarkedPossessive(WordS *tag){
     return true;
 }
 
-int FunctionWordClass(WordS *tag){
+int FunctionWordClass(WordSPtr tag){
     WordMapIter w = functionWords.find(tag->baseForm);
     if(w!=functionWords.end())  return w->second;
     return 0;
 }
 
-void XlaterENGLISH::findDefinitions(WordS *words){
-    UnicodeString txt=""; // UErrorCode err=U_ZERO_ERROR; int32_t Result=0;
-    UnicodeString ChainText; tagChainToString(words, ChainText);
-    WordS* crntChoice=0;
-    for(WordListItr crntWrd=words->words.begin(); crntWrd!=words->words.end(); ++crntWrd){
-        WordListItr tmpWrd=crntWrd;
-        int numWordsInCompound=0;
-        string trial="", wordKey="en%"; // start the search in the English section.
-        while(tmpWrd!=words->words.end() && numWordsInCompound++ < maxWordsInCompound){
-            if(numWordsInCompound>1) wordKey.append("-");
-            wordKey.append((*tmpWrd)->norm); tmpWrd++;
-            cout << "#######>"<<wordKey<<"\t\t";
-            WordSMap::iterator trialItr=wordLibrary.lower_bound(wordKey);
-            if(trialItr==wordLibrary.end()) {cout<<"x\n"; continue;}
-            trial=trialItr->first;
-            int keyLen=wordKey.length();
-
-            crntChoice=0;
-            if(trial.substr(0,keyLen) != wordKey){cout<<"o\n"; break;} // Break to choice
-            {cout<<"\t\t:"<<keyLen<<" "<<trial<<"\t\n"; }
-  //          while(trial.length()==wordKey.length()){
-                // record or choose model based on scope, country, etc.
-                //trial++;
-  //          }
+int examineMatchingStatus(string wrdToParse, string trial){
+    char t, w; uint i, maxLen=min(wrdToParse.length(), trial.length());
+    for(i=0; i<maxLen; ++i){
+        t=trial[i]; w=wrdToParse[i];
+        if(w != t){
+            if(w < t) return -i;
+            else return i;
         }
-     //   crntWrd+=numWordsInCompound;
-        if(crntChoice){
-         //   if(numberWord){
-         //   } else if(functionWord){
-         //   }
+        if(t=='%') return i;
+    }
+    if(trial.length()>maxLen && trial[maxLen]!='%') return -i;
+    return i;
+}
+
+void lookUpAffixesFromCharPos(WordSMap* wordLib, const string &wrdToParse, const string &scopeID, WordList *resultList){
+    uint matchLen, searchLen=1, scopeScore, crntWrdLen=wrdToParse.length(); WordSPtr crntChoice=0;
+cout<<"FIND: "<<wrdToParse<<"   \n";
+    while(searchLen<=crntWrdLen){
+        scopeScore=0;
+        string partKey=""+wrdToParse.substr(0,searchLen);
+ cout <<"\tpartKey: "<<partKey<<"   ";
+        WordSMap::iterator trialItr=wordLib->lower_bound(partKey);
+        if(trialItr==wordLib->end()) {cout<<"x\n"; break;}
+        string trial=trialItr->first; cout << "\t "<<trial<<"\n";
+        while((matchLen=examineMatchingStatus(wrdToParse, trial)) > 0){
+            if(trial[matchLen]=='%'){cout << "\tMATCH!    ";
+                uint newScopeScore=calcScopeScore(scopeID, trial.substr(matchLen+1));
+                if(newScopeScore > scopeScore) {
+                    scopeScore=newScopeScore;
+                    crntChoice=trialItr->second;
+                }
+            } else break;
+            cout << "\t "<<trial<<"\n";
+            if(++trialItr != wordLib->end()) trial=trialItr->first; else break;
         }
-        else { // Try parsing inside the word for prefixes, suffixes, etc.
-
-
-
-//        if(tagIsMarkedPossessive(*crntWrd)){}
-        }
+        if(crntChoice) resultList->push_back(crntChoice);
+        if(matchLen<=0) break;
+        searchLen=matchLen+1;
     }
 }
 
-void XlaterENGLISH::stitchAndDereference(WordS *text){
+int parseWord(WordSMap *wordLib, const string &wrdToParse, const string &scopeID, vector<WordList> *resultList){
+    int furthestPos=0;
+    int wrdLen=wrdToParse.length();
+    lookUpAffixesFromCharPos(wordLib, wrdToParse, scopeID, &((*resultList)[0]));
+    for(int searchPos=0; searchPos<wrdLen; ++searchPos){
+        if(! resultList[searchPos].empty())
+            for(WordListItr WLi=(*resultList)[searchPos].begin(); WLi != (*resultList)[searchPos].end(); ++WLi){
+                int newPos=searchPos+(*WLi)->norm.length();
+                if (newPos>furthestPos) furthestPos=newPos;
+                if((*resultList)[newPos].empty())
+                    lookUpAffixesFromCharPos(wordLib, wrdToParse.substr(newPos), scopeID, &((*resultList)[newPos]));
+            }
+    }
+    return furthestPos;
 }
 
-infon* XlaterENGLISH::infonate(WordS *text){
+void XlaterENGLISH::findDefinitions(WordSPtr words){
+    UnicodeString txt=""; // UErrorCode err=U_ZERO_ERROR; int32_t Result=0;
+    UnicodeString ChainText; tagChainToString(words, ChainText);
+    WordSPtr crntChoice=0;
+    string scopeID=words->key.substr(words->key.find('%')+1);
+    for(WordListItr crntWrd=words->words.begin(); crntWrd!=words->words.end();){
+        WordListItr tmpWrd;
+        int numWordsInCompound=0, numWordsInChosen=0, scopeScore=0;; crntChoice=0;
+        string trial="", wordKey="";
+        for(tmpWrd=crntWrd; tmpWrd!=words->words.end() && numWordsInCompound++ < maxWordsInCompound; tmpWrd++){
+            if(numWordsInCompound>1) wordKey.append("-");
+            wordKey.append((*tmpWrd)->norm);
+            cout << "#######>"<<wordKey<<"\t\t"<<scopeID<<"\n";
+            WordSMap::iterator trialItr=wordLibrary.lower_bound(wordKey);
+            if(trialItr==wordLibrary.end()) break;
+            trial=trialItr->first;
+            bool stopSearch=true;
+            int keyLen=wordKey.length();
+            while(trial.substr(0,keyLen) == wordKey){
+                stopSearch=false;
+                if(trial[keyLen]=='%'){cout << "\tMATCH!\n";
+                    int newScopeScore=calcScopeScore(scopeID, trial.substr(keyLen+1));
+                    if(newScopeScore > scopeScore) {
+                        scopeScore=newScopeScore;
+                        crntChoice=trialItr->second;
+                        numWordsInChosen=numWordsInCompound;
+                    }
+                }
+                if(++trialItr != wordLibrary.end()) trial=trialItr->first; else break;
+            }
+            if(stopSearch) break;
+        }
+
+        if(crntChoice==0){
+            (*crntWrd)->baseForm=(*crntWrd)->norm;
+            if(tagIsMarkedPossessive(*crntWrd)){}
+            int wordClass=FunctionWordClass(*crntWrd);
+            if(wordClass) {
+                if(wordClass==wcNumberStarter){
+                    // load number
+                    // crntChoice=XXX;
+                    // numWordsInChosen=YYY;
+                }// else if(wordClass==wcPronoun){}
+            }else { // Try parsing inside the word for prefixes, suffixes, etc.
+            // Here we look for possessives, plurals, verb-forms, affixes, NVAJF, Contracted verbs.
+            // We should handle alternate spellings such as UK/US, before a suffix, defined "runs" but uses "running".
+                string wrdToParse=(*crntWrd)->baseForm;
+                uint wrdLen=wrdToParse.length();
+                vector<WordList> alts(wrdLen,WordList());
+                uint furthestPos=parseWord(&wordLibrary, wrdToParse, scopeID, &alts);
+                cout << "FurthestPos:" << furthestPos<<"  at Char:"<< wrdToParse[furthestPos] <<"\n";
+                if(furthestPos<wrdLen){ // If we didn't find a path thru wrdToParse try other spellings:
+                    // TODO: verify more rigerously that there are no important exceptions to this logic:
+                    string reversedWrd=string(wrdToParse.rbegin(), wrdToParse.rend());
+                    vector<WordList> backAlts(reversedWrd.length(),WordList());
+                    furthestPos=parseWord(&EnglishSuffixes, reversedWrd, scopeID, &backAlts);
+                    cout << "FurthestPos2:" << furthestPos<<"  at Char:"<< reversedWrd[furthestPos] <<"\n";
+                    if(furthestPos>0 && furthestPos<wrdLen){ // Try modified spellings
+                    }
+                }
+            }
+        }
+        if(crntChoice==0) {cout<< ((string)"\n\nMESG: What does "+(*crntWrd)->norm+" mean?\n"); crntWrd++;}
+        else crntWrd+=numWordsInChosen;
+    }
+}
+
+void XlaterENGLISH::stitchAndDereference(WordSPtr text){
+}
+
+infon* XlaterENGLISH::infonate(WordSPtr text){
     return text->definition;
 }

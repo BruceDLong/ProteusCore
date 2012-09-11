@@ -178,9 +178,10 @@ xlater* QParser::chkLocale(icu::Locale* locale){
     string localeID=buf;
     LanguageExtentions::iterator lang = langExtentions.find(localeID);
     if (lang != langExtentions.end()){
-        *locale=icu::Locale::createCanonical(localeID.c_str());
-        chkStr(":");
-        return lang->second;
+        if(chkStr(":")){
+            *locale=icu::Locale::createCanonical(localeID.c_str());
+            return lang->second;
+        }
     }
     streamPut(textParsed.size()-startPos);
     lang = langExtentions.find(locale->getBaseName());
@@ -188,13 +189,13 @@ xlater* QParser::chkLocale(icu::Locale* locale){
     return 0;
 }
 
-WordS* QParser::ReadTagChain(icu::Locale* locale, xlater **XL_return, string scopeID){
+WordSPtr QParser::ReadTagChain(icu::Locale* locale, xlater **XL_return, string scopeID){
     icu::Locale tmpLocale= *locale;
     xlater* Xlater = chkLocale(&tmpLocale);
     if(Xlater==0) throw "Words read with unsupported or no locale";
     if(XL_return) (*XL_return)=Xlater;
-    WordS *result=Xlater->ReadTagChain(this, tmpLocale);
-    result->key=(string)tmpLocale.getLanguage() + "%" + result->norm + "%" + scopeID + "%" + (string)tmpLocale.getCountry();
+    WordSPtr result=Xlater->ReadTagChain(this, tmpLocale);
+    result->key=result->norm + "%" + scopeID;
     result->xLater=Xlater;
     return result;
 }
@@ -281,10 +282,11 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
             if(tok=='&') { // This is a definition, not an element
                 streamGet();
                 xlater *Xlater;
-                WordS* tag=0; WordS* prevTag=0; bool done=false;
+                vector<WordSPtr> tagList;
+                WordSPtr tag=0; bool done=false;
                 do{ // Here we process tag definitions
                     tag=ReadTagChain(&locale, &Xlater, scopeID); if (tag==0) throw "Null tag was read";
-                    tag->definition=(infon*)prevTag; prevTag=tag;
+                    tagList.push_back(tag);
                     //if(nxtTok(":")){if(nxtTok("cTok")) {icu::Locale tmp; tag->locale=(tmp.createCanonical(buf)).getBaseName();}}
                     if(nxtTok(":")){if(nxtTok("<abc>")) tag->pronunciation=buf;}
                     if(nxtTok("=")){done=true;}
@@ -293,12 +295,12 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                 string scopeTag=scopeID + (string)"&"+tag->norm;
                 infon* definition=ReadInfon(scopeTag);
                 WordSMap *wordLib=&Xlater->wordLibrary;
-                for(WordS* t=tag; t; t=prevTag){
-                    prevTag=(WordS*)t->definition; t->definition=definition;
-                    WordSMap::iterator tagPtr=wordLib->find(t->key);
+                for(vector<WordSPtr>::iterator t=tagList.begin(); t!=tagList.end(); ++t){
+                    (*t)->definition=definition;
+                    WordSMap::iterator tagPtr=wordLib->find((*t)->key);
                     if (tagPtr==wordLib->end()) {
-                        (*wordLib)[t->key]=t;
-                        DefPtr2Tag.insert(pair<infon*,WordS*>(definition,t));
+                        (*wordLib)[(*t)->key]=(*t);
+                        DefPtr2Tag.insert(pair<infon*,WordSPtr>(definition,(*t)));
                     }else{throw("A tag is being redefined, which isn't allowed");}
                 }
                 continue;
@@ -344,7 +346,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
 
 infon* QParser::ReadInfon(string &scopeID, int noIDs){
     char op=0; UInt size=0; pureInfon iSize, iVal; infon *s1=0,*s2=0; UInt wFlag=0,fs=0,fv=0;
-    WordS* tags=0; const char* cTok, *eTok, *cTok2; WordSMap* tag2Ptr=0; /*int textEnd=0; int textStart=textParsed.size();*/
+    WordSPtr tags=0; const char* cTok, *eTok, *cTok2; WordSMap* tag2Ptr=0; /*int textEnd=0; int textStart=textParsed.size();*/
     if(nxtTok("@")){wFlag|=toExec;}
     if(nxtTok("#")){wFlag|=asDesc;}
     if(nxtTok("!")){wFlag|=asNot;}

@@ -63,7 +63,7 @@ bool infon::getStng(string* str) {
     return try2CatStr(str, &value, getSize().get_ui());
 }
 
-infon* infon::findTag(WordS* word){
+infon* infon::findTag(WordSPtr word){
     if(word->definition) return word->definition;
     infon* def=word->xLater->tags2Proteus(word);
     if(def) return def;

@@ -16,6 +16,7 @@
 #include <unicode/unistr.h>
 #include <unicode/putil.h>
 #include <unicode/normalizer2.h>
+#include <boost/intrusive_ptr.hpp>
 #include "remiss.h"
 
 using namespace std;
@@ -26,11 +27,12 @@ using namespace std;
 #define check(ch) {RmvWSC(); ChkNEOF; tok=streamGet(); if(tok != ch) {cout<<"Expected "<<ch<<"\n"; throw "Unexpected character";}}
 
 struct WordS;
+typedef boost::intrusive_ptr<WordS> WordSPtr;
 struct infon;
 struct QParser;
 
 typedef string wordKey;
-typedef map<wordKey, WordS*> WordSMap;
+typedef map<wordKey, WordSPtr> WordSMap;
 
 /* The class xlater is used to translate a (possibly) natural language to and from infons.
  * Subclass xlater for each language. Languages are identified by locale identifiers.
@@ -55,7 +57,7 @@ public:
      *  This function works when loading an infon and won't have access to the tag library.
      */
 
-    virtual WordS* ReadLanguageWord(QParser *parser, icu::Locale &locale)=0;
+    virtual WordSPtr ReadLanguageWord(QParser *parser, icu::Locale &locale)=0;
 
     //////////////////////////////////////////////////////////
     /* ReadTagChain() extends a QParser to read a phrase in some language (possibly a natural language).
@@ -65,14 +67,14 @@ public:
      *   This function works when loading an infon and won't have access to the tag library.
      */
 
-    virtual WordS* ReadTagChain(QParser *parser, icu::Locale &locale)=0;
+    virtual WordSPtr ReadTagChain(QParser *parser, icu::Locale &locale)=0;
 
     //////////////////////////////////////////////////////////
     /* Tags2Proteus() converts a list of tags read by ReadTagChain() into an infon and returns a pointer to it.
      */
 
-    virtual infon* tags2Proteus(WordS* tags)=0;
-    virtual WordS* proteus2Tags(infon* proteus)=0;
+    virtual infon* tags2Proteus(WordSPtr tags)=0;
+    virtual WordSPtr proteus2Tags(infon* proteus)=0;
 
 
     // Implementations initialize the language (i.e., load any lists or structures) in loadLanguageData(). Free them in unloadLanguageData();

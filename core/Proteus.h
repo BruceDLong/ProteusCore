@@ -205,7 +205,7 @@ struct pureInfon {
 };
 
 struct infon {
-    infon(UInt wf=0, pureInfon* s=0, pureInfon* v=0, infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0,WordSMap* tagMap=0);
+    infon(UInt wf=0, pureInfon* s=0, pureInfon* v=0, infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0);
     infon* isntLast(); // 0=this is the last one. >0 = pointer to predecessor of the next one.
     BigInt& getSize();
     bool getInt(BigInt* num);
@@ -220,7 +220,6 @@ struct infon {
     infon *next, *prev, *top, *top2, *pred;
     infon *spec1, *spec2;   // Used to store indexes, functions args, etc.
     infNode* wrkList;
-    WordSMap *tag2Ptr;
     WordSPtr type;
 };
 int infValueCmp(infon* A, infon* B);

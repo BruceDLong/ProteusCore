@@ -93,15 +93,9 @@ int main(int argc, char **argv){
         Entry=q.parse(); // cout <<"Parsed.\n";
         if (Entry) try{
 
-{ // This functionality would be better implemented by streamed parsing of world.
-            infon* outerList=Entry;
-            if(Entry->tag2Ptr){
-                if (a.world->tag2Ptr==0) a.world->tag2Ptr=new WordSMap;
-                a.world->tag2Ptr->insert(Entry->tag2Ptr->begin(), Entry->tag2Ptr->end());
-                delete Entry->tag2Ptr;
-            }
+            infon* outerList=Entry;  // This functionality would be better implemented by streamed parsing of world.
             Entry=Entry->value.listHead; outerList->value.listHead=0; delete outerList;
-}
+
             if(Entry){
                 Entry->top=0; Entry->next=Entry->prev=0;
                 //a.normalize(Entry); // cout << "Normalizd\n";

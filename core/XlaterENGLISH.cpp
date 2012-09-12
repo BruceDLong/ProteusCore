@@ -194,50 +194,52 @@ map<string, infon*> prefixes = {
 
 // These are mostly from http://en.wiktionary.org/wiki/Appendix:English_suffixes
 WordSMap suffixesFront = {  // non-plural-related suffixes
-    {"a", 0}, {"ability", 0}, {"able", 0}, {"ably", 0}, {"ac", 0}, {"acea", 0}, {"aceae", 0}, {"acean", 0}, {"aceous", 0}, {"ad", 0},
+    {"ability", 0}, {"able", 0}, {"ably", 0}, {"ac", 0}, {"acea", 0}, {"aceae", 0}, {"acean", 0}, {"ad", 0},
     {"ade", 0}, {"aemia", 0}, {"age", 0}, {"agog", 0}, {"agogue", 0}, {"aholic", 0}, {"al", 0}, {"ales", 0}, {"algia", 0}, {"amine", 0},
-    {"an", 0}, {"ana", 0}, {"anae", 0}, {"ance", 0}, {"ancy", 0}, {"androus", 0}, {"andry", 0}, {"ane", 0}, {"ant", 0}, {"ar", 0}, {"arch", 0},
+    {"ana", 0}, {"anae", 0}, {"ance", 0}, {"ancy", 0}, {"andry", 0}, {"ane", 0}, {"ant", 0}, {"ar", 0}, {"arch", 0},
     {"archy", 0}, {"ard", 0}, {"aria", 0}, {"arian", 0}, {"arium", 0}, {"art", 0}, {"ary", 0}, {"ase", 0}, {"ate", 0}, {"athon", 0},
     {"ation", 0}, {"ative", 0}, {"ator", 0}, {"atory", 0}, {"biont", 0}, {"biosis", 0}, {"blast", 0}, {"cade", 0}, {"caine", 0}, {"carp", 0},
-    {"carpic", 0}, {"carpous", 0}, {"cele", 0}, {"cene", 0}, {"centric", 0}, {"cephalic", 0}, {"cephalous", 0}, {"cephaly", 0}, {"chore", 0},
+    {"carpic", 0}, {"cele", 0}, {"cene", 0}, {"centric", 0}, {"cephalic", 0}, {"cephaly", 0}, {"chore", 0},
     {"chory", 0}, {"chrome", 0}, {"cide", 0}, {"clast", 0}, {"clinal", 0}, {"cline", 0}, {"clinic", 0}, {"coccus", 0}, {"coel", 0}, {"coele", 0},
-    {"colous", 0}, {"cracy", 0}, {"crat", 0}, {"cratic", 0}, {"cratical", 0}, {"cy", 0}, {"cyte", 0}, {"dale", 0}, {"derm", 0}, {"derma", 0},
-    {"dermatous", 0}, {"dom", 0}, {"drome", 0}, {"dromous", 0}, {"eae", 0}, {"eaux", 0}, {"ectomy", 0}, {"ed", 0}, {"ee", 0}, {"eer", 0},
-    {"ein", 0}, {"eme", 0}, {"emia", 0}, {"en", 0}, {"ence", 0}, {"enchyma", 0}, {"ency", 0}, {"ene", 0}, {"ent", 0}, {"eous", 0}, {"er", 0},
+    {"cracy", 0}, {"crat", 0}, {"cratic", 0}, {"cratical", 0}, {"cy", 0}, {"cyte", 0}, {"dale", 0}, {"derm", 0}, {"derma", 0},
+    {"dom", 0}, {"drome", 0}, {"eae", 0}, {"eaux", 0}, {"ectomy", 0}, {"ed", 0}, {"ee", 0}, {"eer", 0},
+    {"ein", 0}, {"eme", 0}, {"emia", 0}, {"en", 0}, {"ence", 0}, {"enchyma", 0}, {"ency", 0}, {"ene", 0}, {"ent", 0}, {"er", 0},
     {"ergic", 0}, {"ergy", 0}, {"es", 0}, {"escence", 0}, {"escent", 0}, {"ese", 0}, {"esque", 0}, {"ess", 0}, {"est", 0}, {"et", 0},
-    {"eth", 0}, {"etic", 0}, {"ette", 0}, {"ey", 0}, {"facient", 0}, {"faction", 0}, {"fer", 0}, {"ferous", 0}, {"fic", 0}, {"fication", 0},
-    {"fid", 0}, {"florous", 0}, {"fold", 0}, {"foliate", 0}, {"foliolate", 0}, {"form", 0}, {"fuge", 0}, {"ful", 0}, {"fy", 0}, {"gamous", 0},
-    {"gamy", 0}, {"gate", 0}, {"gen", 0}, {"gene", 0}, {"genesis", 0}, {"genetic", 0}, {"genic", 0}, {"genous", 0}, {"geny", 0}, {"gnathous", 0},
-    {"gon", 0}, {"gony", 0}, {"gram", 0}, {"graph", 0}, {"grapher", 0}, {"graphy", 0}, {"gyne", 0}, {"gynous", 0}, {"gyny", 0}, {"hood", 0},
+    {"eth", 0}, {"etic", 0}, {"ette", 0}, {"ey", 0}, {"facient", 0}, {"faction", 0}, {"fer", 0}, {"fic", 0}, {"fication", 0},
+    {"fid", 0}, {"fold", 0}, {"foliate", 0}, {"foliolate", 0}, {"form", 0}, {"fuge", 0}, {"ful", 0}, {"fy", 0},
+    {"gamy", 0}, {"gate", 0}, {"gen", 0}, {"gene", 0}, {"genesis", 0}, {"genetic", 0}, {"genic", 0}, {"geny", 0},
+    {"gon", 0}, {"gony", 0}, {"gram", 0}, {"graph", 0}, {"grapher", 0}, {"graphy", 0}, {"gyne", 0}, {"gyny", 0}, {"hood", 0},
     {"ia", 0}, {"ial", 0}, {"ian", 0}, {"iana", 0}, {"iasis", 0}, {"iatric", 0}, {"iatrics", 0}, {"iatry", 0}, {"ibility", 0}, {"ible", 0},
     {"ic", 0}, {"icide", 0}, {"ician", 0}, {"ics", 0}, {"id", 0}, {"idae", 0}, {"ide", 0}, {"ie", 0}, {"ify", 0}, {"ile", 0}, {"in", 0},
-    {"ina", 0}, {"inae", 0}, {"ine", 0}, {"ineae", 0}, {"ing", 0}, {"ini", 0}, {"ion", 0}, {"ious", 0}, {"isation", 0}, {"ise", 0}, {"ish", 0},
-    {"ism", 0}, {"ist", 0}, {"istic", 0}, {"istical", 0}, {"istically", 0}, {"ite", 0}, {"itious", 0}, {"itis", 0}, {"ity", 0}, {"ium", 0},
+    {"ina", 0}, {"inae", 0}, {"ine", 0}, {"ineae", 0}, {"ing", 0}, {"ini", 0}, {"ion", 0}, {"isation", 0}, {"ise", 0}, {"ish", 0},
+    {"ism", 0}, {"ist", 0}, {"istic", 0}, {"istical", 0}, {"istically", 0}, {"ite", 0}, {"itis", 0}, {"ity", 0}, {"ium", 0},
     {"ive", 0}, {"ix", 0}, {"ization", 0}, {"ize", 0}, {"kin", 0}, {"kinesis", 0}, {"kins", 0}, {"latry", 0}, {"le", 0}, {"lepry", 0}, {"less", 0},
     {"let", 0}, {"like", 0}, {"ling", 0}, {"lite", 0}, {"lith", 0}, {"lithic", 0}, {"log", 0}, {"logue", 0}, {"logic", 0}, {"logical", 0},
     {"logist", 0}, {"logy", 0}, {"ly", 0}, {"lyse", 0}, {"lysis", 0}, {"lyte", 0}, {"lytic", 0}, {"lyze", 0}, {"mancy", 0}, {"mania", 0},
-    {"meister", 0}, {"ment", 0}, {"mer", 0}, {"mere", 0}, {"merous", 0}, {"meter", 0}, {"metric", 0}, {"metrics", 0}, {"metry", 0}, {"mire", 0},
-    {"mo", 0}, {"morph", 0}, {"morphic", 0}, {"morphism", 0}, {"morphous", 0}, {"most", 0}, {"mycete", 0}, {"mycetes", 0}, {"mycetidae", 0},
+    {"meister", 0}, {"ment", 0}, {"mer", 0}, {"mere", 0}, {"meter", 0}, {"metric", 0}, {"metrics", 0}, {"metry", 0}, {"mire", 0},
+    {"mo", 0}, {"morph", 0}, {"morphic", 0}, {"morphism", 0}, {"most", 0}, {"mycete", 0}, {"mycetes", 0}, {"mycetidae", 0},
     {"mycin", 0}, {"mycota", 0}, {"mycotina", 0}, {"n't", 0}, {"nasty", 0}, {"ness", 0}, {"nik", 0}, {"nomy", 0}, {"nomics", 0}, {"o", 0},
     {"ode", 0}, {"odon", 0}, {"odont", 0}, {"odontia", 0}, {"oholic", 0}, {"oic", 0}, {"oid", 0}, {"oidea", 0}, {"oideae", 0}, {"ol", 0}, {"ole", 0},
     {"oma", 0}, {"ome", 0}, {"omics", 0}, {"on", 0}, {"one", 0}, {"ont", 0}, {"onym", 0}, {"onymy", 0}, {"opia", 0}, {"opsida", 0}, {"opsis", 0},
-    {"opsy", 0}, {"or", 0}, {"orama", 0}, {"ory", 0}, {"ose", 0}, {"osis", 0}, {"otic", 0}, {"otomy", 0}, {"ous", 0}, {"para", 0}, {"parous", 0},
-    {"path", 0}, {"pathy", 0}, {"ped", 0}, {"pede", 0}, {"penia", 0}, {"petal", 0}, {"phage", 0}, {"phagia", 0}, {"phagous", 0}, {"phagy", 0},
-    {"phane", 0}, {"phasia", 0}, {"phil", 0}, {"phile", 0}, {"philia", 0}, {"philiac", 0}, {"philic", 0}, {"philous", 0}, {"phobe", 0}, {"phobia", 0},
-    {"phobic", 0}, {"phone", 0}, {"phony", 0}, {"phore", 0}, {"phoresis", 0}, {"phorous", 0}, {"phrenia", 0}, {"phyll", 0}, {"phyllous", 0},
-    {"phyceae", 0}, {"phycidae", 0}, {"phyta", 0}, {"phyte", 0}, {"phytina", 0}, {"plasia", 0}, {"plasm", 0}, {"plast", 0}, {"plastic", 0},
-    {"plasty", 0}, {"plegia", 0}, {"plex", 0}, {"ploid", 0}, {"pod", 0}, {"pode", 0}, {"podous", 0}, {"poieses", 0}, {"poietic", 0}, {"pter", 0},
+    {"opsy", 0}, {"or", 0}, {"orama", 0}, {"ory", 0}, {"ose", 0}, {"osis", 0}, {"otic", 0}, {"otomy", 0}, {"ous", 0}, {"para", 0},
+    {"path", 0}, {"pathy", 0}, {"ped", 0}, {"pede", 0}, {"penia", 0}, {"petal", 0}, {"phage", 0}, {"phagia", 0}, {"phagy", 0},
+    {"phane", 0}, {"phasia", 0}, {"phil", 0}, {"phile", 0}, {"philia", 0}, {"philiac", 0}, {"philic", 0}, {"phobe", 0}, {"phobia", 0},
+    {"phobic", 0}, {"phone", 0}, {"phony", 0}, {"phore", 0}, {"phoresis", 0}, {"phrenia", 0}, {"phyll", 0},
+    {"phyceae", 0}, {"phycidae", 0}, {"phyta", 0}, {"phyte", 0}, {"phytina", 0}, {"plasia", 0}, {"plasm", 0}, {"plast", 0},
+    {"plasty", 0}, {"plegia", 0}, {"plex", 0}, {"ploid", 0}, {"pod", 0}, {"pode", 0}, {"poieses", 0}, {"poietic", 0}, {"pter", 0},
     {"punk", 0}, {"rrhea", 0}, {"ric", 0}, {"ry", 0}, {"s", 0}, {"scape", 0}, {"scope", 0}, {"scopy", 0}, {"scribe", 0}, {"script", 0}, {"sect", 0},
-    {"sepalous", 0}, {"ship", 0}, {"some", 0}, {"speak", 0}, {"sperm", 0}, {"sphere", 0}, {"sporous", 0}, {"st", 0}, {"stasis", 0}, {"stat", 0},
+    {"sepalous", 0}, {"ship", 0}, {"some", 0}, {"speak", 0}, {"sperm", 0}, {"sphere", 0}, {"st", 0}, {"stasis", 0}, {"stat", 0},
     {"ster", 0}, {"stome", 0}, {"stomy", 0}, {"taxis", 0}, {"taxy", 0}, {"tend", 0}, {"th", 0}, {"therm", 0}, {"thermal", 0}, {"thermic", 0},
-    {"thermy", 0}, {"thon", 0}, {"thymia", 0}, {"tion", 0}, {"tome", 0}, {"tomy", 0}, {"tonia", 0}, {"trichous", 0}, {"trix", 0}, {"tron", 0},
-    {"trophic", 0}, {"trophy", 0}, {"tropic", 0}, {"tropism", 0}, {"tropous", 0}, {"tropy", 0}, {"tude", 0}, {"ture", 0}, {"ty", 0}, {"ular", 0},
-    {"ule", 0}, {"ure", 0}, {"urgy", 0}, {"uria", 0}, {"uronic", 0}, {"urous", 0}, {"valent", 0}, {"virile", 0}, {"vorous", 0}, {"ward", 0},
-    {"wards", 0}, {"ware", 0}, {"ways", 0}, {"wear", 0}, {"wide", 0}, {"wise", 0}, {"worthy", 0}, {"xor", 0}, {"y", 0},
-    {"zilla", 0}, {"zoic", 0}, {"zoon", 0}, {"zygous", 0}, {"zyme", 0}
+    {"thermy", 0}, {"thon", 0}, {"thymia", 0}, {"tion", 0}, {"tome", 0}, {"tomy", 0}, {"tonia", 0}, {"trix", 0}, {"tron", 0},
+    {"trophic", 0}, {"trophy", 0}, {"tropic", 0}, {"tropism", 0}, {"tropy", 0}, {"tude", 0}, {"ture", 0}, {"ty", 0}, {"ular", 0},
+    {"ule", 0}, {"ure", 0}, {"urgy", 0}, {"uria", 0}, {"uronic", 0}, {"valent", 0}, {"virile", 0}, {"ward", 0},
+    {"wards", 0}, {"ware", 0}, {"ways", 0}, {"wear", 0}, {"wide", 0}, {"wise", 0}, {"worthy", 0}, {"xor", 0}, {"y", 0}, {"zyme", 0}
 };
 
 WordSMap EnglishSuffixes;
+
+char letterMap[127]; // Help distinguish vowels, consonants, etc.
+#define isVowel(ch) (letterMap[(uint)(ch)])
 
 bool XlaterENGLISH::loadLanguageData(string dataFilename){
     string reversedKey;
@@ -255,6 +257,10 @@ bool XlaterENGLISH::loadLanguageData(string dataFilename){
         WordSPtr wsp=WordSPtr(new WordS(S->first, 0, 0, this));
         wordLibrary.insert(pair<wordKey, WordSPtr>(S->first+"%U", wsp));
     }
+
+    memset(&letterMap, 0, 127);
+    letterMap['A']=1; letterMap['a']=1; letterMap['E']=1; letterMap['e']=1; letterMap['I']=1; letterMap['i']=1;
+    letterMap['O']=1; letterMap['o']=1; letterMap['U']=1; letterMap['u']=1; letterMap['Y']=1; letterMap['y']=1;
     return 0;
 }
 
@@ -316,7 +322,7 @@ int examineMatchingStatus(string wrdToParse, string trial){
 
 void lookUpAffixesFromCharPos(WordSMap* wordLib, const string &wrdToParse, const string &scopeID, WordList *resultList){
     uint matchLen, searchLen=1, scopeScore, crntWrdLen=wrdToParse.length(); WordSPtr crntChoice=0;
-cout<<"FIND: "<<wrdToParse<<"   \n";
+cout<<"  TRY: "<<wrdToParse<<"   \n";
     while(searchLen<=crntWrdLen){
         scopeScore=0;
         string partKey=""+wrdToParse.substr(0,searchLen);
@@ -342,6 +348,7 @@ cout<<"FIND: "<<wrdToParse<<"   \n";
 }
 
 int parseWord(WordSMap *wordLib, const string &wrdToParse, const string &scopeID, vector<WordList> *resultList){
+    cout<<"FIND: "<<wrdToParse<<"   \n";
     int furthestPos=0;
     int wrdLen=wrdToParse.length();
     lookUpAffixesFromCharPos(wordLib, wrdToParse, scopeID, &((*resultList)[0]));
@@ -357,6 +364,14 @@ int parseWord(WordSMap *wordLib, const string &wrdToParse, const string &scopeID
     return furthestPos;
 }
 
+#define tryParse(str) {        \
+    if(!foundPath){            \
+        modToParse=(str); modLen=modToParse.length();                             \
+        for(sPos=0; sPos<modLen; ++sPos) alts[sPos].clear();                      \
+        farPos=parseWord(&wordLibrary, modToParse, scopeID, &alts);               \
+        if(farPos==modLen) foundPath=true;                                        \
+    } }
+
 void XlaterENGLISH::findDefinitions(WordSPtr words){
     UnicodeString txt=""; // UErrorCode err=U_ZERO_ERROR; int32_t Result=0;
     UnicodeString ChainText; tagChainToString(words, ChainText);
@@ -364,7 +379,7 @@ void XlaterENGLISH::findDefinitions(WordSPtr words){
     string scopeID=words->key.substr(words->key.find('%')+1);
     for(WordListItr crntWrd=words->words.begin(); crntWrd!=words->words.end();){
         WordListItr tmpWrd;
-        int numWordsInCompound=0, numWordsInChosen=0, scopeScore=0;; crntChoice=0;
+        int numWordsInCompound=0, numWordsInChosen=0, scopeScore=0; crntChoice=0;
         string trial="", wordKey="";
         for(tmpWrd=crntWrd; tmpWrd!=words->words.end() && numWordsInCompound++ < maxWordsInCompound; tmpWrd++){
             if(numWordsInCompound>1) wordKey.append("-");
@@ -405,16 +420,42 @@ void XlaterENGLISH::findDefinitions(WordSPtr words){
             // We should handle alternate spellings such as UK/US, before a suffix, defined "runs" but uses "running".
                 string wrdToParse=(*crntWrd)->baseForm;
                 uint wrdLen=wrdToParse.length();
-                vector<WordList> alts(wrdLen,WordList());
+                vector<WordList> alts(wrdLen+5,WordList()); // The 5 is to have room for modified spellings.
                 uint furthestPos=parseWord(&wordLibrary, wrdToParse, scopeID, &alts);
-                cout << "FurthestPos:" << furthestPos<<"  at Char:"<< wrdToParse[furthestPos] <<"\n";
+                cout <<"wrdLen:"<<wrdLen<<"  " << "FurthestPos:" << furthestPos<<"  at Char:"<< wrdToParse[furthestPos] <<"\n";
                 if(furthestPos<wrdLen){ // If we didn't find a path thru wrdToParse try other spellings:
                     // TODO: verify more rigerously that there are no important exceptions to this logic:
                     string reversedWrd=string(wrdToParse.rbegin(), wrdToParse.rend());
                     vector<WordList> backAlts(reversedWrd.length(),WordList());
-                    furthestPos=parseWord(&EnglishSuffixes, reversedWrd, scopeID, &backAlts);
-                    cout << "FurthestPos2:" << furthestPos<<"  at Char:"<< reversedWrd[furthestPos] <<"\n";
-                    if(furthestPos>0 && furthestPos<wrdLen){ // Try modified spellings
+                    uint furthestRevPos=parseWord(&EnglishSuffixes, reversedWrd, scopeID, &backAlts);
+
+                    // Try common modified spellings
+                    if(furthestRevPos>0 && furthestRevPos<wrdLen){
+                        char suf1Char=reversedWrd[furthestRevPos-1];
+                        string suf2Char=""; if(furthestRevPos>1) {suf2Char+=suf1Char;suf2Char+=reversedWrd[furthestRevPos-2];}
+                        char pre1Char=reversedWrd[furthestRevPos];
+                        string pre2Char=""; if(furthestRevPos<(wrdLen-1)) {pre2Char+=reversedWrd[furthestRevPos+1]; pre2Char+=pre1Char;}
+                        uint brkPos=wrdLen-furthestRevPos; string prePart=wrdToParse.substr(0,brkPos); string postPart=wrdToParse.substr(brkPos);
+                        string modToParse; uint foundPath=0, sPos, modLen, farPos=0; // These are used in tryParse macro.
+                        if(isVowel(suf1Char)){
+                            if(!isVowel(pre1Char)) {tryParse(prePart+"e"+postPart);}
+                            if(pre1Char=='v' && suf2Char=="es"){
+                                tryParse(prePart.substr(0,brkPos-1)+"f"+postPart);
+                                tryParse(prePart.substr(0,brkPos-1)+"fe"+postPart);
+                            }
+                            if(pre2Char=="ll" && suf2Char=="ed"){tryParse(prePart.substr(0,brkPos-1)+postPart);}
+                            if(pre1Char=='y' && suf2Char=="in" && furthestRevPos>2 && reversedWrd[furthestRevPos-3]=='g'){
+                                tryParse(prePart.substr(0,brkPos-1)+"ie"+postPart);
+                            }
+                        } else {
+                            if(pre2Char!="" && !isVowel(pre1Char) && pre2Char[0]==pre2Char[1]){tryParse(prePart.substr(0,brkPos-1)+postPart);}
+                            if(suf2Char=="ly"){
+                                if(!isVowel(pre1Char)){tryParse(prePart+"le"+postPart); cout<<"LY->LE\n";}
+                                if(pre1Char=='l'){tryParse(prePart+"l"+postPart);}
+                            }
+                        }
+                        if(pre1Char=='i'){tryParse(prePart.substr(0,brkPos-1)+"y"+postPart);}
+                        if(foundPath) cout<<"FOUND-PATH\n"; else cout<<"No path\n";
                     }
                 }
             }
@@ -422,6 +463,7 @@ void XlaterENGLISH::findDefinitions(WordSPtr words){
         if(crntChoice==0) {cout<< ((string)"\n\nMESG: What does "+(*crntWrd)->norm+" mean?\n"); crntWrd++;}
         else crntWrd+=numWordsInChosen;
     }
+    words->definition=crntChoice->definition;
 }
 
 void XlaterENGLISH::stitchAndDereference(WordSPtr text){

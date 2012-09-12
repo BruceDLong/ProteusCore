@@ -285,7 +285,6 @@ void agent::deepCopyPure(pureInfon* from, pureInfon* to, int flags, infon* tagCt
 void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags, infon* tagCtxt){
     UInt fm=from->wFlag&mFindMode; infon* tmp;
     to->wFlag=(from->wFlag&0xffffffff);
-    to->tag2Ptr=from->tag2Ptr;
     if(to->type==0) {  // TODO: We should merge types, not just copy over.
         if(from->type){ //cout<<"TAG:"<<from->type->tag<<"--"<<tagCtxt<<"\n";
             if(tagCtxt) if(!tagCtxt->findTag(from->type)) throw "Nested tag not found when copying.";
@@ -485,7 +484,7 @@ inline infon* getMasterList(infon* item){
 }
 
 int agent::checkTypeMatch(WordSPtr LType, WordSPtr RType){
-    return LType->key==RType->key;
+    return LType->norm==RType->norm;
 }
 
 int agent::compute(infon* i){
@@ -687,7 +686,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                 if(Qi->whatNext!=DoNextBounded) noNewContent=false;
                 if (item->wFlag&mAsProxie) {item=item->value.proxie;}
                 else if(wrkNode->idFlags&c1Right){
-                    cout<<"ciRight\n";
+                    cout<<"c1Right\n";
                     SetBits(ci->value.flags, 0xf, item->value.flags);
                     ci->size=item->size;
                    // if((ci->wFlag&mFindMode)>=iGetLast) {

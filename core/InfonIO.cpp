@@ -346,7 +346,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
 
 infon* QParser::ReadInfon(string &scopeID, int noIDs){
     char op=0; UInt size=0; pureInfon iSize, iVal; infon *s1=0,*s2=0; UInt wFlag=0,fs=0,fv=0;
-    WordSPtr tags=0; const char* cTok, *eTok, *cTok2; WordSMap* tag2Ptr=0; /*int textEnd=0; int textStart=textParsed.size();*/
+    WordSPtr tags=0; const char* cTok, *eTok, *cTok2; /*int textEnd=0; int textStart=textParsed.size();*/
     if(nxtTok("@")){wFlag|=toExec;}
     if(nxtTok("#")){wFlag|=asDesc;}
     if(nxtTok("!")){wFlag|=asNot;}
@@ -388,7 +388,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
             }
         }
     }
-    infon* i=new infon(wFlag, &iSize,&iVal,0,s1,s2,0,tag2Ptr); i->wSize=size; i->type=tags;
+    infon* i=new infon(wFlag, &iSize,&iVal,0,s1,s2,0); i->wSize=size; i->type=tags;
     if(ValueIsConcat(i) && (*i->size.dataHead)==1){infon* ret=i->value.listHead; delete(i); ret->top=ret->next=ret->prev=0; return ret;} // BUT we lose i's idents and some flags (desc, ...)
     if (i->size.listHead) i->size.listHead->top=i;
     if (i->value.listHead)i->value.listHead->top=i;

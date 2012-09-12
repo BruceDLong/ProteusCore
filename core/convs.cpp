@@ -14,8 +14,8 @@
 
 using namespace std;
 
-infon::infon(UInt wf, pureInfon* s, pureInfon* v, infNode*ID,infon*s1,infon*s2,infon*n,WordSMap* tagMap):
-        wFlag(wf), wSize(0), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID), tag2Ptr(tagMap) {
+infon::infon(UInt wf, pureInfon* s, pureInfon* v, infNode*ID,infon*s1,infon*s2,infon*n):
+        wFlag(wf), wSize(0), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {
     prev=0; top=0; top2=0; type=0; pos=0;
     if(s) size=*s;
     if(v) value=*v;
@@ -65,9 +65,7 @@ bool infon::getStng(string* str) {
 
 infon* infon::findTag(WordSPtr word){
     if(word->definition) return word->definition;
-    infon* def=word->xLater->tags2Proteus(word);
-    if(def) return def;
-    return 0;
+    return word->xLater->tags2Proteus(word);
 }
 
 int infonSizeCmp(infon* left, infon* right) { // -1: L<R,  0: L=R, 1: L>R. Infons must have fLiteral, numeric sizes

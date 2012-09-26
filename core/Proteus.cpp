@@ -595,7 +595,7 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
                 } else{
                     normalize(CI->spec1, cn->firstID);
                     if( ! CI->spec1->isntLast ()) CI->wFlag|=(isBottom+isLast);
-                    if(InfHasAlts(CI->spec1)) {  // migrate alternates from spec1 to CI... Later, build this into LastTerm.
+                    if(InfHasAlts(CI->spec1)) {  // migrate alternates from spec1 to CI... TODO: Later, build this into LastTerm.
                         infNode *wrkNode=CI->spec1->wrkList; infon* item=0;
                         if(wrkNode)do{
                             wrkNode=wrkNode->next; item=wrkNode->item;
@@ -686,12 +686,8 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                 if(Qi->whatNext!=DoNextBounded) noNewContent=false;
                 if (item->wFlag&mAsProxie) {item=item->value.proxie;}
                 else if(wrkNode->idFlags&c1Right){
-                    cout<<"c1Right\n";
-                    SetBits(ci->value.flags, 0xf, item->value.flags);
-                    ci->size=item->size;
-                   // if((ci->wFlag&mFindMode)>=iGetLast) {
-                   //     item=item->spec1;}
-                   // else throw "Tag wasn't a reference ";
+                    if(item->spec1){item=item->spec1;}
+                    else throw "Tag wasn't a reference ";
                 }
             }
             UInt CIsType=InfsType(ci), ItemsType=InfsType(item);

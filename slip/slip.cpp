@@ -496,9 +496,9 @@ infon* NormalizeAndPresent(infon* i, infon* firstID=0){
             theAgent.fetch_NodesNormalForm(cn);
 
             if(CI->type){
-                if(CI->type->tag == "portal"){MSGl("PORTAL");}
-                else if(CI->type->tag == "frame"){MSGl("FRAME");}
-                else {MSGl(CI->type->tag <<" ["<<CI<<"]"); }
+                if(CI->type->norm == "portal"){MSGl("PORTAL");}
+                else if(CI->type->norm == "frame"){MSGl("FRAME");}
+                else {MSGl(CI->type->norm <<" ["<<CI<<"]"); }
 
             }else {MSG("*");}
             //wait?
@@ -554,6 +554,7 @@ void InitializePortalSystem(int argc, char** argv){
   //UNDO:  SDL_EnableUNICODE(1);
     atexit(cleanup);
 
+    populateLangExtentions();
     if(theAgent.loadInfon(worldFile, &theAgent.world)) exit(1);
     User* portalUser=new User;
     if(loadUserRecord(portalUser, username, password)) {MSGl("\nUser could not be authenticated. Exiting..."); exit(5);}

@@ -353,7 +353,9 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
     if(nxtTok("?")){iSize.flags=fUnknown; iVal.flags=fUnknown; wFlag=iNone;}
     else if( nxtTok("%")){
         iVal.flags|=fUnknown;
-        if (nxtTok("cTok")){
+        if (nxtTok("123")){
+            wFlag|=iTagUse; if(!(tags=ReadTagChain(&locale, 0, scopeID))) throw "Null Words found after %123. Shouldn't happen";
+        }else if (nxtTok("cTok")){
             if      (strcmp(buf,"W")==0){wFlag|=iToWorld;}
             else if (strcmp(buf,"C")==0){wFlag|=iToCtxt;}
             else if (strcmp(buf,"A")==0){wFlag|=iToArgs;}
@@ -428,7 +430,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
         if((toRef->type==0) && !(idFlags&mLooseType)) toRef->type=toSet->type;
         insertID(&toSet->wrkList, toRef, idFlags);
     }
-    if(!(noIDs&2)){  // Load function "calls"
+    if(!(noIDs&2)){  // Load function "calls". In addOne<:5, i->spec2 is the 5.
         if(nxtTok(":>" )) {infon* j=ReadInfon(scopeID, 1); j->wFlag|=sUseAsFirst; j->spec2=i; i=j; chk4HardFunc(i);}
         else if(nxtTok("<:")) {i->wFlag|=sUseAsFirst;
             i->spec2=ReadInfon(scopeID, 1);  chk4HardFunc(i);}

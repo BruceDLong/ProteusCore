@@ -212,6 +212,7 @@ struct infon {
     bool getReal(double* d);
     bool getStng(string* str);
     infon* findTag(WordSPtr tag);
+
     UInt wFlag;
     uint64_t pos;
     UInt wSize; // get rid if this. disallow strings and lists in "size"

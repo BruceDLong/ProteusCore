@@ -5,8 +5,8 @@ There are two projects here: the Proteus language engine (core) and the Slipstre
 
 To download or unpack important dependancies into ./deps then install them in ./builds run:
 
-   cd SlipstreamCore
-   export SDL_CONFIG=</path/to/SlipstreamCore>/builds/libs/SDL/1.3/bin/sdl2-config
+   cd ProteusCore
+   export SDL_CONFIG=</path/to/ProteusCore>/builds/libs/SDL/1.3/bin/sdl2-config
    cmake .
    make
 
@@ -22,7 +22,7 @@ NOTE: This script (./CMakeLists.txt) needs some love. There are 3 or 4 places wh
 BUILDING amd RUNNING clip -- The Proteus engine and CLI for Proteus
 #######################################################
 
-cd ./SlipstreamCore/core
+cd ./ProteusCore/core
 cmake .
 make
 ./clip

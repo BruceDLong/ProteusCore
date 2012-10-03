@@ -136,7 +136,7 @@ struct WordS {  // Word System
     int offsetInSource;  // position of this word in the sourceStr.
 
     WordList words;
-    WordSPtr *item, *itemsConstraints, *metaConstraints;
+    WordSPtr item, itemsConstraints, metaConstraints;
 
     int wordFlags;      // See Word Flags enum for bit meanings
     WordClass wordClass; // Type of function word

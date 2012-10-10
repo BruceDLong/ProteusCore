@@ -7,11 +7,11 @@
     You should have received a copy of the GNU General Public License along with the Proteus Engine.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-const int maxWordsInCompound=10;
-
 #include "XlaterENGLISH.h"
 #include <unicode/rbnf.h>
 
+
+const uint maxWordsInCompound=10;
 UErrorCode uErr=U_ZERO_ERROR;
 const icu::Normalizer2 *tagNormalizer=Normalizer2::getNFKCCasefoldInstance(uErr);
 
@@ -84,7 +84,7 @@ WordSPtr XlaterENGLISH::proteus2Tags(infon* proteus){  // Converts an infon to a
 typedef map<string, int> WordMap;
 typedef WordMap::iterator WordMapIter;
 
-enum funcWordFlags {wcNumberStarter=8, wcVerbHelper=16, wcPronoun=32};
+enum funcWordFlags {wcContentWord=0, wcDeterminer=1, wcQuantifier=2, wcNumberStarter=8, wcVerbHelper=16, wcPronoun=32, wcPreposition=64, wcConjunction=128, wcNegotiator=256};
 WordMap functionWords = {   // int is a WordClass
     // Definite determiners
         {"the", 1}, {"this", 1}, {"that", 1}, {"these", 1}, {"those", 1},   // These and Those are plural of this and that
@@ -278,9 +278,6 @@ WordMap apostrophics = {
     {"'00s", 0}, {"'20s", 0}, {"'30s", 0}, {"'40s", 0}, {"'50s", 0}, {"'60s", 0}, {"'70s", 0}, {"'80s", 0}, {"'90s", 0}
 };
 
-typedef deque<WordSPtr> WordList;
-typedef WordList::iterator WordListItr;
-
 bool tagIsMarkedPossessive(WordSPtr &tag){
     int tagLen=tag->baseForm.length();
     if(tagLen>2){
@@ -350,7 +347,10 @@ cout<<"  TRY: "<<wrdToParse<<"   \n";
     }
 }
 
-int parseWord(WordSMap *wordLib, const string &wrdToParse, const string &scopeID, vector<WordList> *resultList){
+typedef vector<WordList> wordListVec;
+typedef wordListVec::iterator wordListVecItr;
+
+int parseWord(WordSMap *wordLib, const string &wrdToParse, const string &scopeID, wordListVec *resultList){
     cout<<"\nFIND: "<<wrdToParse<<"   \n";
     int furthestPos=0;
     int wrdLen=wrdToParse.length();
@@ -380,10 +380,11 @@ void XlaterENGLISH::findDefinitions(WordSPtr words){
     UnicodeString txt=""; // UErrorCode err=U_ZERO_ERROR; int32_t Result=0;
     UnicodeString ChainText; tagChainToString(words, ChainText);
     WordSPtr crntChoice=0;
+    WordListItr WLi;
     string scopeID=words->key.substr(words->key.find('%')+1);
     for(WordListItr crntWrd=words->words.begin(); crntWrd!=words->words.end();){
         WordListItr tmpWrd;
-        int numWordsInCompound=0, numWordsInChosen=0, scopeScore=0; crntChoice=0;
+        uint numWordsInCompound=0, numWordsInChosen=0, scopeScore=0; crntChoice=0;
         string trial="", wordKey="";
         for(tmpWrd=crntWrd; tmpWrd!=words->words.end() && numWordsInCompound++ < maxWordsInCompound; tmpWrd++){
             if(numWordsInCompound>1) wordKey.append("-");
@@ -397,7 +398,7 @@ void XlaterENGLISH::findDefinitions(WordSPtr words){
             while(trial.substr(0,keyLen) == wordKey){
                 stopSearch=false;
                 if(trial[keyLen]=='%'){cout << "\tMATCH!\n";
-                    int newScopeScore=calcScopeScore(scopeID, trial.substr(keyLen+1));
+                    uint newScopeScore=calcScopeScore(scopeID, trial.substr(keyLen+1));
                     if(newScopeScore > scopeScore) {
                         scopeScore=newScopeScore;
                         crntChoice=trialItr->second;
@@ -418,25 +419,32 @@ void XlaterENGLISH::findDefinitions(WordSPtr words){
                     // load number
                     // crntChoice=XXX;
                     // numWordsInChosen=YYY;
-                }// else if(wordClass==wcPronoun){}
+                } else if(wordClass==wcDeterminer){ (*crntWrd)->wordClass=cDeterminer;
+                } else if(wordClass==wcPronoun)   { (*crntWrd)->wordClass=cPronoun;
+                } else if(wordClass==wcQuantifier){ (*crntWrd)->wordClass=cDeterminer;
+                } else if(wordClass==wcVerbHelper){ (*crntWrd)->wordClass=cVerbHelper;
+                } else if(wordClass==wcPreposition){ (*crntWrd)->wordClass=cPreposition;
+                } else if(wordClass==wcConjunction){ (*crntWrd)->wordClass=cConjunction;
+                } else if(wordClass==wcNegotiator){} (*crntWrd)->wordClass=cNegotiator;
             }else { // Try parsing inside the word for prefixes, suffixes, etc.
             // Here we look for possessives, plurals, verb-forms, affixes, NVAJF, Contracted verbs.
             // We should handle alternate spellings such as UK/US, before a suffix, defined "runs" but uses "running".
                 string wrdToParse=(*crntWrd)->baseForm;
                 uint wrdLen=wrdToParse.length();
-                vector<WordList> alts(wrdLen+5,WordList()); // The 5 is to have room for modified spellings.
+                string modToParse; uint foundPath=0, sPos, modLen, farPos=0; // These are used in tryParse macro.
+                wordListVec alts(wrdLen+5,WordList()); // The 5 is to have room for modified spellings.
                 uint furthestPos=parseWord(&wordLibrary, wrdToParse, scopeID, &alts);
-
+cout<<"furthest:"<<furthestPos<<"  wrdLen:"<<wrdLen<<"\n";
                 if(furthestPos<wrdLen){ // If we didn't find a path thru wrdToParse try other spellings:
                     // TODO: verify more rigerously that there are no important exceptions to this logic:
                     string reversedWrd=string(wrdToParse.rbegin(), wrdToParse.rend());
-                    vector<WordList> backAlts(reversedWrd.length(),WordList());
+                    wordListVec backAlts(reversedWrd.length(),WordList());
                     parseWord(&EnglishSuffixes, reversedWrd, scopeID, &backAlts);
 
                     // Find potential word-suffix breaks:
                     for(uint bPos=0; bPos<wrdLen; ++bPos){
                         if(!backAlts[bPos].empty()) {
-                            for(WordListItr WLi=backAlts[bPos].begin(); WLi != backAlts[bPos].end(); ++WLi){
+                            for(WLi=backAlts[bPos].begin(); WLi != backAlts[bPos].end(); ++WLi){
                                 int newPos=bPos+(*WLi)->norm.length();
                                 reversedWrd[wrdLen-newPos]='*';
                             }
@@ -452,7 +460,7 @@ void XlaterENGLISH::findDefinitions(WordSPtr words){
                         string pre2Char=""; if(brkPos>1) {pre2Char+=wrdToParse[brkPos-2]; pre2Char+=pre1Char;}
                         string prePart=wrdToParse.substr(0,brkPos); string postPart=wrdToParse.substr(brkPos);
                         cout<<pre2Char<<", "<<pre1Char<<", "<<suf1Char<<", "<<suf2Char<<" ["<<prePart<<"-"<<postPart<<"]  ";
-                        string modToParse; uint foundPath=0, sPos, modLen, farPos=0; // These are used in tryParse macro.
+                        modLen=0; foundPath=0; farPos=0;
                         if(isVowel(suf1Char)){
                             if(pre1Char=='v' && suf2Char=="es"){
                                 tryParse(prePart.substr(0,brkPos-1)+"f"+postPart, "Wolves");   // Wolves -> Wolf
@@ -473,18 +481,124 @@ void XlaterENGLISH::findDefinitions(WordSPtr words){
                         if(pre1Char=='i'){tryParse(prePart.substr(0,brkPos-1)+"y"+postPart, "Pony");} // Ponies -> Pony
                         if(foundPath) cout<<"FOUND-PATH\n"; else cout<<"No path\n";
                     }
+                } else {modToParse=wrdToParse; modLen=wrdLen; foundPath=true;}
+                if(foundPath) {// Extract a path
+                    cout << "Extracting A Path: \n";
+                    uint curEnd=modLen;
+                    while(curEnd){
+                        for(uint chPos=0; chPos<curEnd; ++chPos){
+                            if(!alts[chPos].empty()) {
+                                for(WLi=alts[chPos].begin(); WLi != alts[chPos].end(); ++WLi){
+                                    if(chPos+(*WLi)->norm.length() == curEnd){
+                                        curEnd=chPos;
+                                        (*crntWrd)->words.push_front(*WLi);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    WordS &crntWord= *(*crntWrd);
+                    for(WLi=crntWord.words.begin(); WLi != crntWord.words.end(); ++WLi){cout <<(*WLi)->norm << "-";}
+                    string lastAffix=(*crntWord.words.back()).norm;
+                    if(lastAffix=="s" || lastAffix=="es"){crntWord.wordForm=form_S_ES;}
+                    else if(lastAffix=="ing"){crntWord.wordForm=form_ING;}
+                    else if(lastAffix=="ed"){crntWord.wordForm=form_ED;}
+
+                    else if(lastAffix=="est") {crntWord.wordDegree=dSuperlative;}
+                    else if(lastAffix=="er")  {crntWord.wordDegree=dComparative;}
+
+                    else if(lastAffix=="'ll"){} // -will
+                    else if(lastAffix=="'d"){}  // -had -would
+                    else if(lastAffix=="'ve"){}  // -have
+                    else if(lastAffix=="'re"){}  // -are
+                    else if(lastAffix=="'m"){}  // I'm
+                    else if(lastAffix=="'ll've"){} // -will have
+                    else if(lastAffix=="'d've"){}  // -had have -would have
+                    // NOW Construct definition infon
                 }
             }
         }
-        if(crntChoice==0) {cout<< ((string)"\n\nMESG: What does "+(*crntWrd)->norm+" mean?\n"); crntWrd++;}
-        else crntWrd+=numWordsInChosen;
+        if((*crntWrd)->wordClass <= cAdv){ // If this isn't a function word...
+            if(crntChoice==0) {words->wordFlags|=wfErrorInAChildWord; cout<< ((string)"\n\nMESG: What does "+(*crntWrd)->norm+" mean?\n"); crntWrd++;}
+            else {
+                if(numWordsInChosen>1){ // If more than one word was consumed, move them into a new parent.
+                    WordSPtr parent=WordSPtr(new WordS);
+                    parent->definition=crntChoice->definition;
+                    words->words.insert(crntWrd, parent);
+                    WordListItr wrd=crntWrd;
+                    for(uint i=0; i<numWordsInChosen; ++i){
+                        if(i>0) parent->norm+=" ";
+                        parent->norm+=(*wrd)->norm;
+                        parent->words.push_back(*wrd);
+                        wrd=words->words.erase(wrd);
+                    }
+                } else {(*crntWrd)->definition=crntChoice->definition; ++crntWrd;}
+            }
+        }
     }
-    words->definition=crntChoice->definition;
 }
 
 void XlaterENGLISH::stitchAndDereference(WordSPtr text){
+    text->definition=(*text->words.begin())->definition;
 }
 
 infon* XlaterENGLISH::infonate(WordSPtr text){
     return text->definition;
+}
+
+///////////////////////////////////////////////////////////
+//            E N G L I S H   P A R S E R                //
+///////////////////////////////////////////////////////////
+
+parseResult EnglishParser::ParseEnglish(ParserArgList){
+    parseResult result;
+    // if((result=pNegotiator(WordSystem, crntWrd, context)) != prNoMatch) {} else
+    if((result=pSentence(WordSystem, crntWrd, context)) != prNoMatch) {/* reduce(WordSystem); */}
+    else result = prNoMatch;
+    return result;
+}
+
+parseResult EnglishParser::pSentence(ParserArgList){
+    parseResult result;
+    // Check for "it BE" of Cleft Sentence (3)
+    // Check for "there BE" of "existential there" (2)
+    // Check for a verb-phrase start due to a postponed subject  (4)
+    // Check for adjunct / adverb / other clause (5)
+    if((result=pNounPhrase(WordSystem, crntWrd, context)) != prNoMatch) {}
+    else result = prNoMatch;
+    return result;
+    }
+
+parseResult EnglishParser::pNounPhrase(ParserArgList){
+    parseResult result;
+    if((result=pDeterminer(WordSystem, crntWrd, context)) != prNoMatch) {} else return result;
+
+    if((result=pSelectorSeq(WordSystem, crntWrd, context)) != prNoMatch) {}
+    else result = prNoMatch;
+    return result;
+    }
+
+parseResult EnglishParser::pSelectorConjunct(ParserArgList){
+    parseResult result;
+    if((result=pDeterminer(WordSystem, crntWrd, context)) != prNoMatch) {} else return result;
+
+    if((result=pSelectorSeq(WordSystem, crntWrd, context)) != prNoMatch) {}
+    else result = prNoMatch;
+    return result;
+    }
+
+parseResult EnglishParser::pDeterminer(ParserArgList){
+    parseResult result;
+  //  if((result=pDUMMY(WordSystem, crntWrd, context)) != prNoMatch) {}
+  //  else result = prNoMatch;
+    return result;
+}
+
+parseResult EnglishParser::pSelectorSeq(ParserArgList){
+    parseResult result;
+    // if((result=pNegotiator(WordSystem, crntWrd, context)) != prNoMatch) {} else
+ //   if((result=pSentence(WordSystem, crntWrd, context)) != prNoMatch) {/* reduce(WordSystem); */}
+ //   else result = prNoMatch;
+    return result;
 }

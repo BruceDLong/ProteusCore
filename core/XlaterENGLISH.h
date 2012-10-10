@@ -33,4 +33,21 @@ private:
     infon* infonate(WordSPtr tags);
 };
 
+
+/////////////////////////////////////
+
+enum parseResult {prNoMatch=0, prOddMatch, prMatch};
+
+#define ParserArgList WordSPtr WordSystem, WordSPtr crntWrd, infon* context
+
+class EnglishParser {
+    parseResult ParseEnglish    (ParserArgList);
+    parseResult pSentence       (ParserArgList);
+    parseResult pNounPhrase     (ParserArgList);
+    parseResult pSelectorConjunct   (ParserArgList);
+    parseResult pDeterminer         (ParserArgList);
+    parseResult pSelectorSeq        (ParserArgList);
+
+};
+
 #endif

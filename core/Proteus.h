@@ -9,6 +9,7 @@
 #define _Proteus
 
 #include <map>
+#include <list>
 #include <queue>
 #include <iostream>
 #include <string.h>
@@ -117,12 +118,14 @@ enum WordClass {cUnknown, cNoun, cVerb, cAdj, cAdv, cDeterminer, cVerbHelper, cP
 enum WordGender {gMasc, gFem, gNeut};
 enum WordDegree {dComparative, dSuperlative};  // more, most
 enum WordPositionStyle {sBeforeNoun, sAfterBoBo};
-enum WordFlags {wfIsPlural=1, wfIsMarkedPossessive=2, wfIsProperNoun=4, wfIsCountable=8, wfIsGradable=16, wfIsParticipialAdj=32, wfIsLyAdverb=64, wfWasHyphenated=128, wfAsPrefix=256, wfAsSuffix=512};
+enum WordForm {form_S_ES=1, form_ING, form_ED};
+enum WordFlags {wfIsPlural=1, wfIsMarkedPossessive=2, wfIsProperNoun=4, wfIsCountable=8, wfIsGradable=16, wfIsParticipialAdj=32, wfIsLyAdverb=64,
+        wfWasHyphenated=128, wfAsPrefix=256, wfAsSuffix=512, wfErrorInAChildWord=1024};
 
 struct WordS;
 typedef boost::intrusive_ptr<WordS> WordSPtr;
 
-typedef deque<WordSPtr> WordList;
+typedef list<WordSPtr> WordList;
 typedef WordList::iterator WordListItr;
 
 struct WordS {  // Word System
@@ -142,6 +145,7 @@ struct WordS {  // Word System
     WordClass wordClass; // Type of function word
     WordGender wordGender;
     WordDegree wordDegree;
+    WordForm wordForm;
     WordPositionStyle PositionStyle;
 
     WordS(string tag="", int flags=0, infon* def=0, xlater *Xlater=0){

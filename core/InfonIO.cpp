@@ -231,7 +231,7 @@ string sizeFromExp(int exp){
     return size;
 }
 
-void numberFromString(char* buf, pureInfon* pInf, int base=10){
+void numberFromString(char* buf, pureInfon* pInf, int base){
     // pInf should be empty when calling this to load it.
     char *pch=strchr(buf,'.');
     if(pch){
@@ -287,8 +287,15 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                 do{ // Here we process tag definitions
                     tag=ReadTagChain(&locale, &Xlater, scopeID); if (tag==0) throw "Null tag was read";
                     tagList.push_back(tag);
-                    //if(nxtTok(":")){if(nxtTok("cTok")) {icu::Locale tmp; tag->locale=(tmp.createCanonical(buf)).getBaseName();}}
-                    if(nxtTok(":")){if(nxtTok("<abc>")) tag->pronunciation=buf;}
+                    while(nxtTok("%")){ // read definition's attributes
+                        nxtTok("cTok");
+                        string attrTag=buf;
+                        chkStr(":");
+                        if(attrTag=="say") nxtTok("<abc>");
+                        else getbuf((peek()!='%' && peek()!='&' && peek()!='='));
+                        string attrText=buf;
+                        tag->attributes.insert(pair<string,string>(attrTag,attrText));
+                    }
                     if(nxtTok("=")){done=true;}
                     else if(!nxtTok("&")) throw "Expected &tag or tag locale, pronunciation or definition";
                 } while (!done);

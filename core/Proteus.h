@@ -114,13 +114,21 @@ enum DescriptionTypes {
     dtTrilation                 // Ryan gave Sara the shirt
 };
 
-enum WordClass {cUnknown, cNoun, cVerb, cAdj, cAdv, cDeterminer, cVerbHelper, cPronoun, cPreposition, cConjunction, cNumberOrd, cNumberCard, cNegotiator};
-enum WordGender {gMasc, gFem, gNeut};
+//enum WordClass {cUnknown, cNoun, cVerb, cAdj, cAdv, cDeterminer, cVerbHelper, cPronoun, cPreposition, cConjunction, cNumberOrd, cNumberCard, cNegotiator};
 enum WordDegree {dComparative, dSuperlative};  // more, most
 enum WordPositionStyle {sBeforeNoun, sAfterBoBo};
-enum WordForm {form_S_ES=1, form_ING, form_ED};
-enum WordFlags {wfIsPlural=1, wfIsMarkedPossessive=2, wfIsProperNoun=4, wfIsCountable=8, wfIsGradable=16, wfIsParticipialAdj=32, wfIsLyAdverb=64,
-        wfWasHyphenated=128, wfAsPrefix=256, wfAsSuffix=512, wfErrorInAChildWord=1024};
+enum WordFlags {
+        maskForm=0x03, wfForm_S_ES=1, wfForm_ING=2, wfForm_ED=3,
+        maskGndr=0x0c, wfGndrMasc=0x04, wfGndrFem=0x08, wfGndrNeut=0x0c,
+        maskPrsn=0x30, wf1stPrsn=0x10, wf2ndPrsn=0x20, wf3rdPrsn=0x30,
+        wfIsMarkedPossessive=0x40,
+        wfWasHyphenated=0x80, wfAsPrefix=0x100, wfAsSuffix=0x200, wfErrorInAChildWord=0x400,
+        wfHasVerbSense=0x800, wfHasNounSense=0x1000, wfHasAdjSense=0x2000, wfHasAdvSense=0x4000, wfHasDetSense=0x8000,
+        wfHasNumSense=0x10000, wfCanStartNum=0x20000, wfIsPronoun=0x40000, wfVerbHelper=0x80000,
+        wfIsPreposition=0x100000, wfIsConjunction=0x200000, wfIsNegotiator=0x400000,
+        wfIsPossessive=0x1000000, wfIsPlural=0x2000000, wfIsProperNoun=0x4000000, wfIsCountable=0x8000000,
+        wfIsGradable=0x10000000
+        };
 
 struct WordS;
 typedef boost::intrusive_ptr<WordS> WordSPtr;
@@ -129,8 +137,9 @@ typedef list<WordSPtr> WordList;
 typedef WordList::iterator WordListItr;
 
 struct WordS {  // Word System
-    string asRead, locale, pronunciation, norm, baseForm;
-    infon *definition, *tagCtxt;  // if sysType indicates this is number-like, definition should be cast to BigNum*.
+    string asRead, locale, norm, baseForm;
+    infon *definition, *tagCtxt;    // The definition and context for this word.
+    map<string, string> attributes; // Attributes including pronunciation, word properties and model/author history.
     xlater *xLater;
     wordKey key;
     WordSystemTypes sysType;
@@ -141,16 +150,14 @@ struct WordS {  // Word System
     WordList words;
     WordSPtr item, itemsConstraints, metaConstraints;
 
-    int wordFlags;      // See Word Flags enum for bit meanings
-    WordClass wordClass; // Type of function word
-    WordGender wordGender;
+    uint wordFlags;      // See Word Flags enum for bit meanings
+//    WordClass wordClass; // Type of word
     WordDegree wordDegree;
-    WordForm wordForm;
     WordPositionStyle PositionStyle;
 
     WordS(string tag="", int flags=0, infon* def=0, xlater *Xlater=0){
         asRead=tag; norm=tag; key="";
-        definition=def; tagCtxt=0; xLater=Xlater; wordFlags=flags; sysType=wstUnparsed; offsetInSource=0; wordClass=cUnknown;
+        definition=def; tagCtxt=0; xLater=Xlater; wordFlags=flags; sysType=wstUnparsed; offsetInSource=0;// wordClass=cUnknown;
         item = itemsConstraints = metaConstraints = 0;
     }
     ~WordS();
@@ -290,6 +297,7 @@ struct agent {
 // From InfonIO.cpp
 string printInfon(infon* i, infon* CI=0);
 string printPure (pureInfon* i, UInt wSize, infon* CI=0);
+void numberFromString(char* buf, pureInfon* pInf, int base=10);
 const int bufmax=1024*32;
 struct QParser{
     QParser(istream& _stream):stream(_stream){};

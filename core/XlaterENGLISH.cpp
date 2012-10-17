@@ -23,9 +23,23 @@ bool isCardinalOrOrdinal(char ch){
     return (isdigit(ch) || ch=='.'  || ch=='-' || ch=='s' || ch=='t' || ch=='h' || ch=='n' || ch=='r' || ch=='d');
 }
 
-bool validNumberSyntax(string* n){
-   // if(n[0]!='-' && !isdigit(n[0])) return 1;
-   return 0;
+WordSystemTypes validNumberSyntax(string &in){
+    WordSystemTypes ret=wstNumCard;
+    string n=in;
+    string tail="";
+    char ch=n[0];
+    int start=0, len=n.size();
+    if(ch=='-') {start=1;}
+    else if(!isdigit(ch)) return wstUnknown;
+    if(len-start >= 3) { // Check for st, th, nd, rd ending
+        tail=n.substr(len-3, 3);
+        if(strcmp(tail.c_str(), "1st") || strcmp(tail.c_str(), "2nd") || strcmp(tail.c_str(), "3rd") || tail.substr(len-2, 2)=="th") {len-=2; ret=wstNumOrd;}
+    }
+    for(int p=start; p<len; ++p){
+        ch=n[p];
+        if(!isdigit(ch) && ch!='.') return wstUnknown;
+    }
+    return ret;
 }
 
 void tagChainToString(WordSPtr tags, UnicodeString &strOut){
@@ -48,13 +62,24 @@ WordSPtr XlaterENGLISH::ReadLanguageWord(QParser *parser, icu::Locale &locale){ 
     tag->asRead=parser->buf; tag->locale=locale.getBaseName();
     if(isalpha(tok)){
         tagNormalizer->normalize(UnicodeString::fromUTF8(tag->asRead), uErr).toUTF8String(tag->norm);
-        if(tagIsBad(tag->norm, tag->locale.c_str())) throw "Illegal tag being defined";
+        if(tagIsBad(tag->norm, tag->locale.c_str())) throw "Illegal tag format";
         if(tag->norm.at(0)=='-'){tag->wordFlags|=wfAsSuffix; tag->norm=tag->norm.substr(1);}
         if(tag->norm.at(tag->norm.length()-1)=='-'){tag->wordFlags|=wfAsPrefix; tag->norm=tag->norm.substr(0,tag->norm.length()-1);}
         if(tag->norm.find('-')!=string::npos) {tag->wordFlags|=wfWasHyphenated;}
-    } else {
-        tag->sysType=wstNumCard;
-        if(!validNumberSyntax(&tag->asRead)) throw "Invalid number syntax";
+    } else { exit(1);
+        WordSystemTypes sysType=validNumberSyntax(tag->asRead);
+        if(sysType==wstUnknown) throw "Invalid number syntax";
+        tag->sysType=sysType;
+        // Create number as model of this:
+        UInt size=1;
+        pureInfon iSize, iVal;
+        iSize=pureInfon(size);
+        numberFromString(parser->buf, &iVal, 10);
+        iVal.flags|=tNum+dDecimal;
+        infon* i=new infon(0, &iSize, &iVal);
+        i->wSize=size;
+        if (i->value.listHead)i->value.listHead->top=i;
+        tag->definition=i;
     }
     return tag;
 }
@@ -81,34 +106,91 @@ WordSPtr XlaterENGLISH::proteus2Tags(infon* proteus){  // Converts an infon to a
     return 0;
 }
 
-typedef map<string, int> WordMap;
+typedef map<string, uint> WordMap;
 typedef WordMap::iterator WordMapIter;
 
-enum funcWordFlags {wcContentWord=0, wcDeterminer=1, wcQuantifier=2, wcNumberStarter=8, wcVerbHelper=16, wcPronoun=32, wcPreposition=64, wcConjunction=128, wcNegotiator=256};
-WordMap functionWords = {   // int is a WordClass
+/*  These Function Words can have more than one usage / sense:
+ *      That / Which:   Demonstrative Pronoun:   THAT book is mine.  (Also see: this,that,these,those.)
+ *                      Bare pronoun: THAT is mine.
+ *                      Subordinating Conjunction: Everyone knows THAT smoking is dangerous.
+ *                      Start of relative clause: The book THAT I am reading is on safety.
+ *
+ *      They, Them, Their, Theirs: 3rd person plural but sometimes used instead of 'he/she' as 3rd person singular pronouns.
+ *
+ *      Some quantifiers can be used alone: MANY are called. FEW are chosen.
+ *
+ *      One: "Number 1", "ONE ought not speak suchly during informal settings.", "I want ONE. I want ONE too. I want ONE two three."
+ *
+ *      You: This 2nd person pronoun can have 4 uses: It can be singular or plural, and either subject or object.
+ *
+ *      Your, Yours: These pronouns can be either singular or plural.
+ *
+ *      His: This possessive pronoun can be used dependently (It's HIS book.) or independently (It's HIS.).
+ *
+ *      Her: HER can be either an objective pronoun: "They congratulated HER" or a possessive-dependent pronoun: "It's HER book.".
+ *
+ *      It: The pronoun it can be either subjective or objective.
+ * */
+
+const uint Det=wfHasDetSense;
+const uint Qnt=Det+wfHasNumSense;
+const uint Num=Qnt+wfCanStartNum;
+const uint ProN=wfIsPronoun;
+const uint AuxV=wfVerbHelper;
+const uint Prep=wfIsPreposition;
+const uint Conj=wfIsConjunction;
+const uint Ngtr=wfIsNegotiator;
+
+const uint p1st=wf1stPrsn;
+const uint p2nd=wf2ndPrsn;
+const uint p3rd=wf3rdPrsn;
+const uint pMas=wfGndrMasc;
+const uint pFem=wfGndrFem;
+const uint pNeut=wfGndrNeut;
+const uint isPl=wfIsPlural;
+const uint Posv=wfIsPossessive;
+
+WordMap functionWords = {
     // Definite determiners
-        {"the", 1}, {"this", 1}, {"that", 1}, {"these", 1}, {"those", 1},   // These and Those are plural of this and that
-        {"which", 1}, {"whichever", 1}, {"what", 1}, {"whatever", 1},       // These usually start questions
-        // Other definite determiners are possessives inclusing possessive pronouns: my, your, his, her, its, our, their, whose.
+        {"the", Det}, {"this", Det}, {"that", Det}, {"these", Det+isPl}, {"those", Det+isPl},   // These and Those are plural of this and that
+        {"which", Det}, {"whichever", Det}, {"what", Det}, {"whatever", Det},       // These usually start questions
+        // Other definite determiners are possessives including the dependent possessive pronouns: my, your, his, her, its, our, their, whose.
 
     // Indefinite determiners
-        {"a", 1}, {"an", 1},       // Use with singular, countable nouns.
-        {"some", 1}, {"any", 1},   // Use with plural and non-countable nouns.
+        {"a", Det}, {"an", Det},       // Use with singular, countable nouns.
+        {"some", Det+isPl}, {"any", Det+isPl},   // Use with plural and non-countable nouns.
 
     // Quantifying determiners // I need to define a "quantifier phrase"
-        {"much", 2}, {"many", 2}, {"more", 2}, {"most", 2}, {"little", 2}, {"few", 2}, {"less", 2}, {"fewer", 2}, {"least", 2}, {"fewest", 2},
-        {"all", 2}, {"both", 2}, {"enough", 2}, {"no", 2},
-        {"each", 2}, {"every", 2}, {"either", 2}, {"neither", 2},   // 'every' can be 'almost every' and some other forms.
+        {"much", Qnt}, {"many", Qnt}, {"more", Qnt}, {"most", Qnt}, {"little", Qnt}, {"few", Qnt}, {"less", Qnt}, {"fewer", Qnt}, {"least", Qnt}, {"fewest", Qnt},
+        {"all", Qnt}, {"both", Qnt}, {"enough", Qnt}, {"no", Qnt},
+        {"each", Qnt}, {"every", Qnt}, {"either", Qnt}, {"neither", Qnt},   // 'every' can be 'almost every' and some other forms. Likewise for 'all', 'enough', numbers, etc.
 
-        {"zero", 8}, {"one", 8}, {"two", 8}, {"three", 8}, {"four", 8}, {"five", 8}, {"six", 8}, {"seven", 8}, {"eight", 8}, {"nine", 8},
-        {"ten", 8}, {"eleven", 8}, {"twelve", 8}, {"thirteen", 8}, {"fourteen", 8}, {"fifteen", 8}, {"sixteen", 8}, {"seventeen", 8}, {"eighteen", 8}, {"nineteen", 8},
-        {"twenty", 8}, {"thirty", 8}, {"forty", 8}, {"fifty", 8}, {"sixty", 8}, {"seventy", 8}, {"eighty", 8}, {"ninety", 8},
+        {"zero", Num}, {"one", Num}, {"two", Num}, {"three", Num}, {"four", Num}, {"five", Num}, {"six", Num}, {"seven", Num}, {"eight", Num}, {"nine", Num},
+        {"ten",Num},{"eleven",Num},{"twelve",Num},{"thirteen",Num},{"fourteen",Num},{"fifteen",Num},{"sixteen",Num},{"seventeen",Num},{"eighteen", Num},{"nineteen",Num},
+        {"twenty", Num}, {"thirty", Num}, {"forty", Num}, {"fifty", Num}, {"sixty", Num}, {"seventy", Num}, {"eighty", Num}, {"ninety", Num},
 
         // when compound function words are supported:
-        {"all the", 4}, {"some of the", 4}, {"some of the many", 4},  // also: "5 liters of"
-        {"a pair of", 4}, {"half", 4}, {"half of", 4}, {"double", 4}, {"more than", 4}, {"less than", 4}, // twice as many as... ,  a dozen,
-        {"a lot of", 4}, {"lots of", 4}, {"plenty of", 4}, {"a great deal of", 4}, {"tons of", 4}, {"a few", 4}, {"a little", 4},
-        {"several", 4}, {"a couple", 4}, {"a number of", 4}, {"a whole boat load of", 4}, //... I need to find a pattern for these
+        {"all the", Qnt}, {"some of the", Qnt}, {"some of the many", Qnt},  // also: "5 liters of"
+        {"a pair of", Qnt}, {"half", Qnt}, {"half of", Qnt}, {"double", Qnt}, {"more than", Qnt}, {"less than", Qnt}, // twice as many as... ,  a dozen,
+        {"a lot of", Qnt}, {"lots of", Qnt}, {"plenty of", Qnt}, {"a great deal of", Qnt}, {"tons of", Qnt}, {"a few", Qnt}, {"a little", Qnt},
+        {"several", Qnt}, {"a couple", Qnt}, {"a number of", Qnt}, {"a whole boat load of", Qnt}, //... I need to find a pattern for these
+
+    // Pronouns
+        {"I",   ProN+p1st},     {"me", ProN+p1st},       {"my",  ProN+p1st+Posv+Det},       {"mine",  ProN+p1st+Posv},      {"myself",  ProN+p1st},
+        {"you", ProN+p2nd},      /* you */               {"your",ProN+p2nd+Posv+Det},       {"yours", ProN+p2nd+Posv},      {"yourself",ProN+p2nd+Posv},
+         /* one */               /* one */               {"one's", ProN+Posv+Det},                                          {"oneself", ProN},
+        {"he",  ProN+p3rd+pMas},{"him", ProN+p3rd+pMas}, {"his", ProN+p3rd+pMas+Posv+Det},   /* his */                      {"himself", ProN+p3rd+pMas},
+        {"she", ProN+p3rd+pFem},{"her", ProN+p3rd+pFem+Det},  /* her */                     {"hers", ProN+p3rd+pFem+Posv},  {"herself", ProN+p3rd+pFem},
+        {"it",  ProN+p3rd+pNeut},/* it */                {"its", ProN+p3rd+pNeut+Posv+Det},                                 {"itself",  ProN+p3rd+pNeut},
+
+        {"we", ProN+p1st+isPl}, {"us", ProN+p1st+isPl},  {"our", ProN+p1st+isPl+Posv+Det},  {"ours", ProN+p1st+isPl+Posv},  {"ourselves",  ProN+p1st+isPl},
+         /* you */               /* you */                /* your */                         /* yours */                    {"yourselves", ProN+p2nd+isPl},
+        {"they",ProN+p3rd+isPl},{"them", ProN+p3rd+isPl},{"their", ProN+p3rd+isPl+Posv+Det},{"theirs", ProN+p3rd+isPl+Posv},{"themselves", ProN+p3rd+isPl},
+
+        {"who", ProN},          {"whom", ProN},          {"whose", ProN+Posv+Det},    /* which,   that */
+
+        // consider: this, that, these, and those can occur without a noun and thus act like pronouns.
+        // consider: one in "I ate one"
 
     // Verb Helpers
         {"be", 16}, {"am", 16}, {"are", 16}, {"aren't", 16}, {"is", 16}, {"isn't", 16}, {"was", 16}, {"wasn't", 16}, {"were", 16}, {"weren't", 16}, {"being", 16}, {"been", 16},
@@ -118,23 +200,6 @@ WordMap functionWords = {   // int is a WordClass
         {"will", 16}, {"won't", 16}, {"shall", 16}, {"shan't", 16}, {"may", 16}, {"mayn't", 16}, {"might", 16}, {"mightn't", 16}, {"must", 16}, {"mustn't", 16},
         // consider: contracted is, has, am, are, have, had and will (e.g, he's, I've, I'll)
         // consider: better, had better, and various compound items
-
-    // Pronouns
-        {"I", 32},  {"me", 32},  {"my", 32},   {"mine", 32},  {"myself", 32},
-        {"you", 32},            {"your", 32},  {"yours", 32}, {"yourself", 32},
-        {"one", 32},                           {"one's", 32}, {"oneself", 32},
-        {"he", 32}, {"him", 32}, {"his", 32},                {"himself", 32},
-        {"she", 32},{"her", 32},              {"hers", 32},  {"herself", 32},
-        {"it", 32},             {"its", 32},                {"itself", 32},
-
-        {"we", 32}, {"us", 32},  {"our", 32},  {"ours", 32},  {"ourselves", 32},
-                                                          {"yourselves", 32},
-        {"they", 32},{"them", 32},{"their", 32},{"theirs", 32},{"themselves", 32},
-
-        {"who", 32}, {"whom", 32},             {"whose", 32},
-
-        // consider: this, that, these, and those can occur without a noun and thus act like pronouns.
-        // consider: one in "I ate one"
 
     // Prepositions
     {"aboard", 64}, {"about", 64}, {"above", 64}, {"across", 64}, {"after", 64}, {"against", 64}, {"along", 64}, {"alongside", 64}, {"amid", 64}, {"amidst", 64},
@@ -151,16 +216,15 @@ WordMap functionWords = {   // int is a WordClass
     {"in addition to", 64}, {"in between", 64}, {"in case of", 64}, {"in face of", 64}, {"in favor of", 64}, {"in front of", 64}, {"in lieu of", 64}, {"in spite of", 64}, {"instead of", 64}, {"in view of", 64},
     {"irrespective of", 64}, {"near to", 64}, {"next to", 64}, {"on account of", 64}, {"on behalf of", 64}, {"on board", 64}, {"on to", 64}, {"on top of", 64}, {"opposite to", 64}, {"opposite of", 64},
     {"other than", 64}, {"out of", 64}, {"outside of", 64}, {"owing to", 64}, {"prior to", 64}, {"regardless of", 64}, {"thanks to", 64}, {"together with", 64}, {"up against", 64}, {"up to", 64},
-    {"up until", 64}, {"one", 64}, {"two", 64}, {"three", 64}, {"four", 64}, {"five", 64}, {"six", 64}, {"seven", 64}, {"eight", 64}, {"nine", 64},
-    {"zero", 64}, {"with reference to", 64}, {"with regard to", 64},
+    {"up until", 64}, {"with reference to", 64}, {"with regard to", 64},
 
     // Conjunctions
     {"and", 128}, {"but", 128}, {"or", 128},  // consider either/or, neither/nor
-    {"although", 128}, {"after", 128}, {"as", 128}, {"before", 128}, {"if", 128}, {"since", 128}, {"that", 128},
+    {"although", 128}, {"after", 128}, {"as", 128}, {"before", 128}, {"if", 128}, {"since", 128}, /* that */
     {"unless", 128}, {"until", 128}, {"when", 128}, {"whenever", 128}, {"whereas", 128}, {"while", 128},
 
     {"as long as", 128}, {"as soon as", 128}, {"as though", 128}, {"except that", 128},
-    {"in order that", 128}, {"provided that", 128}, {"so long as", 128}, {"such that", 128}, {"four", 128}, {"five", 128}, {"six", 128}, {"seven", 128}, {"eight", 128}, {"nine", 128},
+    {"in order that", 128}, {"provided that", 128}, {"so long as", 128}, {"such that", 128},
 
     // Negotiators
     {"hi", 256}, {"hey", 256}, {"hey there", 256}, {"greetings", 256}, {"good-morning", 256},
@@ -296,7 +360,7 @@ bool tagIsMarkedPossessive(WordSPtr &tag){
     return true;
 }
 
-int FunctionWordClass(WordSPtr tag){
+int FunctionWordFlags(WordSPtr tag){
     WordMapIter w = functionWords.find(tag->baseForm);
     if(w!=functionWords.end())  return w->second;
     return 0;
@@ -379,14 +443,16 @@ int parseWord(WordSMap *wordLib, const string &wrdToParse, const string &scopeID
 void XlaterENGLISH::findDefinitions(WordSPtr words){
     UnicodeString txt=""; // UErrorCode err=U_ZERO_ERROR; int32_t Result=0;
     UnicodeString ChainText; tagChainToString(words, ChainText);
-    WordSPtr crntChoice=0;
+    WordSPtr crntChoice=0; uint wordFlags=0;
     WordListItr WLi;
     string scopeID=words->key.substr(words->key.find('%')+1);
     for(WordListItr crntWrd=words->words.begin(); crntWrd!=words->words.end();){
-        WordListItr tmpWrd;
+        WordListItr tmpWrd; wordFlags=0;
         uint numWordsInCompound=0, numWordsInChosen=0, scopeScore=0; crntChoice=0;
         string trial="", wordKey="";
+        if((*crntWrd)->sysType>=wstNumOrd) {++crntWrd; continue;} // It's a number. Don't try to find it.
         for(tmpWrd=crntWrd; tmpWrd!=words->words.end() && numWordsInCompound++ < maxWordsInCompound; tmpWrd++){
+            if((*tmpWrd)->sysType>=wstNumOrd) break; // Numbers cannot be in the compound words.
             if(numWordsInCompound>1) wordKey.append("-");
             wordKey.append((*tmpWrd)->norm);
             cout << "#######>"<<wordKey<<"\t\t"<<scopeID<<"\n";
@@ -413,19 +479,14 @@ void XlaterENGLISH::findDefinitions(WordSPtr words){
         if(crntChoice==0){
             (*crntWrd)->baseForm=(*crntWrd)->norm;
             if(tagIsMarkedPossessive(*crntWrd)){}
-            int wordClass=FunctionWordClass(*crntWrd);
-            if(wordClass) {
-                if(wordClass==wcNumberStarter){
+            wordFlags=FunctionWordFlags(*crntWrd);
+            if(wordFlags) {
+                (*crntWrd)->wordFlags=wordFlags;
+                if(wordFlags&wfCanStartNum){
                     // load number
                     // crntChoice=XXX;
                     // numWordsInChosen=YYY;
-                } else if(wordClass==wcDeterminer){ (*crntWrd)->wordClass=cDeterminer;
-                } else if(wordClass==wcPronoun)   { (*crntWrd)->wordClass=cPronoun;
-                } else if(wordClass==wcQuantifier){ (*crntWrd)->wordClass=cDeterminer;
-                } else if(wordClass==wcVerbHelper){ (*crntWrd)->wordClass=cVerbHelper;
-                } else if(wordClass==wcPreposition){ (*crntWrd)->wordClass=cPreposition;
-                } else if(wordClass==wcConjunction){ (*crntWrd)->wordClass=cConjunction;
-                } else if(wordClass==wcNegotiator){} (*crntWrd)->wordClass=cNegotiator;
+                }
             }else { // Try parsing inside the word for prefixes, suffixes, etc.
             // Here we look for possessives, plurals, verb-forms, affixes, NVAJF, Contracted verbs.
             // We should handle alternate spellings such as UK/US, before a suffix, defined "runs" but uses "running".
@@ -501,9 +562,9 @@ cout<<"furthest:"<<furthestPos<<"  wrdLen:"<<wrdLen<<"\n";
                     WordS &crntWord= *(*crntWrd);
                     for(WLi=crntWord.words.begin(); WLi != crntWord.words.end(); ++WLi){cout <<(*WLi)->norm << "-";}
                     string lastAffix=(*crntWord.words.back()).norm;
-                    if(lastAffix=="s" || lastAffix=="es"){crntWord.wordForm=form_S_ES;}
-                    else if(lastAffix=="ing"){crntWord.wordForm=form_ING;}
-                    else if(lastAffix=="ed"){crntWord.wordForm=form_ED;}
+                    if(lastAffix=="s" || lastAffix=="es"){crntWord.wordFlags|=wfForm_S_ES;}
+                    else if(lastAffix=="ing"){crntWord.wordFlags|=wfForm_ING;}
+                    else if(lastAffix=="ed"){crntWord.wordFlags|=wfForm_ED;}
 
                     else if(lastAffix=="est") {crntWord.wordDegree=dSuperlative;}
                     else if(lastAffix=="er")  {crntWord.wordDegree=dComparative;}
@@ -519,7 +580,7 @@ cout<<"furthest:"<<furthestPos<<"  wrdLen:"<<wrdLen<<"\n";
                 }
             }
         }
-        if((*crntWrd)->wordClass <= cAdv){ // If this isn't a function word...
+        if(!wordFlags){ // If this isn't a function word...
             if(crntChoice==0) {words->wordFlags|=wfErrorInAChildWord; cout<< ((string)"\n\nMESG: What does "+(*crntWrd)->norm+" mean?\n"); crntWrd++;}
             else {
                 if(numWordsInChosen>1){ // If more than one word was consumed, move them into a new parent.
@@ -535,12 +596,17 @@ cout<<"furthest:"<<furthestPos<<"  wrdLen:"<<wrdLen<<"\n";
                     }
                 } else {(*crntWrd)->definition=crntChoice->definition; ++crntWrd;}
             }
-        }
+        } else ++crntWrd;
     }
 }
 
 void XlaterENGLISH::stitchAndDereference(WordSPtr text){
-    text->definition=(*text->words.begin())->definition;
+    parseResult result;
+    EnglishParser parser;
+    parser.ParseEnglish(text, *text->words.begin(), 0);
+    if(result==prMatch){}
+    WordListItr WLI=text->words.begin(); //++WLI;
+    text->definition=(*WLI)->definition;
 }
 
 infon* XlaterENGLISH::infonate(WordSPtr text){
@@ -561,44 +627,38 @@ parseResult EnglishParser::ParseEnglish(ParserArgList){
 
 parseResult EnglishParser::pSentence(ParserArgList){
     parseResult result;
-    // Check for "it BE" of Cleft Sentence (3)
-    // Check for "there BE" of "existential there" (2)
-    // Check for a verb-phrase start due to a postponed subject  (4)
+    // Check for "it BE" of Cleft Sentence: "IT WAS Arthur who made the coffee." (3)
+    // Check for "there BE" of "existential there": "THERE IS too a Santa Clause!" (2)
+    // Check for a verb-phrase start due to a postponed subject-clause or interrogative : "Speak like Yodo I do." "Do you speak like Yoda?" (4)
     // Check for adjunct / adverb / other clause (5)
-    if((result=pNounPhrase(WordSystem, crntWrd, context)) != prNoMatch) {}
-    else result = prNoMatch;
+    if((result=pNounPhrase(WordSystem, crntWrd, context)) != prNoMatch) { // Subject or fronted DO or SC
+    } else result = prNoMatch;
     return result;
-    }
+}
 
 parseResult EnglishParser::pNounPhrase(ParserArgList){
     parseResult result;
-    if((result=pDeterminer(WordSystem, crntWrd, context)) != prNoMatch) {} else return result;
+    uint wordFlags=crntWrd->wordFlags;
+    cout<<"NOUN-PHRASE-a:"<<crntWrd->norm<<"\n";
+    if(wordFlags & wfHasDetSense){
+        cout<<"NOUN-PHRASE-B - HERE\n";
+    }
 
     if((result=pSelectorSeq(WordSystem, crntWrd, context)) != prNoMatch) {}
     else result = prNoMatch;
     return result;
-    }
+}
 
 parseResult EnglishParser::pSelectorConjunct(ParserArgList){
     parseResult result;
-    if((result=pDeterminer(WordSystem, crntWrd, context)) != prNoMatch) {} else return result;
-
-    if((result=pSelectorSeq(WordSystem, crntWrd, context)) != prNoMatch) {}
+    if((result=prNoMatch) != prNoMatch) {}
     else result = prNoMatch;
-    return result;
-    }
-
-parseResult EnglishParser::pDeterminer(ParserArgList){
-    parseResult result;
-  //  if((result=pDUMMY(WordSystem, crntWrd, context)) != prNoMatch) {}
-  //  else result = prNoMatch;
     return result;
 }
 
 parseResult EnglishParser::pSelectorSeq(ParserArgList){
     parseResult result;
-    // if((result=pNegotiator(WordSystem, crntWrd, context)) != prNoMatch) {} else
- //   if((result=pSentence(WordSystem, crntWrd, context)) != prNoMatch) {/* reduce(WordSystem); */}
- //   else result = prNoMatch;
+    if((result=prNoMatch) != prNoMatch) {}
+    else result = prNoMatch;
     return result;
 }

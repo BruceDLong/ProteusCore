@@ -271,7 +271,7 @@ infon* grok(infon* item, UInt tagCode, int* code){
 
 char errMsg[100];
 UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2, string &scopeID){
-    UInt p=0, size=0, stay=1; char rchr, tok; infon *head=0, *prev; infon* j;
+    UInt p=0, size=0, stay=1; char rchr, tok; const char* pTok; infon *head=0, *prev; infon* j;
     infDataPtr* i=&(pInf)->dataHead;
     if(nxtTok("(") || nxtTok("{") || nxtTok("[")){
         if(nTok=='(') {rchr=')'; SetBits(*flags, mFormat+mType,(fConcat+tNum));}
@@ -287,14 +287,15 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                 do{ // Here we process tag definitions
                     tag=ReadTagChain(&locale, &Xlater, scopeID); if (tag==0) throw "Null tag was read";
                     tagList.push_back(tag);
-                    while(nxtTok("%")){ // read definition's attributes
+                    while((pTok = nxtTokN(2,"%","#"))){ // read tag's (%) or definition's (#) attributes
                         nxtTok("cTok");
                         string attrTag=buf;
                         chkStr(":");
-                        if(attrTag=="say") nxtTok("<abc>");
-                        else getbuf((peek()!='%' && peek()!='&' && peek()!='='));
+                        if(*pTok=='%' && attrTag=="say") nxtTok("<abc>");
+                        else getbuf((peek()!='%' && peek()!='#' && peek()!='&' && peek()!='='));
                         string attrText=buf;
-                        tag->attributes.insert(pair<string,string>(attrTag,attrText));
+                        if(*pTok=='%') tag->attributes.insert(pair<string,string>(attrTag,attrText));
+                        else if(*pTok=='#') tag->attributes.insert(pair<string,string>(attrTag,attrText)); // TODO: store these and add them to definition below.
                     }
                     if(nxtTok("=")){done=true;}
                     else if(!nxtTok("&")) throw "Expected &tag or tag locale, pronunciation or definition";

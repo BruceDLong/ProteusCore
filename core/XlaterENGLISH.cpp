@@ -440,6 +440,25 @@ int parseWord(WordSMap *wordLib, const string &wrdToParse, const string &scopeID
         if(farPos==modLen) foundPath=true;                                        \
     } }
 
+/* findDefinitions(WordSPtr words).
+ * INPUT:
+ *   The main data going into this is the words field of the argument. i.e. words->words.
+ *   It is a list of the words in the words chain. So if I types into clip "the big eye opening preenactments find."
+ *   then words->words would contain 6 items. One for each of those words.
+ *
+ * OUTPUT:
+ *   Afterwards each word will have been examined and classified.
+ *   'the' will have been marked as the correct function word.
+ *   'big' will have had its definition field pointing to the infon for &big.
+ *   'eye' and 'opening' will have been moved under a new WordS whose defintion will point to the infon for "eye-opening".
+ *   'preenactments' (if not found in the library) will have been decomposed into pre, enact, ment and s.
+ *      The ending 's' will mean that the word's wfForm_S_ES flag is set (i.e., this is either plural or a -s verb)
+ *   Other plural forms will cause the word to be marked as plural.
+ *   Words with 's or s' will have wfIsMarkedPossessive set. Similar for -es, -ed, -ing.
+ *   A string of words like "seven hundred and twenty five" will have become a number (725)
+ *   If a word does not have a definition, the argument words will have its wfErrorInAChildWord flag set.
+ */
+
 void XlaterENGLISH::findDefinitions(WordSPtr words){
     UnicodeString txt=""; // UErrorCode err=U_ZERO_ERROR; int32_t Result=0;
     UnicodeString ChainText; tagChainToString(words, ChainText);
@@ -483,7 +502,9 @@ void XlaterENGLISH::findDefinitions(WordSPtr words){
             if(wordFlags) {
                 (*crntWrd)->wordFlags=wordFlags;
                 if(wordFlags&wfCanStartNum){
-                    // load number
+                    cout <<"NUMBER: "<<(*crntWrd)->norm<<"  ("<<(*crntWrd)->offsetInSource<<")\n";
+                    Formattable resultInt=0; ParsePosition parsePos=(*crntWrd)->offsetInSource; // NOT CORRECT.
+  //                  RuleBasedNumberFormat formtter; formatter.parse(ChainText, resultInt, parsePos);
                     // crntChoice=XXX;
                     // numWordsInChosen=YYY;
                 }
@@ -642,6 +663,7 @@ parseResult EnglishParser::pNounPhrase(ParserArgList){
     cout<<"NOUN-PHRASE-a:"<<crntWrd->norm<<"\n";
     if(wordFlags & wfHasDetSense){
         cout<<"NOUN-PHRASE-B - HERE\n";
+// note: make "number 53" be nominal.
     }
 
     if((result=pSelectorSeq(WordSystem, crntWrd, context)) != prNoMatch) {}

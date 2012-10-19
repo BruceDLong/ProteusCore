@@ -574,10 +574,11 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
             case iTagDef: break; // Reserved
             case iTagUse: {
                 if(CI->type == 0) throw ("A tag was null which is a bug");
-                // OUT("Recalling: "<<CI->type->tag<<":"<<CI->type->locale);
+                 OUT("Recalling: "<<CI->type->norm<<":"<<CI->type->locale);
                 infon* found=CI->findTag(CI->type);
                 if (found) {
                     bool asNotFlag=((CI->wFlag&asNot)==asNot);
+//                    CI->type=0;
                     UInt tmpFlags=CI->wFlag&mListPos; deepCopy(found,CI,0,0,CI->type->tagCtxt); CI->wFlag|=tmpFlags; // TODO B4: move this flag stuff into deepCopy.
                     if(CI->wFlag&asNot) asNotFlag = !asNotFlag;
                     SetBits(CI->wFlag, asNot, (asNotFlag)?asNot:0);

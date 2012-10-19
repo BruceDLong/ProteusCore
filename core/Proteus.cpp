@@ -260,12 +260,12 @@ void deTagWrkList(infon* i){ // After a tag is derefed, move any c1Left wrkList 
     } while (p!=i->wrkList);
 }
 
-infon* agent::copyList(infon* from, int flags, infon* tagCtxt){
+infon* agent::copyList(infon* from, int flags){
     infon* top=0; infon* follower; infon* q, *p=from;
     if(from==0)return 0;
     do {
         q=new infon;
-        deepCopy(p,q, 0, flags, tagCtxt); q->pos=p->pos;
+        deepCopy(p,q, 0, flags); q->pos=p->pos;
         if (top==0) follower=top=q;
         q->prev=follower; q->top=top; follower=follower->next=q;
         p=p->next;
@@ -275,25 +275,24 @@ infon* agent::copyList(infon* from, int flags, infon* tagCtxt){
     return top;
 }
 
-void agent::deepCopyPure(pureInfon* from, pureInfon* to, int flags, infon* tagCtxt){
+void agent::deepCopyPure(pureInfon* from, pureInfon* to, int flags){
     to->flags=from->flags;
     to->offset=from->offset;
-    if(PureIsInListMode(*from)) to->listHead=copyList(from->listHead, flags, tagCtxt);
+    if(PureIsInListMode(*from)) to->listHead=copyList(from->listHead, flags);
     else {to->listHead=0; to->dataHead=from->dataHead;}
 }
 
-void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags, infon* tagCtxt){
+void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags){
     UInt fm=from->wFlag&mFindMode; infon* tmp;
     to->wFlag=(from->wFlag&0xffffffff);
     if(to->type==0) {  // TODO: We should merge types, not just copy over.
-        if(from->type){ //cout<<"TAG:"<<from->type->tag<<"--"<<tagCtxt<<"\n";
-            if(tagCtxt) if(!tagCtxt->findTag(from->type)) throw "Nested tag not found when copying.";
+        if(from->type){ //cout<<"TAG:"<<from->type->tag<<"\n";
             to->type=from->type;
         }
     }
 
-    deepCopyPure(&from->size, &to->size, flags, tagCtxt);  if(to->size.listHead) to->size.listHead->top=to;
-    deepCopyPure(&from->value,&to->value,flags, tagCtxt); if(to->value.listHead)to->value.listHead->top=to;
+    deepCopyPure(&from->size, &to->size, flags);  if(to->size.listHead) to->size.listHead->top=to;
+    deepCopyPure(&from->value,&to->value,flags); if(to->value.listHead)to->value.listHead->top=to;
 
     if(from->wFlag&mIsHeadOfGetLast) to->top2=(*ptrs)[from->top2];
     if(fm==iToPath || fm==iToPathH || fm==iToArgs || fm==iToVars) {
@@ -304,7 +303,7 @@ void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags, infon* tag
         if ((to->prev) && (tmp=to->prev->spec1) && (tmp->wFlag&mIsHeadOfGetLast) && (tmp=tmp->next)) to->spec1=tmp;
         else {to->spec1=new infon; }
         (*ptrMap)[from]=to;
-        deepCopy (from->spec1, to->spec1, ptrMap, flags, tagCtxt);
+        deepCopy (from->spec1, to->spec1, ptrMap, flags);
         if(ptrs==0) delete ptrMap;
         if (flags && from->wFlag&mAssoc) {
             from->wFlag&= ~(mAssoc+mFindMode); from->wFlag|=iAssocNxt;
@@ -314,12 +313,12 @@ void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags, infon* tag
 
     if ((from->wFlag&mFindMode)==iAssocNxt) {to->spec2=from;}  // Breadcrumbs to later find next associated item.
     else if(!from->spec2) to->spec2=0;
-    else {to->spec2=new infon; deepCopy(from->spec2, to->spec2,0,flags,tagCtxt);}
+    else {to->spec2=new infon; deepCopy(from->spec2, to->spec2,0,flags);}
 
     infNode *p=from->wrkList, *q;  // Merge Identity Lists
     if(p) do {
         q=new infNode; q->idFlags=p->idFlags;
-        if((p->item->wFlag&mFindMode)<iAssocNxt && (p->item->wFlag&mFindMode)>iNone) {q->item=new infon; q->idFlags=p->idFlags; deepCopy(p->item,q->item,ptrs,flags,tagCtxt);}
+        if((p->item->wFlag&mFindMode)<iAssocNxt && (p->item->wFlag&mFindMode)>iNone) {q->item=new infon; q->idFlags=p->idFlags; deepCopy(p->item,q->item,ptrs,flags);}
         else {q->item=p->item;}
         prependID(&to->wrkList, q);
         p=p->next;
@@ -579,7 +578,7 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
                 if (found) {
                     bool asNotFlag=((CI->wFlag&asNot)==asNot);
 //                    CI->type=0;
-                    UInt tmpFlags=CI->wFlag&mListPos; deepCopy(found,CI,0,0,CI->type->tagCtxt); CI->wFlag|=tmpFlags; // TODO B4: move this flag stuff into deepCopy.
+                    UInt tmpFlags=CI->wFlag&mListPos; deepCopy(found,CI,0,0); CI->wFlag|=tmpFlags; // TODO B4: move this flag stuff into deepCopy.
                     if(CI->wFlag&asNot) asNotFlag = !asNotFlag;
                     SetBits(CI->wFlag, asNot, (asNotFlag)?asNot:0);
                     deTagWrkList(CI);

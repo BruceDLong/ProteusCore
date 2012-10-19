@@ -138,7 +138,7 @@ typedef WordList::iterator WordListItr;
 
 struct WordS {  // Word System
     string asRead, locale, norm, baseForm;
-    infon *definition, *tagCtxt;    // The definition and context for this word.
+    infon *definition;    // The definition/model of this word.
     map<string, string> attributes; // Attributes including pronunciation, word properties and model/author history.
     xlater *xLater;
     wordKey key;
@@ -157,7 +157,7 @@ struct WordS {  // Word System
 
     WordS(string tag="", int flags=0, infon* def=0, xlater *Xlater=0){
         asRead=tag; norm=tag; key="";
-        definition=def; tagCtxt=0; xLater=Xlater; wordFlags=flags; sysType=wstUnparsed; offsetInSource=0;// wordClass=cUnknown;
+        definition=def; xLater=Xlater; wordFlags=flags; sysType=wstUnparsed; offsetInSource=0;// wordClass=cUnknown;
         item = itemsConstraints = metaConstraints = 0;
     }
     ~WordS();
@@ -276,8 +276,8 @@ struct agent {
     infon *world, context;
     icu::Locale locale;
     void* utilField; // Field for application specific use.
-    void deepCopyPure(pureInfon* from, pureInfon* to, int flags, infon* tagCtxt=0);
-    void deepCopy(infon* from, infon* to, PtrMap* ptrs=0, int flags=0, infon* tagCtxt=0);
+    void deepCopyPure(pureInfon* from, pureInfon* to, int flags);
+    void deepCopy(infon* from, infon* to, PtrMap* ptrs=0, int flags=0);
     int loadInfon(const char* filename, infon** inf, bool normIt=true);
 
     int fetch_NodesNormalForm(QitemPtr cn);
@@ -287,7 +287,7 @@ struct agent {
         int (*autoEval)(infon*, agent*);
         map<dblPtr,UInt> alts;
         void InitList(infon* item);
-        infon* copyList(infon* from, int flags, infon* tagCtxt=0);
+        infon* copyList(infon* from, int flags);
         void processVirtual(infon* v);
         int getFollower(infon** lval, infon* i);
         void AddSizeAlternate(infon* Lval, infon* Rval, infon* Pred, UInt Size, infon* Last, UInt Flags);

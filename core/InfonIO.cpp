@@ -282,6 +282,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
             if(tok=='&') { // This is a definition, not an element
                 streamGet();
                 xlater *Xlater;
+                map<string, string> *attrs=0; // For model attributes
                 vector<WordSPtr> tagList;
                 WordSPtr tag=0; bool done=false;
                 do{ // Here we process tag definitions
@@ -295,13 +296,17 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                         else getbuf((peek()!='%' && peek()!='#' && peek()!='&' && peek()!='='));
                         string attrText=buf;
                         if(*pTok=='%') tag->attributes.insert(pair<string,string>(attrTag,attrText));
-                        else if(*pTok=='#') tag->attributes.insert(pair<string,string>(attrTag,attrText)); // TODO: store these and add them to definition below.
+                        else if(*pTok=='#'){
+                            if(attrs==0) attrs=new map<string, string>;
+                            attrs->insert(pair<string,string>(attrTag,attrText));
+                        }
                     }
                     if(nxtTok("=")){done=true;}
                     else if(!nxtTok("&")) throw "Expected &tag or tag locale, pronunciation or definition";
                 } while (!done);
                 string scopeTag=scopeID + (string)"&"+tag->norm;
                 infon* definition=ReadInfon(scopeTag);
+                definition->attrs=attrs;
                 WordSMap *wordLib=&Xlater->wordLibrary;
                 for(vector<WordSPtr>::iterator t=tagList.begin(); t!=tagList.end(); ++t){
                     (*t)->definition=definition;

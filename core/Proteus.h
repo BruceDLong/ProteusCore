@@ -12,7 +12,7 @@
 #include <list>
 #include <queue>
 #include <iostream>
-#include <string.h>
+#include <string>
 #include <stddef.h>
 #include <unicode/locid.h>
 #include <unicode/unistr.h>
@@ -233,6 +233,8 @@ struct infon {
     infon *spec1, *spec2;   // Used to store indexes, functions args, etc.
     infNode* wrkList;
     WordSPtr type;
+    map<string, string> *attrs; // Misc attributes: <tag, data-string>
+    ~infon(){delete attrs;};
 };
 int infValueCmp(infon* A, infon* B);
 int infonSizeCmp(infon* left, infon* right); // -1: L<R,  0: L=R, 1: L>R. Infons must have fLiteral, numeric sizes

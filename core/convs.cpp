@@ -16,7 +16,7 @@ using namespace std;
 
 infon::infon(UInt wf, pureInfon* s, pureInfon* v, infNode*ID,infon*s1,infon*s2,infon*n):
         wFlag(wf), wSize(0), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {
-    prev=0; top=0; top2=0; type=0; pos=0;
+    prev=0; top=0; top2=0; type=0; pos=0; attrs=0;
     if(s) size=*s;
     if(v) value=*v;
 };

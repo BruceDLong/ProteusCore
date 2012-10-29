@@ -12,7 +12,7 @@
 const int ListBuffCutoff=20;  // TODO: make this '2' to show a bug.
 
 typedef map<dblPtr,UInt>::iterator altIter;
-multimap<infon*,WordSPtr> DefPtr2Tag;
+multimap<infon*,WordSPtr> DefPtr2Tag;  // TODO: Verify that smartpointer in container here will be OK.
 
 #define recAlts(lval, rval) {if(InfsType(rval)==tString) alts[dblPtr((char*)rval->value.dataHead->get_num_mpz_t()->_mp_d,lval)]++;}
 #define fetchLastItem(lval, item) {for(lval=item; InfsType(lval)==tList;lval=lval->value->prev);}
@@ -36,7 +36,7 @@ void populateLangExtentions(){     // Use this to load available language module
     for(int loc=0; loc<numLocales; ++loc){
         string localeID=locale[loc].getBaseName();
         string localeLanguage=locale[loc].getLanguage();
-        if     (localeLanguage=="en") langExtentions[localeID]=&EnglishXLater;   // English
+        if     (localeLanguage=="en") {langExtentions[localeID]=&EnglishXLater;}  // English
         else if(localeLanguage=="fr") langExtentions[localeID]=0;  // French
         else if(localeLanguage=="es") langExtentions[localeID]=0;  // Spanish
         else if(localeLanguage=="zh") langExtentions[localeID]=0;  // Chinese
@@ -573,8 +573,8 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
             case iTagDef: break; // Reserved
             case iTagUse: {
                 if(CI->type == 0) throw ("A tag was null which is a bug");
-                 OUT("Recalling: "<<CI->type->norm<<":"<<CI->type->locale);
-                infon* found=CI->findTag(CI->type);
+                OUT("Recalling: "<<CI->type->norm<<":"<<CI->type->locale);
+                infon* found=CI->findTag(*CI->type);
                 if (found) {
                     bool asNotFlag=((CI->wFlag&asNot)==asNot);
 //                    CI->type=0;
@@ -895,4 +895,3 @@ infon* agent::normalize(infon* i, infon* firstID){
     }
     return 0;
 }
-

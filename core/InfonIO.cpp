@@ -184,7 +184,7 @@ xlater* QParser::chkLocale(icu::Locale* locale){
         }
     }
     streamPut(textParsed.size()-startPos);
-    lang = langExtentions.find(locale->getBaseName());
+    lang = langExtentions.find(locale->getLanguage());
     if (lang != langExtentions.end()){return lang->second;}
     return 0;
 }
@@ -194,7 +194,8 @@ WordSPtr QParser::ReadTagChain(icu::Locale* locale, xlater **XL_return, string s
     xlater* Xlater = chkLocale(&tmpLocale);
     if(Xlater==0) throw "Words read with unsupported or no locale";
     if(XL_return) (*XL_return)=Xlater;
-    WordSPtr result=Xlater->ReadTagChain(this, tmpLocale);
+    WordSPtr result=WordSPtr(new WordS);
+    Xlater->ReadTagChain(this, tmpLocale, *result);
     result->key=result->norm + "%" + scopeID;
     result->xLater=Xlater;
     return result;
@@ -283,7 +284,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                 streamGet();
                 xlater *Xlater;
                 map<string, string> *attrs=0; // For model attributes
-                vector<WordSPtr> tagList;
+                list<WordSPtr> tagList;
                 WordSPtr tag=0; bool done=false;
                 do{ // Here we process tag definitions
                     tag=ReadTagChain(&locale, &Xlater, scopeID); if (tag==0) throw "Null tag was read";
@@ -302,19 +303,19 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                         }
                     }
                     if(nxtTok("=")){done=true;}
-                    else if(!nxtTok("&")) throw "Expected &tag or tag locale, pronunciation or definition";
+                    else if(!nxtTok("&")) throw "Expected &tag or tag locale";
                 } while (!done);
                 string scopeTag=scopeID + (string)"&"+tag->norm;
                 infon* definition=ReadInfon(scopeTag);
                 definition->attrs=attrs;
                 WordSMap *wordLib=&Xlater->wordLibrary;
-                for(vector<WordSPtr>::iterator t=tagList.begin(); t!=tagList.end(); ++t){
+                for(list<WordSPtr>::iterator t=tagList.begin(); t!=tagList.end(); ++t){
                     (*t)->definition=definition;
                     WordSMap::iterator tagPtr=wordLib->find((*t)->key);
-                    if (tagPtr==wordLib->end()) {
-                        (*wordLib)[(*t)->key]=(*t);
+                    if (tagPtr==wordLib->end() || (tagPtr->second->senseID != (*t)->senseID)) {
+                        wordLib->insert(pair<wordKey, WordSPtr>((*t)->key, (*t)));
                         DefPtr2Tag.insert(pair<infon*,WordSPtr>(definition,(*t)));
-                    }else{throw("A tag is being redefined, which isn't allowed");}
+                    }else{throw("A word/sense is being redefined, which isn't allowed");}
                 }
                 continue;
             }

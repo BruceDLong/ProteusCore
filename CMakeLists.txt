@@ -6,7 +6,8 @@ SET(CMAKE_COLOR_MAKEFILE ON)
 #SET(CMAKE_VERBOSE_MAKEFILE OFF)
 
 set(ICU_UnicodeVersion release-49-1-1)
-
+set(CMAKE_C_FLAGS -m32) 
+set(CMAKE_CXX_FLAGS -m32)
 include(ExternalProject)
 
 #find_package(Mercurial)
@@ -60,18 +61,18 @@ ExternalProject_Add(
 
 #=========================================
 # Build GMP
-ExternalProject_Add(
-  GMP_BigInts
-  PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/deps/GMP_BigInts/
-  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/gmp-5.0.4.tar.bz2"
+#ExternalProject_Add(
+  #GMP_BigInts
+  #PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/deps/GMP_BigInts/
+  #URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/gmp-5.0.4.tar.bz2"
 
-  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/GMP_BigInts/src/gmp-5.0.4/
-  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/deps/GMP_BigInts/src/gmp-5.0.4/configure --enable-fat --enable-cxx --disable-shared --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/GMP_BigInts/gmp-5.0.4/
+  #SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/GMP_BigInts/src/gmp-5.0.4/
+  #CONFIGURE_COMMAND export CFLAGS=-m32 && export LDFLAGS=-m32 && ${CMAKE_CURRENT_SOURCE_DIR}/deps/GMP_BigInts/src/gmp-5.0.4/configure ABI=32 --enable-cxx --enable-static --disable-shared --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/GMP_BigInts/gmp-5.0.4/
 
-  BUILD_COMMAND  $(MAKE)
-  INSTALL_COMMAND  $(MAKE) install
-  BUILD_IN_SOURCE 0
-)
+  #BUILD_COMMAND  $(MAKE)
+  #INSTALL_COMMAND  $(MAKE) install
+  #BUILD_IN_SOURCE 0
+#)
 
 #=========================================
 # Build MPFA
@@ -97,7 +98,7 @@ ExternalProject_Add(
   URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/readline-6.2.tar.gz"
 
   SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/Readline/src/readline-6.2/
-  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/deps/Readline/src/readline-6.2/configure --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/Readline/readline-6.2/
+  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/deps/Readline/src/readline-6.2/configure ABI=32 --enable-static --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/Readline/readline-6.2/
 
   BUILD_COMMAND  $(MAKE)
   INSTALL_COMMAND  $(MAKE) install
@@ -118,7 +119,7 @@ ExternalProject_Add(
   PATCH_COMMAND
   SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/unicode/${ICU_UnicodeVersion}
   # TODO: for cross compiling, the 'linux' in the following should be one of those given by 'runConfigureICU --help'
-  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/deps/unicode/${ICU_UnicodeVersion}/source/runConfigureICU Linux --with-data-packaging=archive --enable-static --disable-shared --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/unicode/release-49-1-1
+  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/deps/unicode/${ICU_UnicodeVersion}/source/runConfigureICU Linux ABI=32 --with-data-packaging=archive --with-library-bits=32  --enable-static  --enable-shared --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/unicode/release-49-1-1
 
   BUILD_COMMAND $(MAKE)
   INSTALL_COMMAND $(MAKE) install

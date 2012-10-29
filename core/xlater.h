@@ -32,7 +32,7 @@ struct infon;
 struct QParser;
 
 typedef string wordKey;
-typedef map<wordKey, WordSPtr> WordSMap;
+typedef multimap<wordKey, WordSPtr> WordSMap;
 
 /* The class xlater is used to translate a (possibly) natural language to and from infons.
  * Subclass xlater for each language. Languages are identified by locale identifiers.
@@ -57,7 +57,7 @@ public:
      *  This function works when loading an infon and won't have access to the tag library.
      */
 
-    virtual WordSPtr ReadLanguageWord(QParser *parser, icu::Locale &locale)=0;
+    virtual WordS* ReadLanguageWord(QParser *parser, icu::Locale &locale)=0;
 
     //////////////////////////////////////////////////////////
     /* ReadTagChain() extends a QParser to read a phrase in some language (possibly a natural language).
@@ -67,14 +67,14 @@ public:
      *   This function works when loading an infon and won't have access to the tag library.
      */
 
-    virtual WordSPtr ReadTagChain(QParser *parser, icu::Locale &locale)=0;
+    virtual void ReadTagChain(QParser *parser, icu::Locale &locale, WordS& result)=0;
 
     //////////////////////////////////////////////////////////
     /* Tags2Proteus() converts a list of tags read by ReadTagChain() into an infon and returns a pointer to it.
      */
 
-    virtual infon* tags2Proteus(WordSPtr tags)=0;
-    virtual WordSPtr proteus2Tags(infon* proteus)=0;
+    virtual infon* tags2Proteus(WordS& tags)=0;
+    virtual void proteus2Tags(infon* proteus, WordS& WordsOut)=0;
 
 
     // Implementations initialize the language (i.e., load any lists or structures) in loadLanguageData(). Free them in unloadLanguageData();

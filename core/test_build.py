@@ -173,5 +173,3 @@ def ChkWorld(t):
        pass
    finally:
        assert child.after==t[5]
-
-

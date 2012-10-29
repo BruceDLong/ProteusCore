@@ -7,6 +7,7 @@ fstream log;
 
 #include "Proteus.h"
 #include <stdlib.h>
+#include "unicode/utypes.h"
 
 
 // maybe wrap this whole in a IFDEF clause?
@@ -54,8 +55,8 @@ int AutoEval(infon* CI, agent* a);
 bool IsHardFunc(string tag);
 
 int main(int argc, char **argv){
-    u_setDataDirectory("/home/bruce/proteus/unicode/install/share/icu/49.1.1");
-    rl_init();
+    u_setDataDirectory("../resources"); cout<<"DataDir:"<<u_getDataDirectory()<<"\n";
+ //   UErrorCode icuErr; icu::u_init(&icuErr);  if(U_FAILURE(icuErr)) throw "Couldn't load Unicode langauge data\n";
     signal(SIGSEGV, reportFault);
 
     // Load World
@@ -67,6 +68,7 @@ int main(int argc, char **argv){
     topInfon=a.world;  // use topInfon in the ddd debugger to view World
 
     cout<<"\nThe Proteus CLI. Type some infons or 'quit'\n\n";
+    if(sizeof(int)!=4) cout<<"WARNING! int size is "<<sizeof(int)<<" bytes.\n\n";
     while(!cin.eof()){
         string entry= readln("Proteus: ");
         if (entry=="quit") break;

@@ -63,9 +63,9 @@ bool infon::getStng(string* str) {
     return try2CatStr(str, &value, getSize().get_ui());
 }
 
-infon* infon::findTag(WordSPtr word){
-    if(word->definition) return word->definition;
-    return word->xLater->tags2Proteus(word);
+infon* infon::findTag(WordS& word){
+    if(word.definition) return word.definition;
+    return word.xLater->tags2Proteus(word);
 }
 
 int infonSizeCmp(infon* left, infon* right) { // -1: L<R,  0: L=R, 1: L>R. Infons must have fLiteral, numeric sizes

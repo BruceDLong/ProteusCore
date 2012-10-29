@@ -23,6 +23,25 @@ bool isCardinalOrOrdinal(char ch){
     return (isdigit(ch) || ch=='.'  || ch=='-' || ch=='s' || ch=='t' || ch=='h' || ch=='n' || ch=='r' || ch=='d');
 }
 
+string parseSenseID(QParser *parser){
+    string senseID="";
+    if     (parser->chkStr("#n#")){senseID="#n#";}
+    else if(parser->chkStr("#v#")){senseID="#v#";}
+    else if(parser->chkStr("#a#")){senseID="#a#";}
+    else if(parser->chkStr("#r#")){senseID="#r#";}
+    else if(parser->chkStr("#f#")){senseID="#f#";}
+    else{
+        getBufs(isEngWordChar(parser->peek()),parser);
+        senseID=parser->buf;
+    }
+    if(senseID[0]=='#') { // Read Wordnet sense identifier
+        if(isdigit(parser->peek())){senseID += parser->streamGet();}
+        else throw "Numeric Sense ID expected";
+        if(isdigit(parser->peek())){senseID += parser->streamGet();}
+    }
+    return senseID;
+}
+
 WordSystemTypes validNumberSyntax(string &in){
     WordSystemTypes ret=wstNumCard;
     string n=in;
@@ -42,33 +61,39 @@ WordSystemTypes validNumberSyntax(string &in){
     return ret;
 }
 
-void tagChainToString(WordSPtr tags, UnicodeString &strOut){
-    strOut="";
+void tagChainToString(WordS *tags, string *strOut){
+    *strOut=""; WordS* n;
     for(WordListItr itr=tags->words.begin(); itr!=tags->words.end(); ++itr){
-        if(strOut!="") strOut+=" ";
-        (*itr)->sourceStr = &strOut;
-        (*itr)->offsetInSource=strOut.length();
-        strOut+= strOut.fromUTF8((*itr)->norm);
+        n= (*itr).get();
+cout<<"t2s: @"<<n<<"\n";
+        if((*strOut)!="") (*strOut)+=" ";
+        n->offsetInSource=strOut->length();
+        (*strOut) += n->norm; //strOut.fromUTF8(n.norm); // This needn't be unicode in English. (unless Unicode chars are allowed later.)
     }
 }
 
-WordSPtr XlaterENGLISH::ReadLanguageWord(QParser *parser, icu::Locale &locale){ // Reads a 'word' consisting of a number or an alphabetic+hyphen+appostrophies tag
+WordS* XlaterENGLISH::ReadLanguageWord(QParser *parser, icu::Locale &locale){ // Reads a 'word' consisting of a number or an alphabetic+hyphen+appostrophies tag
     char tok=parser->Peek();
     if(isdigit(tok) || tok=='-') {getBufs(isCardinalOrOrdinal(parser->peek()),parser);}
     else if(isalpha(tok)){getBufs(isEngWordChar(parser->peek()),parser);}
     else return 0;
     if(parser->buf[0]==0) return 0;
-    WordSPtr tag=WordSPtr(new WordS);
+    WordS* tag=new WordS;
     tag->asRead=parser->buf; tag->locale=locale.getBaseName();
     if(isalpha(tok)){
         tagNormalizer->normalize(UnicodeString::fromUTF8(tag->asRead), uErr).toUTF8String(tag->norm);
-        if(tagIsBad(tag->norm, tag->locale.c_str())) throw "Illegal tag format";
+        if(tagIsBad(tag->norm, tag->locale.c_str())) throw "Problem with characters in word";
         if(tag->norm.at(0)=='-'){tag->wordFlags|=wfAsSuffix; tag->norm=tag->norm.substr(1);}
         if(tag->norm.at(tag->norm.length()-1)=='-'){tag->wordFlags|=wfAsPrefix; tag->norm=tag->norm.substr(0,tag->norm.length()-1);}
         if(tag->norm.find('-')!=string::npos) {tag->wordFlags|=wfWasHyphenated;}
-    } else { exit(1);
+
+        if(parser->peek()=='#'){ // Read word sense identifier
+            tag->senseID=parseSenseID(parser);
+        }
+    } else {
         WordSystemTypes sysType=validNumberSyntax(tag->asRead);
         if(sysType==wstUnknown) throw "Invalid number syntax";
+        tag->norm=tag->asRead;
         tag->sysType=sysType;
         // Create number as model of this:
         UInt size=1;
@@ -84,26 +109,25 @@ WordSPtr XlaterENGLISH::ReadLanguageWord(QParser *parser, icu::Locale &locale){ 
     return tag;
 }
 
-WordSPtr XlaterENGLISH::ReadTagChain(QParser *parser, icu::Locale &locale){ // Reads a phrase that ends at a non-matching character or a period that isn't in a number.
-    WordSPtr head=0, nxtTag;
+void XlaterENGLISH::ReadTagChain(QParser *parser, icu::Locale &locale, WordS& head){ // Reads a phrase that ends at a non-matching character or a period that isn't in a number.
+    WordS* nxtTag;
     while((nxtTag=ReadLanguageWord(parser, locale))){
-        if(head==0) {head = WordSPtr(new WordS);} else head->norm+="-";
-        head->words.push_back(nxtTag);
-        head->norm+=nxtTag->norm;
+        if(head.words.size()==0) {head.norm="";} else head.norm+="-";
+        head.norm+=nxtTag->norm;
+        head.words.push_back(WordSPtr(nxtTag));
     }
     parser->nxtTokN(1,".");
-    return head;
+    head.locale=locale.getBaseName();
 }
 
-infon* XlaterENGLISH::tags2Proteus(WordSPtr words){   // Converts a list of words read by ReadTagChain() into an infon and returns a pointer to it.
+infon* XlaterENGLISH::tags2Proteus(WordS& words){   // Converts a list of words read by ReadTagChain() into an infon and returns a pointer to it.
     findDefinitions(words);
     stitchAndDereference(words);
     infon* proteusCode = infonate(words);
     return proteusCode;
 }
 
-WordSPtr XlaterENGLISH::proteus2Tags(infon* proteus){  // Converts an infon to a tag chain.
-    return 0;
+void XlaterENGLISH::proteus2Tags(infon* proteus, WordS& WordsOut){  // Converts an infon to a tag chain.
 }
 
 typedef map<string, uint> WordMap;
@@ -137,9 +161,6 @@ const uint Qnt=Det+wfHasNumSense;
 const uint Num=Qnt+wfCanStartNum;
 const uint ProN=wfIsPronoun;
 const uint AuxV=wfVerbHelper;
-const uint Prep=wfIsPreposition;
-const uint Conj=wfIsConjunction;
-const uint Ngtr=wfIsNegotiator;
 
 const uint p1st=wf1stPrsn;
 const uint p2nd=wf2ndPrsn;
@@ -459,18 +480,17 @@ int parseWord(WordSMap *wordLib, const string &wrdToParse, const string &scopeID
  *   If a word does not have a definition, the argument words will have its wfErrorInAChildWord flag set.
  */
 
-void XlaterENGLISH::findDefinitions(WordSPtr words){
-    UnicodeString txt=""; // UErrorCode err=U_ZERO_ERROR; int32_t Result=0;
-    UnicodeString ChainText; tagChainToString(words, ChainText);
+void XlaterENGLISH::findDefinitions(WordS& words){
+    string ChainText; tagChainToString(&words, &ChainText);
     WordSPtr crntChoice=0; uint wordFlags=0;
     WordListItr WLi;
-    string scopeID=words->key.substr(words->key.find('%')+1);
-    for(WordListItr crntWrd=words->words.begin(); crntWrd!=words->words.end();){
+    string scopeID=words.key.substr(words.key.find('%')+1);
+    for(WordListItr crntWrd=words.words.begin(); crntWrd!=words.words.end();){
         WordListItr tmpWrd; wordFlags=0;
         uint numWordsInCompound=0, numWordsInChosen=0, scopeScore=0; crntChoice=0;
         string trial="", wordKey="";
         if((*crntWrd)->sysType>=wstNumOrd) {++crntWrd; continue;} // It's a number. Don't try to find it.
-        for(tmpWrd=crntWrd; tmpWrd!=words->words.end() && numWordsInCompound++ < maxWordsInCompound; tmpWrd++){
+        for(tmpWrd=crntWrd; tmpWrd!=words.words.end() && numWordsInCompound++ < maxWordsInCompound; tmpWrd++){
             if((*tmpWrd)->sysType>=wstNumOrd) break; // Numbers cannot be in the compound words.
             if(numWordsInCompound>1) wordKey.append("-");
             wordKey.append((*tmpWrd)->norm);
@@ -502,6 +522,7 @@ void XlaterENGLISH::findDefinitions(WordSPtr words){
             if(wordFlags) {
                 (*crntWrd)->wordFlags=wordFlags;
                 if(wordFlags&wfCanStartNum){
+                    // UErrorCode err=U_ZERO_ERROR; int32_t Result=0;
                     cout <<"NUMBER: "<<(*crntWrd)->norm<<"  ("<<(*crntWrd)->offsetInSource<<")\n";
                     Formattable resultInt=0; ParsePosition parsePos=(*crntWrd)->offsetInSource; // NOT CORRECT.
   //                  RuleBasedNumberFormat formtter; formatter.parse(ChainText, resultInt, parsePos);
@@ -602,18 +623,18 @@ cout<<"furthest:"<<furthestPos<<"  wrdLen:"<<wrdLen<<"\n";
             }
         }
         if(!wordFlags){ // If this isn't a function word...
-            if(crntChoice==0) {words->wordFlags|=wfErrorInAChildWord; cout<< ((string)"\n\nMESG: What does "+(*crntWrd)->norm+" mean?\n"); crntWrd++;}
+            if(crntChoice==0) {words.wordFlags|=wfErrorInAChildWord; cout<< ((string)"\n\nMESG: What does "+(*crntWrd)->norm+" mean?\n"); crntWrd++;}
             else {
                 if(numWordsInChosen>1){ // If more than one word was consumed, move them into a new parent.
                     WordSPtr parent=WordSPtr(new WordS);
                     parent->definition=crntChoice->definition;
-                    words->words.insert(crntWrd, parent);
+                    words.words.insert(crntWrd, parent);
                     WordListItr wrd=crntWrd;
                     for(uint i=0; i<numWordsInChosen; ++i){
                         if(i>0) parent->norm+=" ";
                         parent->norm+=(*wrd)->norm;
                         parent->words.push_back(*wrd);
-                        wrd=words->words.erase(wrd);
+                        wrd=words.words.erase(wrd);
                     }
                 } else {(*crntWrd)->definition=crntChoice->definition; ++crntWrd;}
             }
@@ -621,17 +642,17 @@ cout<<"furthest:"<<furthestPos<<"  wrdLen:"<<wrdLen<<"\n";
     }
 }
 
-void XlaterENGLISH::stitchAndDereference(WordSPtr text){
+void XlaterENGLISH::stitchAndDereference(WordS& text){
     parseResult result;
     EnglishParser parser;
-    parser.ParseEnglish(text, *text->words.begin(), 0);
+    parser.ParseEnglish(text, **text.words.begin(), 0);
     if(result==prMatch){}
-    WordListItr WLI=text->words.begin(); //++WLI;
-    text->definition=(*WLI)->definition;
+    WordListItr WLI=text.words.begin(); //++WLI;
+    text.definition=(*WLI)->definition;
 }
 
-infon* XlaterENGLISH::infonate(WordSPtr text){
-    return text->definition;
+infon* XlaterENGLISH::infonate(WordS& text){
+    return text.definition;
 }
 
 ///////////////////////////////////////////////////////////
@@ -659,11 +680,11 @@ parseResult EnglishParser::pSentence(ParserArgList){
 
 parseResult EnglishParser::pNounPhrase(ParserArgList){
     parseResult result;
-    uint wordFlags=crntWrd->wordFlags;
-    cout<<"NOUN-PHRASE-a:"<<crntWrd->norm<<"\n";
+    uint wordFlags=crntWrd.wordFlags;
+    cout<<"NOUN-PHRASE-a:"<<crntWrd.norm<<"\n";
     if(wordFlags & wfHasDetSense){
         cout<<"NOUN-PHRASE-B - HERE\n";
-// note: make "number 53" be nominal.
+// TODO: make "number 53" be nominal.
     }
 
     if((result=pSelectorSeq(WordSystem, crntWrd, context)) != prNoMatch) {}

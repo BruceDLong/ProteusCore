@@ -6,7 +6,7 @@ SET(CMAKE_COLOR_MAKEFILE ON)
 #SET(CMAKE_VERBOSE_MAKEFILE OFF)
 
 set(ICU_UnicodeVersion release-49-1-1)
-set(CMAKE_C_FLAGS -m32) 
+set(CMAKE_C_FLAGS -m32)
 set(CMAKE_CXX_FLAGS -m32)
 include(ExternalProject)
 
@@ -25,7 +25,7 @@ ExternalProject_Add(
   UPDATE_COMMAND ""
 
   SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/SDL/src/SDL
-  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/deps/SDL/src/SDL/configure --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/SDL/1.3
+  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/deps/SDL/src/SDL/configure ABI=32  --disable-static CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32 --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/SDL/1.3
 
   BUILD_COMMAND  $(MAKE)
   INSTALL_COMMAND  $(MAKE) install
@@ -43,7 +43,7 @@ ExternalProject_Add(
   UPDATE_COMMAND ""
 
   SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/SDL_image/
-  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/deps/SDL_image/src/SDL_image/configure --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/SDL_image
+  CONFIGURE_COMMAND export SDL_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/SDL/1.3/bin/sdl2-config && ${CMAKE_CURRENT_SOURCE_DIR}/deps/SDL_image/src/SDL_image/configure ABI=32  --disable-static CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32  --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/SDL_image
   BUILD_COMMAND  $(MAKE)
   INSTALL_COMMAND  $(MAKE) install
   BUILD_IN_SOURCE 0
@@ -107,24 +107,24 @@ ExternalProject_Add(
 
 #=========================================
 # Build ICU (unicode)
-ExternalProject_Add(
-  ICU_unicode
-  PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/deps/unicode/
-  SVN_REPOSITORY "http://source.icu-project.org/repos/icu/icu/tags/${ICU_UnicodeVersion}"
-#  SVN_REVISION "release-49-1-1"
-#  GIT_REPOSITORY git://github.com/commontk/CTK.git
-#  GIT_TAG origin/master
-  UPDATE_COMMAND ""
-  # TODO: patch uversion.h and platform.h as per readme.html
-  PATCH_COMMAND
-  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/unicode/${ICU_UnicodeVersion}
-  # TODO: for cross compiling, the 'linux' in the following should be one of those given by 'runConfigureICU --help'
-  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/deps/unicode/${ICU_UnicodeVersion}/source/runConfigureICU Linux ABI=32 --with-data-packaging=archive --with-library-bits=32  --enable-static  --enable-shared --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/unicode/release-49-1-1
+#ExternalProject_Add(
+  #ICU_unicode
+  #PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/deps/unicode/
+  #SVN_REPOSITORY "http://source.icu-project.org/repos/icu/icu/tags/${ICU_UnicodeVersion}"
+##  SVN_REVISION "release-49-1-1"
+##  GIT_REPOSITORY git://github.com/commontk/CTK.git
+##  GIT_TAG origin/master
+  #UPDATE_COMMAND ""
+  ## TODO: patch uversion.h and platform.h as per readme.html
+  #PATCH_COMMAND
+  #SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/unicode/${ICU_UnicodeVersion}
+  ## TODO: for cross compiling, the 'linux' in the following should be one of those given by 'runConfigureICU --help'
+  #CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/deps/unicode/${ICU_UnicodeVersion}/source/runConfigureICU Linux ABI=32 --with-data-packaging=archive --with-library-bits=32  --enable-static  --enable-shared --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/unicode/release-49-1-1
 
-  BUILD_COMMAND $(MAKE)
-  INSTALL_COMMAND $(MAKE) install
-  BUILD_IN_SOURCE 0
-)
+  #BUILD_COMMAND $(MAKE)
+  #INSTALL_COMMAND $(MAKE) install
+  #BUILD_IN_SOURCE 0
+#)
 
 add_subdirectory (core)
 #add_subdirectory (slip)

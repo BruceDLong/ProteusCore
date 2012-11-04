@@ -154,6 +154,7 @@ struct WordS {  // Word System: single number, word or phrase / clause / sentenc
     WordSPtr item, itemsConstraints, metaConstraints; // After analysis: "head", "pre-modifiers", "post-modifiers"
 
     uint wordFlags;      // See Word Flags enum for bit meanings
+    int rank;             // negotiator > verb > noun > adj (opinion, size, shape, condition, age, color, origin) > adv > det > pp
 
     WordDegree wordDegree;
     WordPositionStyle PositionStyle;

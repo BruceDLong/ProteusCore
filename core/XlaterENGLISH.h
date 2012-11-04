@@ -25,6 +25,7 @@ public:
     void proteus2Tags(infon* proteus, WordS& WordsOut);  // Converts an infon to a tag chain.
     virtual bool loadLanguageData(string dataFilename);
     virtual bool unloadLanguageData();
+    XlaterENGLISH(){language.createCanonical("en");};
     ~XlaterENGLISH(){unloadLanguageData();};
 
 private:

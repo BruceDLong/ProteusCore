@@ -61,14 +61,13 @@ WordSystemTypes validNumberSyntax(string &in){
     return ret;
 }
 
-void tagChainToString(WordS *tags, string *strOut){
+void tagChainToString(WordS *tags, UnicodeString *strOut){
     *strOut=""; WordS* n;
     for(WordListItr itr=tags->words.begin(); itr!=tags->words.end(); ++itr){
         n= (*itr).get();
-cout<<"t2s: @"<<n<<"\n";
         if((*strOut)!="") (*strOut)+=" ";
         n->offsetInSource=strOut->length();
-        (*strOut) += n->norm; //strOut.fromUTF8(n.norm); // This needn't be unicode in English. (unless Unicode chars are allowed later.)
+        (*strOut) += strOut->fromUTF8(n->norm);
     }
 }
 
@@ -381,6 +380,24 @@ bool tagIsMarkedPossessive(WordSPtr &tag){
     return true;
 }
 
+struct burser {
+    deque<WordSPtr> subscribers;
+    void submitNextWord(WordSPtr word);
+};
+
+int calcWordsRank(WordSPtr word){
+    return 0;
+}
+
+void burser::submitNextWord(WordSPtr word){
+    bool isEnd = (word==0);
+ //   int rank = word->rank = calcWordsRank(WordSPtr word);
+ //   if (prevRank<rank) isEnd=true;
+
+    if(isEnd){
+    }
+}
+
 int FunctionWordFlags(WordSPtr tag){
     WordMapIter w = functionWords.find(tag->baseForm);
     if(w!=functionWords.end())  return w->second;
@@ -481,7 +498,7 @@ int parseWord(WordSMap *wordLib, const string &wrdToParse, const string &scopeID
  */
 
 void XlaterENGLISH::findDefinitions(WordS& words){
-    string ChainText; tagChainToString(&words, &ChainText);
+    UnicodeString ChainText; tagChainToString(&words, &ChainText);
     WordSPtr crntChoice=0; uint wordFlags=0;
     WordListItr WLi;
     string scopeID=words.key.substr(words.key.find('%')+1);
@@ -522,10 +539,11 @@ void XlaterENGLISH::findDefinitions(WordS& words){
             if(wordFlags) {
                 (*crntWrd)->wordFlags=wordFlags;
                 if(wordFlags&wfCanStartNum){
-                    // UErrorCode err=U_ZERO_ERROR; int32_t Result=0;
+                    UErrorCode err=U_ZERO_ERROR;
                     cout <<"NUMBER: "<<(*crntWrd)->norm<<"  ("<<(*crntWrd)->offsetInSource<<")\n";
                     Formattable resultInt=0; ParsePosition parsePos=(*crntWrd)->offsetInSource; // NOT CORRECT.
-  //                  RuleBasedNumberFormat formtter; formatter.parse(ChainText, resultInt, parsePos);
+                    RuleBasedNumberFormat formatter(URBNF_SPELLOUT,language, err);
+                    formatter.parse(ChainText, resultInt, parsePos);
                     // crntChoice=XXX;
                     // numWordsInChosen=YYY;
                 }
@@ -658,6 +676,8 @@ infon* XlaterENGLISH::infonate(WordS& text){
 ///////////////////////////////////////////////////////////
 //            E N G L I S H   P A R S E R                //
 ///////////////////////////////////////////////////////////
+
+// #define ParserArgList WordS& WordSystem, WordS& crntWrd, infon* context
 
 parseResult EnglishParser::ParseEnglish(ParserArgList){
     parseResult result;

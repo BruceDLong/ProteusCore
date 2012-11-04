@@ -375,7 +375,8 @@ void CloseTurbulanceViewport(InfonViewPort* viewPort){
             delete(portal->theme); delete(portal->user); delete(portal->crntFrame);
 
             // remove self from Portals[]
-            for(int p=0; p<numPortals; ++p){if(portals[p]==portal) break;}
+            int p;
+            for(p=0; p<numPortals; ++p){if(portals[p]==portal) break;}
             while(++p<numPortals) portals[p-1]=portals[p];
             --numPortals;
             delete(portal);

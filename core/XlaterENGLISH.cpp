@@ -384,42 +384,6 @@ bool tagIsMarkedPossessive(WordSPtr &tag){
     return true;
 }
 
-struct burser {
-    int crntRank, prevRank;
-    WordSPtr crntWord, prevWord;
-    deque<WordSPtr> subscribers;
-    void submitNextWord(WordSPtr word);
-    bool levelPopped();
-    burser(){crntRank=prevRank=0;};
-};
-
-int calcWordsRank(WordSPtr word){
-    return 0;
-}
-
-bool burser::levelPopped(){
-    crntWord=subscribers.back();
-    subscribers.pop_back();
-    crntRank=crntWord->rank;
-    prevWord=subscribers.back();
-    subscribers.pop_back();
-    prevRank=prevWord->rank;
-    return crntRank < prevRank;
-}
-
-void burser::submitNextWord(WordSPtr word){
-    if(word){
-        word->rank = calcWordsRank(word);
-        subscribers.push_back(word);
-        while(levelPopped()){
-            if(prevWord->wordFlags & wfHasDetSense){
-                if(crntWord->wordFlags & wfHasNounSense){
-                }
-            }
-        }
-    } else{ // Handle end of incoming words
-    }
-}
 
 int FunctionWordFlags(WordSPtr tag){
     WordMapIter w = functionWords.find(tag->baseForm);

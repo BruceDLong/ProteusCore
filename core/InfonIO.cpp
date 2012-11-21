@@ -380,6 +380,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
         }
     }else if(isTagStart(Peek())){
         wFlag|=iTagUse; if(!(tags=ReadTagChain(&locale, 0, scopeID))) throw "Null Words found. Shouldn't happen";
+        nxtTok(",");
     }else{  // OK, then we're parsing some form of *... +...
         wFlag|=iNone;
         if(nxtTok("+") || nxtTok("-")) op='+'; else if(nxtTok("*") || nxtTok("/")) op='*';

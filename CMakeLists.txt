@@ -25,7 +25,7 @@ ExternalProject_Add(
   UPDATE_COMMAND ""
 
   SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/SDL/src/SDL
-  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/deps/SDL/src/SDL/configure ABI=32  --disable-static CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32 --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/SDL/1.3
+  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/deps/SDL/src/SDL/configure ABI=32  CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32 --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/SDL/1.3
 
   BUILD_COMMAND  $(MAKE)
   INSTALL_COMMAND  $(MAKE) install
@@ -43,7 +43,7 @@ ExternalProject_Add(
   UPDATE_COMMAND ""
 
   SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/SDL_image/
-  CONFIGURE_COMMAND export SDL_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/SDL/1.3/bin/sdl2-config && ${CMAKE_CURRENT_SOURCE_DIR}/deps/SDL_image/src/SDL_image/configure ABI=32  --disable-static CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32  --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/SDL_image
+  CONFIGURE_COMMAND export SDL_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/SDL/1.3/bin/sdl2-config && ${CMAKE_CURRENT_SOURCE_DIR}/deps/SDL_image/src/SDL_image/configure ABI=32  CFLAGS=-m32 CXXFLAGS=-m32 LDFLAGS=-m32  --prefix=${CMAKE_CURRENT_SOURCE_DIR}/builds/libs/SDL_image
   BUILD_COMMAND  $(MAKE)
   INSTALL_COMMAND  $(MAKE) install
   BUILD_IN_SOURCE 0

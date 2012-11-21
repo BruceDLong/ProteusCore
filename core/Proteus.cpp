@@ -573,7 +573,7 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
             case iTagDef: break; // Reserved
             case iTagUse: {
                 if(CI->type == 0) throw ("A tag was null which is a bug");
-                OUT("Recalling: "<<CI->type->norm<<":"<<CI->type->locale);
+//                OUT("Recalling: "<<CI->type->norm<<":"<<CI->type->locale);
                 infon* found=CI->findTag(*CI->type);
                 if (found) {
                     bool asNotFlag=((CI->wFlag&asNot)==asNot);
@@ -588,10 +588,12 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
             case iGetMiddle: break; // TODO: iGetMiddle
             case iGetLast:
                 if (SizeIsInverted(CI->spec1)){ // TODO: This block is a hack to make simple backward references work. Fix for full back-parsing.
+                    normalize(CI->spec1, cn->firstID);
                     newID=CI;
-                    for(UInt i=(UInt)CI->spec1->getSize().get_ui(); i>0; --i){newID=newID->prev;}
+cout<<"NEGATIVE INDEX: "<<CI->spec1->getSize().get_ui()<<"\n";
+                    for(UInt i=(UInt)CI->spec1->getSize().get_ui(); i>0; --i){cout<<"   NewID: "<<printInfon(newID)<<"   ("<<newID->pos<<")\n"; newID=newID->prev;}
                     {insertID(&CI->wrkList, newID,0); if(ValueIsUnknown(CI)) {CI->size=newID->size;} cpFlags(newID, CI,~mListPos);}
-                    SetValueFormat(CI, fUnknown);
+  //                  SetValueFormat(CI, fUnknown);
                 } else{
                     normalize(CI->spec1, cn->firstID);
                     if( ! CI->spec1->isntLast ()) CI->wFlag|=(isBottom+isLast);

@@ -1,27 +1,13 @@
 <%
-{'ONE' 'TWO'/*
-&test={_ "Hello"}
+{
+
+&appearance = "APPEARANCE"
+
+&entity = *3+{{appearance, ...} | ...}
+
+////////////////////
 6 5 4 3
-test== 5
-/*
-&frame = {?|...}
-
-&portal = {frame|...}
-
-&my2ndItem=[_ _]
-&everyOther={[_ _]|...}
-&setTo6=([???]=6)
-&color=#{*_+_ *_+_ *_+_}
-&size=#*_+_
-
-    &HIGH_NUM = _
-    &LOW_NUM = _
-    &NOW_VAL = _
-
-    &weather_report = {HIGH_NUM LOW_NUM NOW_VAL }
-*/
 ...
 }
-//{1 2 3}
 %>
 

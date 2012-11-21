@@ -51,8 +51,11 @@ WordSystemTypes validNumberSyntax(string &in){
     if(ch=='-') {start=1;}
     else if(!isdigit(ch)) return wstUnknown;
     if(len-start >= 3) { // Check for st, th, nd, rd ending
-        tail=n.substr(len-3, 3);
-        if(strcmp(tail.c_str(), "1st") || strcmp(tail.c_str(), "2nd") || strcmp(tail.c_str(), "3rd") || tail.substr(len-2, 2)=="th") {len-=2; ret=wstNumOrd;}
+        tail=n.substr(len-3, 3); cout<<"tail:"<<tail<<".\n";
+        if(tail=="1st"||tail=="2nd"||tail=="3rd"||tail=="4th"||tail=="5th"||
+           tail=="6th"||tail=="7th"||tail=="8th"||tail=="9th"||tail=="0th") {
+            len-=2; ret=wstNumOrd;
+        }
     }
     for(int p=start; p<len; ++p){
         ch=n[p];
@@ -78,9 +81,9 @@ WordS* XlaterENGLISH::ReadLanguageWord(QParser *parser, icu::Locale &locale){ //
     else return 0;
     if(parser->buf[0]==0) return 0;
     WordS* tag=new WordS;
-    tag->asRead=parser->buf; tag->locale=locale.getBaseName();
+    string &parsed=tag->asRead=parser->buf; tag->locale=locale.getBaseName();
     if(isalpha(tok)){
-        tagNormalizer->normalize(UnicodeString::fromUTF8(tag->asRead), uErr).toUTF8String(tag->norm);
+        tagNormalizer->normalize(UnicodeString::fromUTF8(parsed), uErr).toUTF8String(tag->norm);
         if(tagIsBad(tag->norm, tag->locale.c_str())) throw "Problem with characters in word";
         if(tag->norm.at(0)=='-'){tag->wordFlags|=wfAsSuffix; tag->norm=tag->norm.substr(1);}
         if(tag->norm.at(tag->norm.length()-1)=='-'){tag->wordFlags|=wfAsPrefix; tag->norm=tag->norm.substr(0,tag->norm.length()-1);}
@@ -90,9 +93,10 @@ WordS* XlaterENGLISH::ReadLanguageWord(QParser *parser, icu::Locale &locale){ //
             tag->senseID=parseSenseID(parser);
         }
     } else {
-        WordSystemTypes sysType=validNumberSyntax(tag->asRead);
+        WordSystemTypes sysType=validNumberSyntax(parsed);
         if(sysType==wstUnknown) throw "Invalid number syntax";
-        tag->norm=tag->asRead;
+        tag->norm=parsed;
+        if(sysType==wstNumOrd) {parser->buf[parsed.length()-1]=' '; parser->buf[parsed.length()-2]=' ';}
         tag->sysType=sysType;
         // Create number as model of this:
         UInt size=1;
@@ -331,13 +335,13 @@ bool XlaterENGLISH::loadLanguageData(string dataFilename){
     EnglishSuffixes.clear();
     for(WordSMap::iterator S = suffixesFront.begin(); S!=suffixesFront.end(); ++S){
         string reversedKey=string(S->first.rbegin(), S->first.rend());
-        WordSPtr wsp=WordSPtr(new WordS(S->first, 0, 0, this));
+        WordSPtr wsp=WordSPtr(new WordS(S->first, 0, 0, this)); wsp->senseID="auto";
         EnglishSuffixes.insert(pair<string, WordSPtr>(reversedKey+"%U", wsp));
         wordLibrary.insert(pair<wordKey, WordSPtr>(S->first+"%U", wsp));
     }
 
     for(map<string, infon*>::iterator S = prefixes.begin(); S!=prefixes.end(); ++S){
-        WordSPtr wsp=WordSPtr(new WordS(S->first, 0, 0, this));
+        WordSPtr wsp=WordSPtr(new WordS(S->first, 0, 0, this)); wsp->senseID="auto";
         wordLibrary.insert(pair<wordKey, WordSPtr>(S->first+"%U", wsp));
     }
 
@@ -381,20 +385,39 @@ bool tagIsMarkedPossessive(WordSPtr &tag){
 }
 
 struct burser {
+    int crntRank, prevRank;
+    WordSPtr crntWord, prevWord;
     deque<WordSPtr> subscribers;
     void submitNextWord(WordSPtr word);
+    bool levelPopped();
+    burser(){crntRank=prevRank=0;};
 };
 
 int calcWordsRank(WordSPtr word){
     return 0;
 }
 
-void burser::submitNextWord(WordSPtr word){
-    bool isEnd = (word==0);
- //   int rank = word->rank = calcWordsRank(WordSPtr word);
- //   if (prevRank<rank) isEnd=true;
+bool burser::levelPopped(){
+    crntWord=subscribers.back();
+    subscribers.pop_back();
+    crntRank=crntWord->rank;
+    prevWord=subscribers.back();
+    subscribers.pop_back();
+    prevRank=prevWord->rank;
+    return crntRank < prevRank;
+}
 
-    if(isEnd){
+void burser::submitNextWord(WordSPtr word){
+    if(word){
+        word->rank = calcWordsRank(word);
+        subscribers.push_back(word);
+        while(levelPopped()){
+            if(prevWord->wordFlags & wfHasDetSense){
+                if(crntWord->wordFlags & wfHasNounSense){
+                }
+            }
+        }
+    } else{ // Handle end of incoming words
     }
 }
 
@@ -511,7 +534,7 @@ void XlaterENGLISH::findDefinitions(WordS& words){
             if((*tmpWrd)->sysType>=wstNumOrd) break; // Numbers cannot be in the compound words.
             if(numWordsInCompound>1) wordKey.append("-");
             wordKey.append((*tmpWrd)->norm);
-            cout << "#######>"<<wordKey<<"\t\t"<<scopeID<<"\n";
+//            cout << "#######>"<<wordKey<<"\t\t"<<scopeID<<"\n";
             WordSMap::iterator trialItr=wordLibrary.lower_bound(wordKey);
             if(trialItr==wordLibrary.end()) break;
             trial=trialItr->first;
@@ -519,7 +542,7 @@ void XlaterENGLISH::findDefinitions(WordS& words){
             int keyLen=wordKey.length();
             while(trial.substr(0,keyLen) == wordKey){
                 stopSearch=false;
-                if(trial[keyLen]=='%'){cout << "\tMATCH!\n";
+                if(trial[keyLen]=='%'){//cout << "\tMATCH!\n";
                     uint newScopeScore=calcScopeScore(scopeID, trial.substr(keyLen+1));
                     if(newScopeScore > scopeScore) {
                         scopeScore=newScopeScore;
@@ -541,9 +564,13 @@ void XlaterENGLISH::findDefinitions(WordS& words){
                 if(wordFlags&wfCanStartNum){
                     UErrorCode err=U_ZERO_ERROR;
                     cout <<"NUMBER: "<<(*crntWrd)->norm<<"  ("<<(*crntWrd)->offsetInSource<<")\n";
-                    Formattable resultInt=0; ParsePosition parsePos=(*crntWrd)->offsetInSource; // NOT CORRECT.
-                    RuleBasedNumberFormat formatter(URBNF_SPELLOUT,language, err);
-                    formatter.parse(ChainText, resultInt, parsePos);
+
+                    RuleBasedNumberFormat* formatter= new RuleBasedNumberFormat(URBNF_SPELLOUT, Locale::getUS(), err); // <-- It crashes here.
+cout<<"AT AAA\n";
+                    Formattable parseResult; ParsePosition parsePos=(*crntWrd)->offsetInSource; // offset likely NOT CORRECT.
+                    formatter->parse(ChainText, parseResult, parsePos);
+                    delete formatter;
+cout<<"NUMBER WAS:"<<parseResult.getLong()<<".\n";
                     // crntChoice=XXX;
                     // numWordsInChosen=YYY;
                 }
@@ -555,7 +582,7 @@ void XlaterENGLISH::findDefinitions(WordS& words){
                 string modToParse; uint foundPath=0, sPos, modLen, farPos=0; // These are used in tryParse macro.
                 wordListVec alts(wrdLen+5,WordList()); // The 5 is to have room for modified spellings.
                 uint furthestPos=parseWord(&wordLibrary, wrdToParse, scopeID, &alts);
-cout<<"furthest:"<<furthestPos<<"  wrdLen:"<<wrdLen<<"\n";
+//cout<<"furthest:"<<furthestPos<<"  wrdLen:"<<wrdLen<<"\n";
                 if(furthestPos<wrdLen){ // If we didn't find a path thru wrdToParse try other spellings:
                     // TODO: verify more rigerously that there are no important exceptions to this logic:
                     string reversedWrd=string(wrdToParse.rbegin(), wrdToParse.rend());
@@ -701,9 +728,9 @@ parseResult EnglishParser::pSentence(ParserArgList){
 parseResult EnglishParser::pNounPhrase(ParserArgList){
     parseResult result;
     uint wordFlags=crntWrd.wordFlags;
-    cout<<"NOUN-PHRASE-a:"<<crntWrd.norm<<"\n";
+ //   cout<<"NOUN-PHRASE-a:"<<crntWrd.norm<<"\n";
     if(wordFlags & wfHasDetSense){
-        cout<<"NOUN-PHRASE-B - HERE\n";
+        cout<<"NOUN-PHRASE-DET - HERE\n";
 // TODO: make "number 53" be nominal.
     }
 

@@ -26,7 +26,7 @@
 using namespace std;
 
 bool IsHardFunc(string tag){
-    return((tag=="addone") || (tag=="loadinfon") || (tag=="imageif") || (tag=="textinfon")
+    return((tag=="addone") || (tag=="loadinfon") || (tag=="imageof") || (tag=="textinfon")
         || (tag=="time") || (tag=="cos") || (tag=="sin") || (tag=="textline") || (tag=="timestr"));
 }
 

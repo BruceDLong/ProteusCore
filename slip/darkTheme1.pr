@@ -8,23 +8,23 @@
        { drawItem (
             {{setBackgndImg 'AbstractBkgnd.png'} {dispBackgnd}}
             {
-                {fontFace 'sans bold 12'}
-                {inkColorAlpha 0.5 0.5 0.8 0.3}
-                {lineWidth 3}
-                {moveTo 0 50}
-                {lineRel 200 0}
-                {curveRel 100.0 100 -70.8 -50.4 0.1 400}
-                {lineRel -200 0}
-                {lineRel 0 400}
+                {fontFace, 'sans bold 12'}
+                {inkColorAlpha, 0.5 0.5 0.8 0.3}
+                {lineWidth, 3}
+                {moveTo, 0 50}
+                {lineRel, 200 0}
+                {curveRel, 100.0 100 -70.8 -50.4 0.1 400}
+                {lineRel, -200 0}
+                {lineRel, 0 400}
                 {fillPath}
-                {moveTo 0 70}
-                {inkColorAlpha 0.6 0.6 0.9 0.7}
+                {moveTo, 0 70}
+                {inkColorAlpha, 0.6 0.6 0.9 0.7}
             }
-           { {drawItem {{moveRel 20.0 0.0 }   imageOf <: {%A:[?]~}  {moveRel -20.0 20.0} }} |...} //(%V:[_]~)
+           { {drawItem {{moveRel, 20.0 0.0 }   imageOf <: {%A:[?]~}  {moveRel, -20.0 20.0} }} |...} //(%V:[_]~)
             {
                 {fillPath}
             }
-            { {dispPic "ColorfulPath.png" 1500 200 5}}
+            { {dispPic, "ColorfulPath.png" 1500 200 5}}
         )
        }
       ]
@@ -38,8 +38,8 @@
         [ ?
             {drawItem {
                 {fontFace 'sans bold italic 11'}
-                {text %A:[$]} {moveRel 0 20}
-                {fontFace 'sans normal 10'}
+                {text %A:[$]} {moveRel, 0 20}
+                {fontFace, 'sans normal 10'}
                 imageOf <: {(%A:[$ ?])}
               }
             }
@@ -66,7 +66,7 @@
     {'default'
       [ ?
         {drawItem {
-            {text textInfon<:(%A:[_])}
+            {text, textInfon<:(%A:[_])}
           }
         }
        ]
@@ -79,7 +79,7 @@
     {'default'
       [ ?
         {drawItem {
-            {text "?"}
+            {text, "?"}
           }
         }
        ]
@@ -94,7 +94,7 @@
        {5.0 42.0 12.0 25.0 56.0} // ({0.0} {+(+40.0 (%\\\\:[_]~)) | ...})  // Y-values
 
        { drawItem
-        { {drawItem {{moveRel 20.0 0.0 }   imageOf <: {%A:[?]~}  {moveRel -20.0 20.0} }} |...} //(%V:[_]~)
+        { {drawItem {{moveRel, 20.0 0.0 }   imageOf <: {%A:[?]~}  {moveRel, -20.0 20.0} }} |...} //(%V:[_]~)
        }
       ]
     }
@@ -119,10 +119,10 @@
         //({0} {+(\\\\[_]. \\\^[_].) | ...})  // X-values
         ({0} {+(+50 %\\\^:[_].) | ...})  // Y-values
 
-        { red drawComplex
+        { red, drawComplex
         {
-            {blue text 20,\\\\^[? _].  \\\\[$]. }
-            // {green line 0, \\\\^[? _]. 100, \\\\^[? _]. }
+            {blue, text 20,\\\\^[? _].  \\\\[$]. }
+            // {green, line 0, \\\\^[? _]. 100, \\\\^[? _]. }
         |...}
        }
       ]
@@ -131,12 +131,12 @@
     {'blocked',
       [ ?
         {drawItem {
-            {inkColorAlpha 0.1 1.0 0.1 0.8}
-            {curvedRect 25.0 30.0 400.0 600.0 60.0}
+            {inkColorAlpha, 0.1 1.0 0.1 0.8}
+            {curvedRect, 25.0 30.0 400.0 600.0 60.0}
 
-            {inkColorAlpha 0.1 0.5 0.1 0.9}
+            {inkColorAlpha, 0.1 0.5 0.1 0.9}
 
-   //         {scaleTo 5.0 5.0}
+   //         {scaleTo, 5.0 5.0}
             {text %A:[$]}
  //           {fillPath}
           }
@@ -167,7 +167,7 @@
        {5.0 42.0 12.0 25.0 56.0} // ({0.0} {+(+40.0 (%\\\\:[_]~)) | ...})  // Y-values
 
        { drawItem
-        { {drawItem {{moveRel 20.0 0.0 }   imageOf <: {%A:[?]~}  {moveRel -20.0 20.0} }} |...} //(%V:[_]~)
+        { {drawItem {{moveRel, 20.0 0.0 }   imageOf <: {%A:[?]~}  {moveRel, -20.0 20.0} }} |...} //(%V:[_]~)
        }
       ]
     }
@@ -177,21 +177,21 @@
        {5.0 42.0 12.0 25.0 56.0} // ({0.0} {+(+40.0 (%\\\\:[_]~)) | ...})  // Y-values
 
        { drawItem
-        { {drawItem {{moveRel 50.0 40.0 }   imageOf <: {%A:[?]~}   }} |...} //(%V:[_]~)
+        { {drawItem {{moveRel, 50.0 40.0 }   imageOf <: {%A:[?]~}   }} |...} //(%V:[_]~)
        }
       ]
     }
 }
 ////////////////////////////////////////////////
 
-  {'weather_report',
+  {'weatherreport',
     {'default'
       [ ?
         {drawItem {
-            {text timestr<:1} {moveRel 0 20}
-            {text textLine<:{{"Today: Temp=" %A:[{!NOW_VAL|...} NOW_VAL]  }}  } {moveRel 10 20}
-            {fontFace 'sans normal 11'}
-            {text textLine<:{{"  High=" %A:[_] "   Low=" %A:[_ _] }}  } {moveRel -10 20}
+            {text, timestr<:1} {moveRel, 0 20}
+            {text, textLine<:{{"Today: Temp=" %A:[{!current|...} current]  }}  } {moveRel, 10 20}
+            {fontFace, 'sans normal 11'}
+            {text, textLine<:{{"  High=" %A:[_] "   Low=" %A:[_ _] }}  } {moveRel, -10 20}
             }
         }
        ]
@@ -201,4 +201,3 @@
 
 
 } %>
-

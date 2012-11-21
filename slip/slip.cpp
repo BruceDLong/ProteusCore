@@ -29,23 +29,25 @@ static int doneYet=0, numEvents=0, numPortals=0;
 
 using namespace std;
 
-#define DEB(msg)  //{cout<< msg;}
-#define DEBl(msg) //{cout<< msg << "\n";}
+#define DEB(msg)  {cout<< msg;}
+#define DEBl(msg) {cout<< msg << "\n";}
+#define DEB2(msg) //{cout<< msg;}  // Use to show drawing commands
 #define MSG(msg)  {cout<< msg << flush;}
 #define MSGl(msg) {cout<< msg << "\n" << flush;}
 #define ERR(msg)  {cout<< msg;}
 #define ERRl(msg) {cout<< msg << "\n";}
+#define Indent {for (int x=0;x<indent;++x) indentStr+="   |";}
 
 #define gINT (theAgent.gIntNxt(&ItemPtr).get_ui())
 #define gZto1 (theAgent.gRealNxt(&ItemPtr))
 #define gSTR theAgent.gStrNxt(&ItemPtr, txtBuff)
 
-#define Z1 {a=gZto1;  DEB(a)}
-#define Z2 {a=gZto1; b=gZto1; DEB(a<<", "<<b)}
-#define Z3 {a=gZto1; b=gZto1; c=gZto1; DEB(a<<", "<<b<<", "<< c)}
-#define Z4 {a=gZto1; b=gZto1; c=gZto1; d=gZto1; DEB(a<<", "<<b<<", "<< c<<", "<< d)}
-#define Z5 {a=gZto1; b=gZto1; c=gZto1; d=gZto1; e=gZto1; DEB(a<<", "<<b<<", "<< c<<", "<< d<<", "<< e)}
-#define Z6 {a=gZto1; b=gZto1; c=gZto1; d=gZto1; e=gZto1; f=gZto1; DEB(a<<", "<<b<<", "<< c<<", "<< d<<", "<< e<<", "<< f)}
+#define Z1 {a=gZto1;  DEB2(a)}
+#define Z2 {a=gZto1; b=gZto1; DEB2(a<<", "<<b)}
+#define Z3 {a=gZto1; b=gZto1; c=gZto1; DEB2(a<<", "<<b<<", "<< c)}
+#define Z4 {a=gZto1; b=gZto1; c=gZto1; d=gZto1; DEB2(a<<", "<<b<<", "<< c<<", "<< d)}
+#define Z5 {a=gZto1; b=gZto1; c=gZto1; d=gZto1; e=gZto1; DEB2(a<<", "<<b<<", "<< c<<", "<< d<<", "<< e)}
+#define Z6 {a=gZto1; b=gZto1; c=gZto1; d=gZto1; e=gZto1; f=gZto1; DEB2(a<<", "<<b<<", "<< c<<", "<< d<<", "<< e<<", "<< f)}
 #define I2 {Ia=gINT; Ib=gINT;}
 #define I3 {Ia=gINT; Ib=gINT; Ic=gINT;}
 #define I4 {Ia=gINT; Ib=gINT; Ic=gINT;  Id=gINT;}
@@ -169,7 +171,7 @@ SDL_Texture *LoadTexture(SDL_Renderer *renderer, char *file, SDL_bool transparen
 
 string fontDescription="Sans Bold 12";
 
-void renderText(cairo_t *cr, char* text){
+void renderText(cairo_t *cr, char* text){ DEB2("'"<<text<<"'");
     PangoLayout *layout=pango_cairo_create_layout(cr);
     pango_layout_set_text(layout, text, -1);
 
@@ -232,51 +234,50 @@ enum dTools{rectangle=1, curvedRect, circle, lineTo, lineRel, moveTo, moveRel, c
 typedef map<string, cairo_surface_t*> picCache_t;
 picCache_t picCache;
 
-void DrawProteusDescription(InfonPortal* portal, infon* ProteusDesc){
+void DrawProteusDescription(InfonPortal* portal, infon* ProteusDesc, int indent=0){
     cairo_surface_t* surface=portal->cairoSurf;
     if (surface==0 || ProteusDesc==0 || ProteusDesc->getSize()==0) ERRl("Description Flag Raised."<<ProteusDesc); // Missing description.
-    //DEBl("DISPLAY:["<<printInfon(ProteusDesc));
-    int count=0; int EOT_d2; char txtBuff[1024];
+    //string indentStr="\n"; Indent;  // Comment or code this out for release.
+    DEB2(indentStr<<"+------------------------------->");
+    int count=0; char txtBuff[1024];
     infon *i, *ItemPtr, *OldItmPtr, *subItem;
     cairo_t *cr = portal->cr;
     SDL_Surface* utilSurface;
-DEB("\n-----------------\n")
-    int size, size2; double a,b,c,d,e,f; int Ia,Ib,Ic,Id,Ie,If,Ih,II; char  *Sa, *Sb;
+    char *Sa; double a,b,c,d,e,f; //int Ia,Ib,Ic,Id,Ie,If,Ih,II;
     for(int EOL=theAgent.StartTerm(ProteusDesc, &i); !EOL; EOL=theAgent.getNextTerm(&i)){
-        DEBl(count<<":[" << printInfon(i).c_str() << "]");
-        int EOT_d2=theAgent.StartTerm(i, &ItemPtr);
+        if(theAgent.StartTerm(i, &ItemPtr)) break;
         int cmd=gINT;
-        DEB("\n[CMD:"<< cmd << "]");
+        DEB2(indentStr<<"#"<<count<<" ("<<cmd<<") [" << printInfon(i).c_str() << "]  \t===>");
         switch(cmd){ // TODO: Pango, Audio, etc.
-            case rectangle:DEB("rectangle:") Z4 cairo_rectangle (cr, a,b,c,d);     break;
-            case curvedRect:DEB("curvedRect:")  Z5 roundedRectangle(cr, a,b,c,d,e);break;
+            case rectangle:DEB2("rectangle:") Z4 cairo_rectangle (cr, a,b,c,d);     break;
+            case curvedRect:DEB2("curvedRect:")  Z5 roundedRectangle(cr, a,b,c,d,e);break;
             case circle:  Z3 cairo_arc (cr, a,b,c,0.0,2.0*M_PI); break;
-            case lineTo: DEB("lineTo:")  Z2   cairo_line_to(cr, a,b);              break;
-            case lineRel: DEB("lineRel:") Z2   cairo_rel_line_to(cr, a,b);         break;
-            case moveTo: DEB("moveTo:") Z2 cairo_move_to(cr, a,b);                 break;
-            case moveRel: DEB("moveRel:") Z2   cairo_rel_move_to(cr, a,b);         break;
+            case lineTo: DEB2("lineTo:")  Z2   cairo_line_to(cr, a,b);              break;
+            case lineRel: DEB2("lineRel:") Z2   cairo_rel_line_to(cr, a,b);         break;
+            case moveTo: DEB2("moveTo:") Z2 cairo_move_to(cr, a,b);                 break;
+            case moveRel: DEB2("moveRel:") Z2   cairo_rel_move_to(cr, a,b);         break;
             case curveTo:  Z6   cairo_curve_to(cr, a,b,c,d,e,f);    break;
             case curveRel: Z6   cairo_rel_curve_to(cr, a,b,c,d,e,f);break;
             case arcClockWise:Z5 cairo_arc(cr, a,b,c,d,e);          break; //xc, yc, radius, angle1, angle2
             case arcCtrClockW:Z5 cairo_arc_negative(cr, a,b,c,d,e); break;
-            case text: DEB("text:") S1  renderText(cr, Sa);         break;
+            case text: DEB2("text:") S1  renderText(cr, Sa);         break;
 
             case strokePreserve: cairo_stroke_preserve(cr); break;
             case fillPreserve: cairo_fill_preserve(cr); break;
-            case strokePath:   cairo_stroke(cr); DEB("strokePath")  break;
-            case fillPath:     cairo_fill(cr); DEB("fillPath")      break;
+            case strokePath:   cairo_stroke(cr); DEB2("strokePath")  break;
+            case fillPath:     cairo_fill(cr); DEB2("fillPath")      break;
             case paintSurface: cairo_paint(cr);      break;
             case closePath:    cairo_close_path(cr); break;
 
-            case inkColor:DEB("inkColor:") Z3 cairo_set_source_rgba(cr, a, b, c, 1);  break;
+            case inkColor:DEB2("inkColor:") Z3 cairo_set_source_rgba(cr, a, b, c, 1);  break;
             case inkLinearGrad: Z4 CreateLinearGradient(cr, a, b, c, d, (infon*)0); break;
             case inkRadialGrad: Z6 CreateRadialGradient(cr, a, b, c, d, e, f, (infon*)0); break;
             case inkSetColorPt: Z5 AddColorStop(cr, a, b, c, d, e); break;
             case inkImage: S1 Z2 loadImageSurface(cr, Sa, a, b); break;
             case inkDrawing:  break;
-            case inkColorAlpha:DEB("inkColorAlpha:") Z4 cairo_set_source_rgba(cr, a, b, c, d);  break;
+            case inkColorAlpha:DEB2("inkColorAlpha:") Z4 cairo_set_source_rgba(cr, a, b, c, d);  break;
 
-            case lineWidth:DEB("lineWidth:") Z1 cairo_set_line_width (cr, a); break;
+            case lineWidth:DEB2("lineWidth:") Z1 cairo_set_line_width (cr, a); break;
             case lineStyle:  break;
             case fontFace: S1 fontDescription=Sa; break;
             case fontSize:  break;
@@ -293,7 +294,7 @@ DEB("\n-----------------\n")
             case scaleTo: Z2 cairo_scale(cr, a,b); break;
             case rotateTo: Z2 cairo_rotate(cr, a); break;
 
-            case loadImage: DEB("background:") S1 utilSurface=IMG_Load(Sa); SDL_BlitSurface(utilSurface,NULL, portal->surface,NULL); break;
+            case loadImage: DEB2("background:") S1 utilSurface=IMG_Load(Sa); SDL_BlitSurface(utilSurface,NULL, portal->surface,NULL); break;
             case setBackgndImg: S1
                 if(portal->cairo_background!=0) break;
           //      portal->SDL_background=IMG_Load(Sa);
@@ -327,10 +328,10 @@ DEB("\n-----------------\n")
                 else pic=picPtr->second;
                 {//pic=cairo_image_surface_create_from_png(Sa);
                     double scale=c;
-                    int w = cairo_image_surface_get_width (pic);
+              /*      int w = cairo_image_surface_get_width (pic);
                     int h = cairo_image_surface_get_height (pic);
                     double pw = portal->surface->w;
-                    double ph = portal->surface->h;
+                    double ph = portal->surface->h;  */
                     cairo_save(cr);
                     cairo_move_to(cr, a*scale,b*scale);
                     cairo_scale(cr,1/scale,1/scale);
@@ -340,19 +341,20 @@ DEB("\n-----------------\n")
                     cairo_restore(cr);
                 }
             }break;
-            case drawItem: DEB(">");
+            case drawItem:
+            DEB2("Sub-Drawing:");
                 subItem=theAgent.gListNxt(&ItemPtr);
          //       cairo_new_sub_path(cr); //cairo_push_group(cr);
-                OldItmPtr=ItemPtr; DrawProteusDescription(portal, subItem); ItemPtr=OldItmPtr;
+                OldItmPtr=ItemPtr; DrawProteusDescription(portal, subItem, indent+1); ItemPtr=OldItmPtr;
            //      cairo_close_path(cr); //cairo_pop_group_to_source (cr);
-                DEB("<"); break;
+                break;
 
             default: {ERRl("Invalid Drawing Command:"<<cmd<<"\n"); exit(2);}
         }
-    if (++count==2000) break;
+        if (++count==2000) break;
     }
+    DEB2(indentStr<<"+<-------------------------------");
  //   cairo_destroy (cr);
-    DEBl("\nCount: " << count << "\n======================");
 }
 
 /////////////////// End of Slip Drawing, Begin Interface to Proteus Engine
@@ -444,7 +446,7 @@ void AddViewToPortal(InfonPortal* portal, char* title, int x, int y, int w, int 
     //TODO: Hardcode: icon, bpp-depth=SDL_PIXELFORMAT_RGB24 / vid_mode
 //    SDL_SetWindowDisplayMode(VP->window, NULL); // Mode for use during fullscreen mode
 //    LoadIcon()
-    VP->renderer=SDL_CreateRenderer(VP->window, -1, SDL_RENDERER_ACCELERATED);
+    VP->renderer=SDL_CreateRenderer(VP->window, -1, SDL_RENDERER_SOFTWARE);//SDL_RENDERER_ACCELERATED);
     SDL_SetRenderDrawColor(VP->renderer, 0xA0, 0xA0, 0xc0, 0xFF);
     VP->isMinimized=false;
     VP->posX=0; VP->posY=0; // location in parent window.
@@ -529,7 +531,7 @@ static int SimThread(void *nothing){
 
 void InitializePortalSystem(int argc, char** argv){
     numPortals=0;
-    char* worldFile="world.pr"; char* username="bruce"; char* password="erty"; string theme; char* portalContent="";
+    char* worldFile="world.pr"; char* username="bruce"; char* password="erty"; string theme;
     for (int i=1; i<argc;) {
         int consumed = 0;
         if (consumed == 0) {
@@ -653,6 +655,39 @@ void StreamEvents(){
                 case SDLK_ESCAPE: doneYet=true; break;
                 }
                 break;
+            case SDL_KEYUP:             break;
+            case SDL_TEXTEDITING:       break;
+            case SDL_TEXTINPUT:         break;
+
+            case SDL_MOUSEMOTION:       break;
+            case SDL_MOUSEBUTTONDOWN:   break;
+            case SDL_MOUSEBUTTONUP:     break;
+            case SDL_MOUSEWHEEL:        break;
+
+            case SDL_INPUTMOTION:       break;
+            case SDL_INPUTBUTTONDOWN:   break;
+            case SDL_INPUTBUTTONUP:     break;
+            case SDL_INPUTWHEEL:        break;
+            case SDL_INPUTPROXIMITYIN:  break;
+            case SDL_INPUTPROXIMITYOUT: break;
+
+            case SDL_FINGERDOWN:        break;
+            case SDL_FINGERUP:          break;
+            case SDL_FINGERMOTION:      break;
+            case SDL_TOUCHBUTTONDOWN:   break;
+            case SDL_TOUCHBUTTONUP:     break;
+            case SDL_MULTIGESTURE:      break;
+            case SDL_DOLLARGESTURE:     break;
+            case SDL_DOLLARRECORD:      break;
+
+            case SDL_JOYAXISMOTION:     break;
+            case SDL_JOYBALLMOTION:     break;
+            case SDL_JOYHATMOTION:      break;
+            case SDL_JOYBUTTONDOWN:     break;
+            case SDL_JOYBUTTONUP:       break;
+
+            case SDL_CLIPBOARDUPDATE:   break;
+            case SDL_DROPFILE:          break;
             case SDL_QUIT: doneYet=true; break;
 
             }
@@ -692,6 +727,7 @@ void StreamEvents(){
 
 int main(int argc, char *argv[]){
     MSGl("\n\n         * * * * * Starting Proteus and The Slipstream * * * * *\n");
+    //MSGl("SDL Revision" << SDL_GetRevisionNumber()<<",  "<<"\n");
     InitializePortalSystem(argc, argv);
     StreamEvents();
     return (0);

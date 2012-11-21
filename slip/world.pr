@@ -5,79 +5,6 @@
 
 <%
 {
-&AMOUNT = _
-&X=amount  &Y=amount  &Z=amount
-&LOCAL={}
-&SUPER={}
-&CLUSTER={}
-&TIME={_}
-&LOCATION={x y z}
-&START={}
-&END={}
-&TEMPORAL_RANGE={start={time}, end={time}}
-&MASS={amount}
-
-&PHYS_OBJ = {temporal_range {{mass location orientation configuration appearance size shape ...} |...} }
-&QUANTUM_OBJ = {temporal_range {charge spin mass location}}
-&QUARK_MODE = {'up' 'down' 'charm' 'strange' 'top' 'bottom'}[...]  // oneOf these
-
-&FERMION = {quantum_obj ...}
-&BOSON = {quantum_obj ...}
-
-&QUARK = {fermion quark_mode}
-&LEPTON = {fermion ...}
-
-&ELECTRON = {lepton ...}
-&MUON = {lepton ...}
-
-&NEUTRON = {quark::={quark_mode=up} *2+{quark::={quark_mode=down}|...}}  // 1 up-quark and 2 down-quarks
-&PROTON = {quark::={quark_mode=down} *2+{quark::={quark_mode=up}|...}}   // 1 down-quark and 2 up-quarks
-
-&NUCLEUS = {{neutron|...} {proton|...}}
-&ATOM = {nucleus {electron|...}}
-
-&MOLECULE = {{atom|...} ...}
-
-&CELL = {cell_nucleus cytoplasm membrane}
-&TISSUE = {{cell|...} ...}
-
-&ORGAN = {{tissue|...} ...}
-
-&BODY = {{organ|...} ...}
-
-&MIND = {world_model self_model {sense|...} {body_control|...} motive_register model_processor}
-
-&PERSON = {body mind motivations}
-&VERTABRATE = {Animal spinal_column limbic_system ...}
-&MAMMAL = {vertabrate mammary_glands ...}
-&HUMAN = {Mammal ...}
-// REFERENCE TO LIFE DATABASE
-
-&SENSE_BASED_AFFECTOR = {}
-&ART_WORK      = {sense_based_state_affector =: (sense=vision)}
-&MUSIC_PIECE   = {sense_based_state_affector =: (sense=audition)}
-&AROMA_THERAPY = {sense_based_state_affector =: (sense=smell)}
-&MASSAGE       = {sense_based_state_affector =: (sense=touch)}
-&CULINARY_WORK = {sense_based_state_affector =: (sense=taste)}
-
-&MALE = {}
-&FEMALE = {}
-&MASCULINE = {}
-&FEMININE = {}
-
-// REFERENCE TO HUMAN NAMES
-
-&GOVERNMENT = {bureaucracy legal_system enforcement_system ...}
-&NATION = {government citizenry {business|...} {NGO|...} {land_area|...} ...}
-&CONTINENT = {{biome|...} ...}
-&OCEAN = {}
-&BIOME = {}
-&PLANET = {phys_obj core surface atmosphere ...}
-&STAR = {phys_obj {hydrogen|...} {helium|...} ...}
-&STAR_SYSTEM = {{star|...} {planet|...}}
-&GALAXY = {phys_obj {star_system|...}}
-&GALACTIC_SUPERCLUSTER = {%phys_obj {Galaxy|...} }
-&UNIVERSE = {Galactic_Supercluster|...}
 
 &CPU = {}
 &GPU = {}
@@ -95,9 +22,6 @@
 &windows = {}
 
 &MP3 = {}
-&WORD_DOC = {}
-
-&TCP_IP_STREAM = {}
 
 &FILESYSTEM = {}
 
@@ -149,11 +73,11 @@
 
     &desktop=?
 
-    &HIGH_NUM = _
-    &LOW_NUM = _
-    &NOW_VAL = _
+    &HIGH  = _
+    &LOW  = _
+    &CURRENT = _
 
-    &weather_report = {HIGH_NUM LOW_NUM NOW_VAL }
+    &weatherReport = {high. low. current. }
 
     &HOUR = _
     &MINUTE = _
@@ -163,7 +87,7 @@
 
     &TITLE = $
 
-    &TASK_LIST = {title ?}
+    &TASK LIST = {title ?}
 
     // eval=#+{{{...} {...}}, @\[{...}]: \[{...} {...}]}
 
@@ -175,7 +99,7 @@
     &red={255,0,0,255}
     &green={0,255,0,255}
     &blue={0,0,255,255}
-    &transparent_blue={0,0,255,32}
+    &transparent blue={0,0,255,32}
     &purple={255,0,255,255}
 
     &rectangle      = 1
@@ -247,4 +171,3 @@
    } */
 }
 %>
-

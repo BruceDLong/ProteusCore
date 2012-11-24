@@ -15,6 +15,37 @@
 
 using namespace std;
 
+struct BurserRule{
+    string head;
+    vector<string> rhs;
+
+    inline BurserRule(char* ruleHead, char* item1=0, char* item2=0, char* item3=0, char* item4=0){
+        head=ruleHead;
+        if(item1) rhs.push_back(item1);
+        if(item2) rhs.push_back(item2);
+        if(item3) rhs.push_back(item3);
+        if(item4) rhs.push_back(item4);
+    };
+    inline friend bool operator==(BurserRule const& left, BurserRule const& right) { // TODO: use an ID to track matching rules.
+        return (left.head == right.head) && (left.rhs.size() == right.rhs.size()) && (std::equal(left.rhs.begin(), left.rhs.end(), right.rhs.begin()));
+        }
+    friend inline std::ostream& operator<<(std::ostream& out, BurserRule const& r) {
+            out << r.head << " --> [ ";
+            for(vector<string>::const_iterator si=r.rhs.begin(); si != r.rhs.end(); ++si){
+                out << (*si) <<" ";
+            }
+            out << "]";
+            return out;
+        }
+};
+
+typedef multimap<string, BurserRule> Rules;
+typedef Rules::iterator RuleItr;
+typedef pair<RuleItr,RuleItr> RuleRange;
+struct Grammar{
+    Rules rules;
+};
+
 struct WordChain;
 
 class XlaterENGLISH:public xlater{
@@ -29,25 +60,10 @@ public:
     ~XlaterENGLISH(){unloadLanguageData();};
 
 private:
+    Grammar EnglishGrammarRules;
     void findDefinitions(WordS& tags);
     void stitchAndDereference(WordS& tags);
     infon* infonate(WordS& tags);
-};
-
-
-/////////////////////////////////////
-
-enum parseResult {prNoMatch=0, prOddMatch, prMatch};
-
-#define ParserArgList WordS& WordSystem, WordS& crntWrd, infon* context
-
-struct EnglishParser {
-    parseResult ParseEnglish    (ParserArgList);
-    parseResult pSentence       (ParserArgList);
-    parseResult pNounPhrase     (ParserArgList);
-    parseResult pSelectorConjunct   (ParserArgList);
-    parseResult pSelectorSeq        (ParserArgList);
-
 };
 
 #endif

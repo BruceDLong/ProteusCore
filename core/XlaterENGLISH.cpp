@@ -9,6 +9,7 @@
 
 #include "XlaterENGLISH.h"
 #include <unicode/rbnf.h>
+#include <memory>
 
 
 const uint maxWordsInCompound=10;
@@ -328,6 +329,10 @@ WordSMap EnglishSuffixes;
 char letterMap[127]; // Help distinguish vowels, consonants, etc.
 #define isVowel(ch) (letterMap[(uint)(ch)])
 
+#define addRule1(HEAD,R1)          {EnglishGrammarRules.rules.insert(pair<string,BurserRule>(HEAD,BurserRule(HEAD,R1)));}
+#define addRule2(HEAD,R1,R2)       {EnglishGrammarRules.rules.insert(pair<string,BurserRule>(HEAD,BurserRule(HEAD,R1,R2)));}
+#define addRule3(HEAD,R1,R2,R3)    {EnglishGrammarRules.rules.insert(pair<string,BurserRule>(HEAD,BurserRule(HEAD,R1,R2,R3)));}
+#define addRule4(HEAD,R1,R2,R3,R4) {EnglishGrammarRules.rules.insert(pair<string,BurserRule>(HEAD,BurserRule(HEAD,R1,R2,R3,R4)));}
 bool XlaterENGLISH::loadLanguageData(string dataFilename){
     string reversedKey;
     // Here we copy suffixes into a new map where they are spelled backwards.
@@ -348,6 +353,64 @@ bool XlaterENGLISH::loadLanguageData(string dataFilename){
     memset(&letterMap, 0, 127);
     letterMap['A']=1; letterMap['a']=1; letterMap['E']=1; letterMap['e']=1; letterMap['I']=1; letterMap['i']=1;
     letterMap['O']=1; letterMap['o']=1; letterMap['U']=1; letterMap['u']=1; letterMap['Y']=1; letterMap['y']=1;
+
+    ///////////// Here is the grammar for English
+    addRule1("$START",        "$sentence");
+    addRule1("$START",        "$negotiator");
+    addRule1("$sentence",     "$clause");    // Clause must have finite verb
+
+    addRule2("$clause",       "$subject", "$predicate");
+    addRule2("$clause",       "$adjunct", "$clause");
+    addRule2("$clause",       "$clause", "$adjunct");
+    addRule3("$clause",       "$subject", "$adjunct", "$predicate");
+
+    addRule1("$subject",      "$nounPhrase");
+    addRule1("$subjCompl",    "$nounPhrase");
+    addRule1("$object",       "$nounPhrase");
+    addRule1("$objCompl",     "$nounPhrase");
+    addRule1("$indirectObj",  "$nounPhrase");
+
+    addRule2("$nounPhrase",   "$determiner", "$selector");
+    addRule1("$nounPhrase",   "$selector");
+
+    addRule1("$determiner",   "the");  // TODO: handle det other, The other, another, many other, etc.
+    addRule1("$determiner",   "a");
+    addRule1("$determiner",   "an");
+    addRule1("$determiner",   "some");    // some or s'm
+    addRule1("$determiner",   "any");     // any or 'ny
+    addRule1("$determiner",   "either");  // must have an 'or' part
+    addRule1("$determiner",   "neither"); // must have a 'nor' part
+    addRule1("$determiner",   "this");
+    addRule1("$determiner",   "that");
+    addRule1("$determiner",   "these");
+    addRule1("$determiner",   "those");
+    addRule1("$determiner",   "no");
+    addRule1("$determiner",   "all");
+    addRule1("$determiner",   "each");
+    addRule1("$determiner",   "every");   // TODO: handle almost every, every other, every 3rd, every last one, etc.
+    addRule1("$determiner",   "which");
+    addRule1("$determiner",   "whichever");
+    addRule1("$determiner",   "what");
+    addRule1("$determiner",   "whatever");
+    addRule1("$determiner",   "whose");
+    addRule1("$determiner",   "$possessive"); // TODO: handle 'all of the', 'many of the', etc. Also, "the X of Y('s)"
+
+    addRule2("$selector",     "%modifier",   "%modified");
+    addRule2("$selector",     "%modifier",   "$selector");
+    addRule2("$selector",     "$quantifier", "$selector");
+    addRule1("$selector",     "%nounLikeWord");
+    addRule2("$selector",     "$selector", "$selectingPostMod");
+
+    addRule1("$predicate",   "$verbPhrase");
+    addRule2("$predicate",   "$verbPhrase", "$subjCompl");
+    addRule2("$predicate",   "$verbPhrase", "$object");
+    addRule3("$predicate",   "$verbPhrase", "$indirectObj", "$object");
+    addRule3("$predicate",   "$verbPhrase", "$object", "$objCompl");
+
+addRule1("$predicate",   "ran");
+addRule1("$predicate",   "laughed");
+addRule1("$subject",   "kitti");
+addRule1("$subject",   "robert");
     return 0;
 }
 
@@ -383,7 +446,163 @@ bool tagIsMarkedPossessive(WordSPtr &tag){
     }
     return true;
 }
+///////////////////////////////////// Burser Code
+struct DiagramItem;
+typedef shared_ptr<DiagramItem> DiagramItemPtr;
+typedef std::vector<DiagramItemPtr> DiagramItemPtrs;
+struct DiagramItem { // Constituent of a parse tree, AKA "sentence diagram"
+    typedef DiagramItemPtrs Children;
+    uint start;
+    uint end;
+    string head;
+    Children children;
+    DiagramItem(uint s, uint e, string Head, Children* ch=0): start(s), end(e), head(Head) {if(ch) children = *ch;}
+};
 
+typedef vector<DiagramItem> Diagram;
+typedef vector<Diagram> Diagrams;
+
+struct BurserArc;
+typedef std::shared_ptr<BurserArc> ArcPtr;
+
+struct BurserArc {
+    uint start, end, dotPos;
+    BurserRule rule;   // TODO: Make this a pointer if possible. We're copying lots of rules.
+
+    DiagramItemPtr item;
+    DiagramItemPtrs parts;
+
+    BurserArc(uint s, BurserRule& r, uint pos=0, uint e=0):start(s),end(e),dotPos(pos),rule(r){};
+    BurserArc(uint s, uint e, DiagramItemPtr itm, BurserRule const& r)
+                :start(s), end(e), dotPos(r.rhs.size()), rule(r), item(itm) {}
+    BurserArc(uint s, uint e, BurserRule& r, DiagramItemPtrs const& partials)
+                :start(s), end(e), dotPos(partials.size()), rule(r), parts(partials) {};
+    bool complete() const { return (dotPos == rule.rhs.size()); }
+    string nextTerm() const { return (complete() ? "" : rule.rhs[dotPos]); }
+    bool matches(ArcPtr other) {
+        return start == other->start
+            && end == other->end
+            && rule == other->rule
+            && dotPos == other->dotPos;
+    }
+    ArcPtr extend(DiagramItemPtr itm) {
+        DiagramItemPtrs partials(parts);
+        partials.push_back(itm);
+//ArcPtr(new BurserArc((*k)->start,(*k)->rule, (*k)->dotPos+1, (*k)->start))
+        //create new complete arc or partial arc
+        if (partials.size() == rule.rhs.size()) { cout<<"EXTEND: "<<rule.head<<"\n";
+            return ArcPtr(
+                new BurserArc(start, 0,//itm->end,
+                    DiagramItemPtr(new DiagramItem(start, 0 /*itm->end*/, rule.head, &partials)),
+                    rule)
+            );
+        } else {  cout<<"EXpLoit: "<<rule.head<<"\n";
+            return ArcPtr(new BurserArc(start, 0, rule, partials));
+        }
+    }
+};
+
+typedef vector<ArcPtr> Column;
+typedef vector<Column> Chart;
+
+
+inline void printDiagram(DiagramItemPtr i, string indent = "") {
+    if (i->children.empty()) {
+        cout << indent << "'" << i->head << "'\n";
+    } else {
+        cout << indent << "(" << i->head << "\n";
+        for(DiagramItemPtrs::iterator CItr=i->children.begin(); CItr != i->children.end(); ++CItr)
+            printDiagram(*CItr, (indent+"    "));
+        cout << indent << ")\n";
+    }
+}
+
+struct Burser{ // Gathers items owed from various sources. e.g., subjects, objects, verbs, phrases, etc.
+    const string start_symbol="$START";
+    uint crntPos;  //  The number of the chart-slot and word we are on.
+    Grammar *grammar;
+    Chart chart;
+    DiagramItemPtrs parses;
+
+    Burser(Grammar *grmr, infon* context):crntPos(0), grammar(grmr){
+        //init chart
+        chart.insert(chart.end(),Column());
+        RuleRange strtRules=grammar->rules.equal_range(start_symbol);
+        for(RuleItr ri=strtRules.first; ri!=strtRules.second; ++ri)
+            chart[0].push_back(ArcPtr(new BurserArc(0,(*ri).second)));
+    };
+
+    void submitWord(WordSPtr word);
+};
+
+void pushArcToChart(Column &column, ArcPtr arc) {
+    for(uint k = 0; k < column.size(); ++k)  //TODO: Use a map to store/search these.
+        if (arc->matches(column[k]))
+            return;
+    column.push_back(arc);
+}
+
+/*
+    SCANNER: If ([A → ... • a ... , j ] is in S[i] && a == input[i+1]) , // i.e., if the rule is terminal and matches.
+        add [A → ... a • ... , j ] to S[i+1].
+    PREDICTOR: If [A → ... • B ... , j ] is in S[i] ,  // I.e., if the rule is non-terminal.
+        add [B → •α, i] to S[i] for all rules B → α.
+        If B is nullable, also add [A → ... B • ... , j ] to S[i].   // if we want null productions use this line.
+    COMPLETER: If [A → ... •, j ] is in S[i] ,
+        add [B → ... A • ... , k] to S[i] for all items [B → ... • A ... , k] in S[j] .
+*/
+
+void Burser::submitWord(WordSPtr word){
+    uint i=crntPos++;
+    if(word){
+        cout<<"SUBMITTED: "<<word->norm<<" \n";
+        chart.insert(chart.end(),Column());
+    }
+    for(uint j = 0; j < chart[i].size(); ++j) {
+        ArcPtr stateItm = chart[i][j];
+        if (stateItm->complete()) {  // (Complete)
+            cout << "RULE COMPLETE:"<< stateItm->rule<<"\n";
+            stateItm->end=i;
+            for(Column::iterator k = chart[stateItm->start].begin(); k != chart[stateItm->start].end(); ++k ) {
+                if (!(*k)->complete() && (*k)->nextTerm() == stateItm->rule.head) {
+                    pushArcToChart(chart[i],(*k)->extend(stateItm->item) );
+                }
+            }
+        } else {
+            string term=stateItm->nextTerm();
+            if (term[0]!='$') { // For terminals (Scan)
+                if (word && word->norm == term) { cout<<"MATCH:"<<term<<"\n";
+                    DiagramItemPtr Word(new DiagramItem(i, i+1, word->norm)); DiagramItemPtrs v; v.push_back(Word); // Track tree
+                    pushArcToChart(chart[i+1], ArcPtr(
+                        //new BurserArc(i,stateItm->rule, stateItm->dotPos+1, i+1)
+                        new BurserArc(i,i+1, DiagramItemPtr(new DiagramItem(i, i+1, stateItm->rule.head, &v)),stateItm->rule)
+                        ));
+
+                  //  new BurserArc(i,i+1, DiagramItemPtr(new DiagramItem(i, i+1, stateItm->rule.head, &v)),stateItm->rule);
+                }
+            } else { // Explode non-terminal symbol   (Predict)
+                RuleRange nextRules=grammar->rules.equal_range(term);
+                for(RuleItr ri=nextRules.first; ri!=nextRules.second; ++ri) {  cout << "RULE:"<< (*ri).second<<"\n";
+                    pushArcToChart(chart[i], ArcPtr(new BurserArc(i, (*ri).second)));
+                }
+            }
+        }
+    }
+    if(!word){ //gather successful parse trees
+        cout<<"GATHERING PARSE TREES "<<chart.back().size()<<"\n";
+        for(uint c = 0; c < chart.back().size(); ++c) {
+            if (chart.back()[c]->complete() && start_symbol == chart.back()[c]->rule.head) { cout<<"PARSE HEAD: "<<chart.back()[c]->rule<<"\n";
+                parses.push_back(chart.back()[c]->item);
+            }
+        }
+        if(parses.size()==0) cout<<"Parsing Failed: I don't understand what you entered\n";
+    }
+}
+
+///////////////////////////////////////
+// Word Identification Section
+
+#define DEB_find(msg) {} //{cout<< msg;}
 
 int FunctionWordFlags(WordSPtr tag){
     WordMapIter w = functionWords.find(tag->baseForm);
@@ -407,7 +626,7 @@ int examineMatchingStatus(string wrdToParse, string trial){
 
 void lookUpAffixesFromCharPos(WordSMap* wordLib, const string &wrdToParse, int pos, const string &scopeID, vector<WordList> *resultList){
     uint searchLen=1, choiceLen=0, scopeScore, crntWrdLen=wrdToParse.length(); WordSPtr crntChoice=0; int matchLen, prevLen;
-cout<<"  TRY: "<<wrdToParse<<"   \n";
+DEB_find("  TRY: "<<wrdToParse<<"   \n")
     while(searchLen<=crntWrdLen){
         string partKey=""+wrdToParse.substr(0,searchLen);
         WordSMap::iterator trialItr=wordLib->lower_bound(partKey);
@@ -427,7 +646,7 @@ cout<<"  TRY: "<<wrdToParse<<"   \n";
             if(++trialItr != wordLib->end()) trial=trialItr->first; else break;
         }
         if(crntChoice){
-            cout<<"     PUSHING:"<<crntChoice->norm<<"\n";
+            DEB_find("     PUSHING:"<<crntChoice->norm<<"\n")
             (*resultList)[pos].push_back(crntChoice);
             searchLen=choiceLen+1;
         } else searchLen=matchLen+1;
@@ -440,7 +659,7 @@ typedef vector<WordList> wordListVec;
 typedef wordListVec::iterator wordListVecItr;
 
 int parseWord(WordSMap *wordLib, const string &wrdToParse, const string &scopeID, wordListVec *resultList){
-    cout<<"\nFIND: "<<wrdToParse<<"   \n";
+    DEB_find("\nFIND: "<<wrdToParse<<"   \n")
     int furthestPos=0;
     int wrdLen=wrdToParse.length();
     lookUpAffixesFromCharPos(wordLib, wrdToParse, 0, scopeID, resultList);
@@ -458,7 +677,7 @@ int parseWord(WordSMap *wordLib, const string &wrdToParse, const string &scopeID
 
 #define tryParse(str, msg) {   \
     if(!foundPath){            \
-        cout<<"\nSPELLING-RULE: "<<msg<<"\n";   \
+        DEB_find("\nSPELLING-RULE: "<<msg<<"\n")   \
         modToParse=(str); modLen=modToParse.length();                             \
         for(sPos=0; sPos<=modLen; ++sPos) alts[sPos].clear();                      \
         farPos=parseWord(&wordLibrary, modToParse, scopeID, &alts);               \
@@ -498,7 +717,7 @@ void XlaterENGLISH::findDefinitions(WordS& words){
             if((*tmpWrd)->sysType>=wstNumOrd) break; // Numbers cannot be in the compound words.
             if(numWordsInCompound>1) wordKey.append("-");
             wordKey.append((*tmpWrd)->norm);
-//            cout << "#######>"<<wordKey<<"\t\t"<<scopeID<<"\n";
+//            DEB_find("#######>"<<wordKey<<"\t\t"<<scopeID<<"\n")
             WordSMap::iterator trialItr=wordLibrary.lower_bound(wordKey);
             if(trialItr==wordLibrary.end()) break;
             trial=trialItr->first;
@@ -506,7 +725,7 @@ void XlaterENGLISH::findDefinitions(WordS& words){
             int keyLen=wordKey.length();
             while(trial.substr(0,keyLen) == wordKey){
                 stopSearch=false;
-                if(trial[keyLen]=='%'){//cout << "\tMATCH!\n";
+                if(trial[keyLen]=='%'){//DEB_find("\tMATCH!\n")
                     uint newScopeScore=calcScopeScore(scopeID, trial.substr(keyLen+1));
                     if(newScopeScore > scopeScore) {
                         scopeScore=newScopeScore;
@@ -527,7 +746,7 @@ void XlaterENGLISH::findDefinitions(WordS& words){
                 (*crntWrd)->wordFlags=wordFlags;
                 if(wordFlags&wfCanStartNum){
                     UErrorCode err=U_ZERO_ERROR;
-                    cout <<"NUMBER: "<<(*crntWrd)->norm<<"  ("<<(*crntWrd)->offsetInSource<<")\n";
+cout<<"NUMBER: "<<(*crntWrd)->norm<<"  ("<<(*crntWrd)->offsetInSource<<")\n";
 
                     RuleBasedNumberFormat* formatter= new RuleBasedNumberFormat(URBNF_SPELLOUT, Locale::getUS(), err); // <-- It crashes here.
 cout<<"AT AAA\n";
@@ -546,7 +765,6 @@ cout<<"NUMBER WAS:"<<parseResult.getLong()<<".\n";
                 string modToParse; uint foundPath=0, sPos, modLen, farPos=0; // These are used in tryParse macro.
                 wordListVec alts(wrdLen+5,WordList()); // The 5 is to have room for modified spellings.
                 uint furthestPos=parseWord(&wordLibrary, wrdToParse, scopeID, &alts);
-//cout<<"furthest:"<<furthestPos<<"  wrdLen:"<<wrdLen<<"\n";
                 if(furthestPos<wrdLen){ // If we didn't find a path thru wrdToParse try other spellings:
                     // TODO: verify more rigerously that there are no important exceptions to this logic:
                     string reversedWrd=string(wrdToParse.rbegin(), wrdToParse.rend());
@@ -571,7 +789,7 @@ cout<<"NUMBER WAS:"<<parseResult.getLong()<<".\n";
                         char pre1Char=wrdToParse[brkPos-1];
                         string pre2Char=""; if(brkPos>1) {pre2Char+=wrdToParse[brkPos-2]; pre2Char+=pre1Char;}
                         string prePart=wrdToParse.substr(0,brkPos); string postPart=wrdToParse.substr(brkPos);
-                        cout<<pre2Char<<", "<<pre1Char<<", "<<suf1Char<<", "<<suf2Char<<" ["<<prePart<<"-"<<postPart<<"]  ";
+                        DEB_find(pre2Char<<", "<<pre1Char<<", "<<suf1Char<<", "<<suf2Char<<" ["<<prePart<<"-"<<postPart<<"]  ")
                         modLen=0; foundPath=0; farPos=0;
                         if(isVowel(suf1Char)){
                             if(pre1Char=='v' && suf2Char=="es"){
@@ -591,11 +809,11 @@ cout<<"NUMBER WAS:"<<parseResult.getLong()<<".\n";
                             }
                         }
                         if(pre1Char=='i'){tryParse(prePart.substr(0,brkPos-1)+"y"+postPart, "Pony");} // Ponies -> Pony
-                        if(foundPath) cout<<"FOUND-PATH\n"; else cout<<"No path\n";
+                        if(foundPath) DEB_find("FOUND-PATH\n") else DEB_find("No path\n")
                     }
                 } else {modToParse=wrdToParse; modLen=wrdLen; foundPath=true;}
                 if(foundPath) {// Extract a path
-                    cout << "Extracting A Path: \n";
+                    DEB_find("Extracting A Path: \n")
                     uint curEnd=modLen;
                     while(curEnd){
                         for(uint chPos=0; chPos<curEnd; ++chPos){
@@ -611,7 +829,7 @@ cout<<"NUMBER WAS:"<<parseResult.getLong()<<".\n";
                         }
                     }
                     WordS &crntWord= *(*crntWrd);
-                    for(WLi=crntWord.words.begin(); WLi != crntWord.words.end(); ++WLi){cout <<(*WLi)->norm << "-";}
+                    for(WLi=crntWord.words.begin(); WLi != crntWord.words.end(); ++WLi){DEB_find((*WLi)->norm << "-")}
                     string lastAffix=(*crntWord.words.back()).norm;
                     if(lastAffix=="s" || lastAffix=="es"){crntWord.wordFlags|=wfForm_S_ES;}
                     else if(lastAffix=="ing"){crntWord.wordFlags|=wfForm_ING;}
@@ -632,7 +850,7 @@ cout<<"NUMBER WAS:"<<parseResult.getLong()<<".\n";
             }
         }
         if(!wordFlags){ // If this isn't a function word...
-            if(crntChoice==0) {words.wordFlags|=wfErrorInAChildWord; cout<< ((string)"\n\nMESG: What does "+(*crntWrd)->norm+" mean?\n"); crntWrd++;}
+            if(crntChoice==0) {words.wordFlags|=wfErrorInAChildWord; cout<< ((string)"MESG: What does "+(*crntWrd)->norm+" mean?\n"); crntWrd++;}
             else {
                 if(numWordsInChosen>1){ // If more than one word was consumed, move them into a new parent.
                     WordSPtr parent=WordSPtr(new WordS);
@@ -652,67 +870,19 @@ cout<<"NUMBER WAS:"<<parseResult.getLong()<<".\n";
 }
 
 void XlaterENGLISH::stitchAndDereference(WordS& text){
-    parseResult result;
-    EnglishParser parser;
-    parser.ParseEnglish(text, **text.words.begin(), 0);
-    if(result==prMatch){}
+    infon* context=0;
+    Burser burser(&EnglishGrammarRules, context);
+    for(WordListItr WLi=text.words.begin(); WLi!=text.words.end(); ++WLi){
+        burser.submitWord(*WLi);
+    }
+    burser.submitWord(0); // End the Parsing
+    for(DiagramItemPtrs::iterator CItr=burser.parses.begin(); CItr != burser.parses.end(); ++CItr)
+        {cout<<"\n\n#####################\nPARSE TREE\n"; printDiagram(*CItr);}
+
     WordListItr WLI=text.words.begin(); //++WLI;
     text.definition=(*WLI)->definition;
 }
 
 infon* XlaterENGLISH::infonate(WordS& text){
     return text.definition;
-}
-
-///////////////////////////////////////////////////////////
-//            E N G L I S H   P A R S E R                //
-///////////////////////////////////////////////////////////
-
-// #define ParserArgList WordS& WordSystem, WordS& crntWrd, infon* context
-
-parseResult EnglishParser::ParseEnglish(ParserArgList){
-    parseResult result;
-    // if((result=pNegotiator(WordSystem, crntWrd, context)) != prNoMatch) {} else
-    if((result=pSentence(WordSystem, crntWrd, context)) != prNoMatch) {/* reduce(WordSystem); */}
-    else result = prNoMatch;
-    return result;
-}
-
-parseResult EnglishParser::pSentence(ParserArgList){
-    parseResult result;
-    // Check for "it BE" of Cleft Sentence: "IT WAS Arthur who made the coffee." (3)
-    // Check for "there BE" of "existential there": "THERE IS too a Santa Clause!" (2)
-    // Check for a verb-phrase start due to a postponed subject-clause or interrogative : "Speak like Yodo I do." "Do you speak like Yoda?" (4)
-    // Check for adjunct / adverb / other clause (5)
-    if((result=pNounPhrase(WordSystem, crntWrd, context)) != prNoMatch) { // Subject or fronted DO or SC
-    } else result = prNoMatch;
-    return result;
-}
-
-parseResult EnglishParser::pNounPhrase(ParserArgList){
-    parseResult result;
-    uint wordFlags=crntWrd.wordFlags;
- //   cout<<"NOUN-PHRASE-a:"<<crntWrd.norm<<"\n";
-    if(wordFlags & wfHasDetSense){
-        cout<<"NOUN-PHRASE-DET - HERE\n";
-// TODO: make "number 53" be nominal.
-    }
-
-    if((result=pSelectorSeq(WordSystem, crntWrd, context)) != prNoMatch) {}
-    else result = prNoMatch;
-    return result;
-}
-
-parseResult EnglishParser::pSelectorConjunct(ParserArgList){
-    parseResult result;
-    if((result=prNoMatch) != prNoMatch) {}
-    else result = prNoMatch;
-    return result;
-}
-
-parseResult EnglishParser::pSelectorSeq(ParserArgList){
-    parseResult result;
-    if((result=prNoMatch) != prNoMatch) {}
-    else result = prNoMatch;
-    return result;
 }

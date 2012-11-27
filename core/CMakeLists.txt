@@ -8,15 +8,15 @@ add_definitions(-m32 -std=gnu++11 -Wno-deprecated -Wno-write-strings -fpermissiv
 set(PROTEUS_SRCS Proteus.cpp convs.cpp InfonIO.cpp Functions.cpp ${LANG_MODULES})
 set(UNICODE_LIBS icuio icui18n icutu icuuc icudata icule iculx icutest dl)
 
-include_directories( #../builds/libs/GMP_BigInts/gmp-5.0.4/include/ 
-					../builds/libs/unicode/release-49-1-1/include/ 
-					../../dev/boost_1_51_0/ 
-					#../builds/libs/Readline/readline-6.2/include/
-					)
-link_directories(#../builds/libs/GMP_BigInts/gmp-5.0.4/lib/ 
-				 ../builds/libs/unicode/release-49-1-1/lib/ 
-				# ../builds/libs/Readline/readline-6.2/lib/
-				 )
+include_directories( #../builds/libs/GMP_BigInts/gmp-5.0.4/include/
+                    ../builds/libs/unicode/release-49-1-1/include/
+                    ../../dev/boost_1_51_0/
+                    #../builds/libs/Readline/readline-6.2/include/
+                    )
+link_directories(#../builds/libs/GMP_BigInts/gmp-5.0.4/lib/
+                 ../builds/libs/unicode/release-49-1-1/lib/
+                # ../builds/libs/Readline/readline-6.2/lib/
+                 )
 
 #add_library(Proteus SHARED ${PROTEUS_SRCS})
 add_executable(clip clip.cpp ${PROTEUS_SRCS})

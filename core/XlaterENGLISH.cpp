@@ -329,10 +329,10 @@ WordSMap EnglishSuffixes;
 char letterMap[127]; // Help distinguish vowels, consonants, etc.
 #define isVowel(ch) (letterMap[(uint)(ch)])
 
-#define addRule1(HEAD,R1)          {EnglishGrammarRules.rules.insert(pair<string,BurserRule>(HEAD,BurserRule(HEAD,R1)));}
-#define addRule2(HEAD,R1,R2)       {EnglishGrammarRules.rules.insert(pair<string,BurserRule>(HEAD,BurserRule(HEAD,R1,R2)));}
-#define addRule3(HEAD,R1,R2,R3)    {EnglishGrammarRules.rules.insert(pair<string,BurserRule>(HEAD,BurserRule(HEAD,R1,R2,R3)));}
-#define addRule4(HEAD,R1,R2,R3,R4) {EnglishGrammarRules.rules.insert(pair<string,BurserRule>(HEAD,BurserRule(HEAD,R1,R2,R3,R4)));}
+#define addRule1(HEAD,R1)          {EnglishGrammarRules.rules.insert(pair<string,BRule>(HEAD,BRule(HEAD,R1)));}
+#define addRule2(HEAD,R1,R2)       {EnglishGrammarRules.rules.insert(pair<string,BRule>(HEAD,BRule(HEAD,R1,R2)));}
+#define addRule3(HEAD,R1,R2,R3)    {EnglishGrammarRules.rules.insert(pair<string,BRule>(HEAD,BRule(HEAD,R1,R2,R3)));}
+#define addRule4(HEAD,R1,R2,R3,R4) {EnglishGrammarRules.rules.insert(pair<string,BRule>(HEAD,BRule(HEAD,R1,R2,R3,R4)));}
 bool XlaterENGLISH::loadLanguageData(string dataFilename){
     string reversedKey;
     // Here we copy suffixes into a new map where they are spelled backwards.
@@ -378,7 +378,7 @@ bool XlaterENGLISH::loadLanguageData(string dataFilename){
     addRule1("$determiner",   "an");
     addRule1("$determiner",   "some");    // some or s'm
     addRule1("$determiner",   "any");     // any or 'ny
-    addRule1("$determiner",   "either");  // must have an 'or' part
+/*    addRule1("$determiner",   "either");  // must have an 'or' part
     addRule1("$determiner",   "neither"); // must have a 'nor' part
     addRule1("$determiner",   "this");
     addRule1("$determiner",   "that");
@@ -392,13 +392,13 @@ bool XlaterENGLISH::loadLanguageData(string dataFilename){
     addRule1("$determiner",   "whichever");
     addRule1("$determiner",   "what");
     addRule1("$determiner",   "whatever");
-    addRule1("$determiner",   "whose");
+    addRule1("$determiner",   "whose");*/
     addRule1("$determiner",   "$possessive"); // TODO: handle 'all of the', 'many of the', etc. Also, "the X of Y('s)"
 
     addRule2("$selector",     "%modifier",   "%modified");
     addRule2("$selector",     "%modifier",   "$selector");
     addRule2("$selector",     "$quantifier", "$selector");
-    addRule1("$selector",     "%nounLikeWord");
+    addRule1("$selector",     "$noun"); //"%nounLikeWord");
     addRule2("$selector",     "$selector", "$selectingPostMod");
 
     addRule1("$predicate",   "$verbPhrase");
@@ -407,10 +407,17 @@ bool XlaterENGLISH::loadLanguageData(string dataFilename){
     addRule3("$predicate",   "$verbPhrase", "$indirectObj", "$object");
     addRule3("$predicate",   "$verbPhrase", "$object", "$objCompl");
 
-addRule1("$predicate",   "ran");
-addRule1("$predicate",   "laughed");
-addRule1("$subject",   "kitti");
-addRule1("$subject",   "robert");
+    addRule1("$verbPhrase",  "$verb");
+
+addRule1("$verb",   "ran");
+addRule1("$verb",   "laughed");
+addRule1("$noun",   "kitti");
+addRule1("$noun",   "bob");
+
+addRule1("$verb",   "give");
+addRule1("$verb",   "gave");
+addRule1("$noun",   "bike");
+addRule1("$noun",   "cat");
     return 0;
 }
 
@@ -447,36 +454,16 @@ bool tagIsMarkedPossessive(WordSPtr &tag){
     return true;
 }
 ///////////////////////////////////// Burser Code
-struct DiagramItem;
-typedef shared_ptr<DiagramItem> DiagramItemPtr;
-typedef std::vector<DiagramItemPtr> DiagramItemPtrs;
-struct DiagramItem { // Constituent of a parse tree, AKA "sentence diagram"
-    typedef DiagramItemPtrs Children;
-    uint start;
-    uint end;
-    string head;
-    Children children;
-    DiagramItem(uint s, uint e, string Head, Children* ch=0): start(s), end(e), head(Head) {if(ch) children = *ch;}
-};
 
-typedef vector<DiagramItem> Diagram;
-typedef vector<Diagram> Diagrams;
+struct bArc;
+typedef std::shared_ptr<bArc> ArcPtr;
+typedef vector<ArcPtr> ArcPtrs;
 
-struct BurserArc;
-typedef std::shared_ptr<BurserArc> ArcPtr;
-
-struct BurserArc {
+struct bArc {  // Arc for the burser. AKA 'Earley state'
     uint start, end, dotPos;
-    BurserRule rule;   // TODO: Make this a pointer if possible. We're copying lots of rules.
+    BRule rule;   // TODO: Make this a pointer if possible. We're copying lots of rules.
 
-    DiagramItemPtr item;
-    DiagramItemPtrs parts;
-
-    BurserArc(uint s, BurserRule& r, uint pos=0, uint e=0):start(s),end(e),dotPos(pos),rule(r){};
-    BurserArc(uint s, uint e, DiagramItemPtr itm, BurserRule const& r)
-                :start(s), end(e), dotPos(r.rhs.size()), rule(r), item(itm) {}
-    BurserArc(uint s, uint e, BurserRule& r, DiagramItemPtrs const& partials)
-                :start(s), end(e), dotPos(partials.size()), rule(r), parts(partials) {};
+    bArc(uint s, BRule& r, uint pos=0, uint e=0):start(s),end(e),dotPos(pos),rule(r){};
     bool complete() const { return (dotPos == rule.rhs.size()); }
     string nextTerm() const { return (complete() ? "" : rule.rhs[dotPos]); }
     bool matches(ArcPtr other) {
@@ -485,35 +472,95 @@ struct BurserArc {
             && rule == other->rule
             && dotPos == other->dotPos;
     }
-    ArcPtr extend(DiagramItemPtr itm) {
-        DiagramItemPtrs partials(parts);
-        partials.push_back(itm);
-//ArcPtr(new BurserArc((*k)->start,(*k)->rule, (*k)->dotPos+1, (*k)->start))
-        //create new complete arc or partial arc
-        if (partials.size() == rule.rhs.size()) { cout<<"EXTEND: "<<rule.head<<"\n";
-            return ArcPtr(
-                new BurserArc(start, 0,//itm->end,
-                    DiagramItemPtr(new DiagramItem(start, 0 /*itm->end*/, rule.head, &partials)),
-                    rule)
-            );
-        } else {  cout<<"EXpLoit: "<<rule.head<<"\n";
-            return ArcPtr(new BurserArc(start, 0, rule, partials));
-        }
-    }
 };
 
-typedef vector<ArcPtr> Column;
-typedef vector<Column> Chart;
+struct BNode {
+    typedef deque<BNode> BNodes;
+    ArcPtr arc;
+    BNodes* children;
+    BNode(ArcPtr& Arc, BNodes* Children=0):arc(Arc), children(Children){};
 
+};
+typedef deque<BNode> BNodes;
 
-inline void printDiagram(DiagramItemPtr i, string indent = "") {
-    if (i->children.empty()) {
-        cout << indent << "'" << i->head << "'\n";
-    } else {
-        cout << indent << "(" << i->head << "\n";
-        for(DiagramItemPtrs::iterator CItr=i->children.begin(); CItr != i->children.end(); ++CItr)
-            printDiagram(*CItr, (indent+"    "));
-        cout << indent << ")\n";
+struct Column:vector<ArcPtr> {
+    uint index;
+    string word;
+    Column(uint Index, string Word):index(Index), word(Word){};
+};
+struct Chart:vector<Column> {
+    void BuildTrees(BNodes* results, ArcPtr usedArc, string indent = "");
+    void BuildTreesHelper(BNodes* results,BNodes* children, ArcPtr usedArc, int ruleIndex, uint endColumn, string indent = "");
+    void printDiagram(BNode &tree, string indent="");
+    void printForest(BNodes& forest);
+};
+
+void Chart::BuildTrees(BNodes* results, ArcPtr usedArc, string indent){ cout<<indent<<"BUILD TREE FOR: "<<usedArc->rule.head<<"\n";
+    BNodes* children=new BNodes;
+    BuildTreesHelper(results, children, usedArc, usedArc->rule.rhs.size()-1, usedArc->end, indent);
+}
+
+void Chart::BuildTreesHelper(BNodes* results,BNodes* children, ArcPtr usedArc, int ruleIndex, uint endColumn, string indent){
+    int startColumn;
+    BNodes HResults, VResults;
+    results->clear();
+    string ruleHead ="<null>"; if (ruleIndex>=0) ruleHead= usedArc->rule.rhs[ruleIndex];
+    cout<<indent<<"ruleIndex:"<<ruleIndex<<"   arc.start:"<<usedArc->start<<"   endColumn:"<<endColumn<<"   RULEHEAD:"<<ruleHead<<"\n";
+    if(ruleIndex<0 || ruleHead[0]!='$') {results->push_back(BNode(usedArc, children)); return;}
+    else if(ruleIndex==0) startColumn = usedArc->start;
+    else startColumn=-1;
+
+    for(uint st = 0; st < (*this)[endColumn].size(); ++st){
+        ArcPtr ST=(*this)[endColumn][st];
+ cout<<indent<<"   ColumnArc:"<<ST->rule.head<<"     \t";
+        if (ST.get() == usedArc.get()) {cout<<indent<<"BREAKING\n"; break;}
+        if (!ST->complete() || ST->rule.head != ruleHead) {cout<<indent<<"CONTINEW-1\n"; continue;}
+        if (startColumn != -1 && (int)ST->start != startColumn) {cout<<indent<<"CONTINEW-2\n"; continue;}
+        cout<<indent<<"THROUGH!\n";
+        BuildTrees(&VResults, ST, indent+"     ");
+        cout<<indent<<"OUT!  ResultSize:"<<VResults.size()<<"\n";
+        for(BNodes::iterator subTree=VResults.begin(); subTree != VResults.end(); ++subTree){
+            cout<<indent<<"   subtree:"<<(*subTree).arc->rule.head<<"\n";
+            BNodes* childList=new BNodes(*children); childList->push_front((*subTree));
+            BuildTreesHelper(&HResults, childList, usedArc, ruleIndex - 1, ST->start, indent+"    .");
+            for(BNodes::iterator node=HResults.begin(); node != HResults.end(); ++node){
+                results->push_back((*node));
+            }
+        }
+    }
+}
+
+void Chart::printDiagram(BNode &tree, string indent){
+    if(tree.children && tree.children->empty()) cout << indent <<
+       tree.arc->rule.head << ": '" << (*this)[tree.arc->start+1].word<<"'\n";
+    else {
+        cout << indent << tree.arc->rule.head << " =\n";
+        for(BNodes::iterator T=tree.children->begin(); T != tree.children->end(); ++T)
+            printDiagram(*T, (indent+"   ."));
+    //    cout << indent << ")\n";
+    }
+}
+
+void Chart::printForest(BNodes& forest){
+    cout<<"######################################### Sentence Diagrams ("<<forest.size()<<"):\n";
+    for(BNodes::iterator tree=forest.begin(); tree != forest.end(); ++tree){
+        printDiagram((*tree));
+        cout<<"-----------------------\n";
+    }
+}
+
+void print_chart(Chart &chart) {
+    std::cout << "#####################################\nChart:\n";
+    for(uint i = 0; i < chart.size(); ++i) {
+        std::cout << "===================\nCell: ";
+        for(uint j = 0; j < chart[i].size(); ++j) {
+            std::cout << "[ "<< chart[i][j]->rule
+                      << " ("<< chart[i][j]->nextTerm()
+                      << ") (" << chart[i][j]->start << " " << chart[i][j]->end << ") "
+                      << (chart[i][j]->complete() ? "C" : "i")
+                      << "] \n";
+        }
+        std::cout << "\n";
     }
 }
 
@@ -522,14 +569,14 @@ struct Burser{ // Gathers items owed from various sources. e.g., subjects, objec
     uint crntPos;  //  The number of the chart-slot and word we are on.
     Grammar *grammar;
     Chart chart;
-    DiagramItemPtrs parses;
+    ArcPtrs parses;
 
     Burser(Grammar *grmr, infon* context):crntPos(0), grammar(grmr){
         //init chart
-        chart.insert(chart.end(),Column());
+        chart.push_back(Column(0, start_symbol));
         RuleRange strtRules=grammar->rules.equal_range(start_symbol);
         for(RuleItr ri=strtRules.first; ri!=strtRules.second; ++ri)
-            chart[0].push_back(ArcPtr(new BurserArc(0,(*ri).second)));
+            chart[0].push_back(ArcPtr(new bArc(0,(*ri).second)));
     };
 
     void submitWord(WordSPtr word);
@@ -553,11 +600,13 @@ void pushArcToChart(Column &column, ArcPtr arc) {
 */
 
 void Burser::submitWord(WordSPtr word){
-    uint i=crntPos++;
+    uint i=crntPos++; string wordTxt="<EOT>";
     if(word){
-        cout<<"SUBMITTED: "<<word->norm<<" \n";
-        chart.insert(chart.end(),Column());
+        wordTxt=word->norm;
+        chart.push_back(Column(i,wordTxt));
     }
+    cout<<"SUBMITTED: "<<wordTxt<<" \n";
+ //   print_chart(chart);
     for(uint j = 0; j < chart[i].size(); ++j) {
         ArcPtr stateItm = chart[i][j];
         if (stateItm->complete()) {  // (Complete)
@@ -565,34 +614,31 @@ void Burser::submitWord(WordSPtr word){
             stateItm->end=i;
             for(Column::iterator k = chart[stateItm->start].begin(); k != chart[stateItm->start].end(); ++k ) {
                 if (!(*k)->complete() && (*k)->nextTerm() == stateItm->rule.head) {
-                    pushArcToChart(chart[i],(*k)->extend(stateItm->item) );
+                   pushArcToChart(chart[i],ArcPtr(new bArc((*k)->start,(*k)->rule, (*k)->dotPos+1, (*k)->start)) );
                 }
             }
         } else {
             string term=stateItm->nextTerm();
             if (term[0]!='$') { // For terminals (Scan)
                 if (word && word->norm == term) { cout<<"MATCH:"<<term<<"\n";
-                    DiagramItemPtr Word(new DiagramItem(i, i+1, word->norm)); DiagramItemPtrs v; v.push_back(Word); // Track tree
                     pushArcToChart(chart[i+1], ArcPtr(
-                        //new BurserArc(i,stateItm->rule, stateItm->dotPos+1, i+1)
-                        new BurserArc(i,i+1, DiagramItemPtr(new DiagramItem(i, i+1, stateItm->rule.head, &v)),stateItm->rule)
+                        new bArc(i, stateItm->rule, stateItm->dotPos+1, i+1)
                         ));
-
-                  //  new BurserArc(i,i+1, DiagramItemPtr(new DiagramItem(i, i+1, stateItm->rule.head, &v)),stateItm->rule);
                 }
             } else { // Explode non-terminal symbol   (Predict)
-                RuleRange nextRules=grammar->rules.equal_range(term);
-                for(RuleItr ri=nextRules.first; ri!=nextRules.second; ++ri) {  cout << "RULE:"<< (*ri).second<<"\n";
-                    pushArcToChart(chart[i], ArcPtr(new BurserArc(i, (*ri).second)));
+                RuleRange nextRules=grammar->rules.equal_range(term); cout << "EVALUATING: "<<term<<" for '"<<wordTxt<<"'...\n";
+                for(RuleItr ri=nextRules.first; ri!=nextRules.second; ++ri) {  cout << "     "<< (*ri).second<<"\n";
+                    pushArcToChart(chart[i], ArcPtr(new bArc(i, (*ri).second)));
                 }
             }
         }
-    }
+    } // cout<<"at-done1\n";
     if(!word){ //gather successful parse trees
         cout<<"GATHERING PARSE TREES "<<chart.back().size()<<"\n";
         for(uint c = 0; c < chart.back().size(); ++c) {
-            if (chart.back()[c]->complete() && start_symbol == chart.back()[c]->rule.head) { cout<<"PARSE HEAD: "<<chart.back()[c]->rule<<"\n";
-                parses.push_back(chart.back()[c]->item);
+            if (chart.back()[c]->complete() && start_symbol == chart.back()[c]->rule.head) {
+                cout<<"PARSE HEAD: "<<chart.back()[c]->rule<<"\n";
+                parses.push_back(chart.back()[c]);
             }
         }
         if(parses.size()==0) cout<<"Parsing Failed: I don't understand what you entered\n";
@@ -876,8 +922,12 @@ void XlaterENGLISH::stitchAndDereference(WordS& text){
         burser.submitWord(*WLi);
     }
     burser.submitWord(0); // End the Parsing
-    for(DiagramItemPtrs::iterator CItr=burser.parses.begin(); CItr != burser.parses.end(); ++CItr)
-        {cout<<"\n\n#####################\nPARSE TREE\n"; printDiagram(*CItr);}
+    BNodes forest;
+    for(ArcPtrs::iterator arc=burser.parses.begin(); arc != burser.parses.end(); ++arc){
+        burser.chart.BuildTrees(&forest, (*arc));
+        burser.chart.printForest(forest);
+    }
+
 
     WordListItr WLI=text.words.begin(); //++WLI;
     text.definition=(*WLI)->definition;

@@ -35,7 +35,8 @@ string rl_gets (const char* prompt) { //Read a string, and return a pointer to i
   return (string(line_read));
 }
 
-void rl_init() {
+void initReadline() {
+  HIST_FILE=".";    // Store history in the current directory, not 'home'
   HIST_FILE.append("/.proteus.clip.hist");
   read_history (HIST_FILE.c_str());
   stifle_history (1000);
@@ -56,6 +57,7 @@ bool IsHardFunc(string tag);
 
 int main(int argc, char **argv){
     u_setDataDirectory("../resources"); cout<<"DataDir:"<<u_getDataDirectory()<<"\n";
+    initReadline();
  //   UErrorCode icuErr; icu::u_init(&icuErr);  if(U_FAILURE(icuErr)) throw "Couldn't load Unicode langauge data\n";
     signal(SIGSEGV, reportFault);
 

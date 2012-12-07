@@ -6,6 +6,7 @@
     You should have received a copy of the GNU General Public License along with the Proteus Engine.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <fstream>
+#include <sqlite3.h>
 #include "Proteus.h"
 #include "remiss.h"
 
@@ -14,14 +15,10 @@ const int ListBuffCutoff=20;  // TODO: make this '2' to show a bug.
 typedef map<dblPtr,UInt>::iterator altIter;
 multimap<infon*,WordSPtr> DefPtr2Tag;  // TODO: Verify that smartpointer in container here will be OK.
 
-#define recAlts(lval, rval) {if(InfsType(rval)==tString) alts[dblPtr((char*)rval->value.dataHead->get_num_mpz_t()->_mp_d,lval)]++;}
-#define fetchLastItem(lval, item) {for(lval=item; InfsType(lval)==tList;lval=lval->value->prev);}
-#define fetchFirstItem(lval, item) {for(lval=item; InfsTYpe(lval)==tList;lval=lval->value){};}
-
 #include "xlater.h"
 #include "XlaterENGLISH.h"
 XlaterENGLISH EnglishXLater;
-
+sqlite3 *coreDatabase;
 xlater* fetchXlater(icu::Locale *locale){
     LanguageExtentions::iterator lang = langExtentions.find(locale->getBaseName());
     if (lang != langExtentions.end()) return lang->second;
@@ -29,9 +26,19 @@ xlater* fetchXlater(icu::Locale *locale){
 }
 
 LanguageExtentions langExtentions; // This map stores valid locales and their xlater if available.
-void populateLangExtentions(){     // Use this to load available language modules before normalizing any infons.
-    int numLocales=0;
-    EnglishXLater.loadLanguageData("");
+int initializeProteusEngine(char* resourceDir, char* dbName){     // Use this to load available language modules before normalizing any infons.
+    // Connect to Proteus Database
+    string dbPath=resourceDir; dbPath+="/"; dbPath+=dbName;
+    int rc = sqlite3_open(dbPath.c_str(), &coreDatabase);
+        if( rc ){
+            fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(coreDatabase));
+            sqlite3_close(coreDatabase);
+            return(1);
+        }
+    // Initialize Language modules.
+    u_setDataDirectory(resourceDir);
+    EnglishXLater.loadLanguageData(coreDatabase);
+    int numLocales;
     const icu::Locale* locale = icu::Locale::getAvailableLocales(numLocales);
     for(int loc=0; loc<numLocales; ++loc){
         string localeID=locale[loc].getBaseName();
@@ -52,6 +59,11 @@ void populateLangExtentions(){     // Use this to load available language module
         else if(localeLanguage=="bn") langExtentions[localeID]=0;  // Bengali
         else langExtentions[localeID]=0;
     }
+    return 0;
+}
+
+void shutdownProteusEngine(){
+    sqlite3_close(coreDatabase);
 }
 
 int calcScopeScore(string wrdS, string trialS){
@@ -74,6 +86,10 @@ infon* infon::isntLast(){ // 0=this is the last one. >0 = pointer to predecessor
         return parent->isntLast();
     return 0;
 }
+
+#define recAlts(lval, rval) {if(InfsType(rval)==tString) alts[dblPtr((char*)rval->value.dataHead->get_num_mpz_t()->_mp_d,lval)]++;}
+#define fetchLastItem(lval, item) {for(lval=item; InfsType(lval)==tList;lval=lval->value->prev);}
+#define fetchFirstItem(lval, item) {for(lval=item; InfsTYpe(lval)==tList;lval=lval->value){};}
 
 int agent::loadInfon(const char* filename, infon** inf, bool normIt){
     cout<<"Loading:'"<<filename<<"'..."<<flush;

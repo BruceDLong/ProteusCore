@@ -12,38 +12,33 @@
 
 #include "xlater.h"
 #include "Proteus.h"
+#include <memory>
+#include <cstdarg>
 
 using namespace std;
 
-struct BRule{
+struct bRule{
     string head;
     vector<string> rhs;
 
-    inline BRule(char* ruleHead, char* item1=0, char* item2=0, char* item3=0, char* item4=0){
-        head=ruleHead;
-        if(item1) rhs.push_back(item1);
-        if(item2) rhs.push_back(item2);
-        if(item3) rhs.push_back(item3);
-        if(item4) rhs.push_back(item4);
-    };
-    inline friend bool operator==(BRule const& left, BRule const& right) { // TODO: use an ID to track matching rules.
-        return (left.head == right.head) && (left.rhs.size() == right.rhs.size()) && (std::equal(left.rhs.begin(), left.rhs.end(), right.rhs.begin()));
-        }
-    friend inline std::ostream& operator<<(std::ostream& out, BRule const& r) {
-            out << r.head << " --> [ ";
-            for(vector<string>::const_iterator si=r.rhs.begin(); si != r.rhs.end(); ++si){
-                out << (*si) <<" ";
-            }
-            out << "]";
-            return out;
+    bRule(char* ruleHead, int n, ...);
+    string asString();
+    friend bool operator==(bRule const& left, bRule const& right) {
+            return (left.head == right.head) && (left.rhs.size()==right.rhs.size())
+                && (std::equal(left.rhs.begin(), left.rhs.end(), right.rhs.begin()));
         }
 };
 
-typedef multimap<string, BRule> Rules;
+typedef shared_ptr<bRule> bRulePtr;
+typedef multimap<string, bRulePtr> Rules;
 typedef Rules::iterator RuleItr;
 typedef pair<RuleItr,RuleItr> RuleRange;
+
 struct Grammar{
-    Rules rules;
+    Rules rules;     // Grammar rules
+    Rules dynRules;  // Dynamically created rules
+    bRulePtr addRule(bool mainLib, int n, ...);
+    void loadRules();
 };
 
 struct WordChain;
@@ -54,9 +49,9 @@ public:
     void ReadTagChain(QParser *parser, icu::Locale &language, WordS& result); // Reads a phrase that ends at a non-matching character or a period that isn't in a number.
     infon* tags2Proteus(WordS& tags);     // Converts a list of tags read by ReadTagChain() into an infon and returns a pointer to it.
     void proteus2Tags(infon* proteus, WordS& WordsOut);  // Converts an infon to a tag chain.
-    virtual bool loadLanguageData(string dataFilename);
+    virtual bool loadLanguageData(sqlite3 *db);
     virtual bool unloadLanguageData();
-    XlaterENGLISH(){language.createCanonical("en");};
+    XlaterENGLISH(){localeID="en"; language.createCanonical(localeID.c_str());};
     ~XlaterENGLISH(){unloadLanguageData();};
 
 private:

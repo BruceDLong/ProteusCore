@@ -56,14 +56,14 @@ int AutoEval(infon* CI, agent* a);
 bool IsHardFunc(string tag);
 
 int main(int argc, char **argv){
-    u_setDataDirectory("../resources"); cout<<"DataDir:"<<u_getDataDirectory()<<"\n";
+    char* resourceDir="../resources";
+    char* dbName="proteusData.db";
+    if(initializeProteusEngine(resourceDir, dbName)) throw "Could not initialize the Proteus Engine";
     initReadline();
- //   UErrorCode icuErr; icu::u_init(&icuErr);  if(U_FAILURE(icuErr)) throw "Couldn't load Unicode langauge data\n";
     signal(SIGSEGV, reportFault);
 
     // Load World
     agent a(0, IsHardFunc, AutoEval);
-    populateLangExtentions();
     a.locale.createCanonical(locale("").name().c_str());
     cout<<"Locale: "; PrntLocale(a.locale);
     if(a.loadInfon("world.pr", &a.world, true)) exit(1);
@@ -78,7 +78,7 @@ int main(int argc, char **argv){
             cout<<"Locale: "; PrntLocale(a.locale);
             xlater* Xlater = fetchXlater(&a.locale);
             if(!Xlater) {cout<<"Translater for this locale wasn't found.\n"; continue;}
-            WordSMap *wordLib=&Xlater->wordLibrary;
+            WordSMap *wordLib=Xlater->wordLibrary;
             for(WordSMap::iterator tagPtr=wordLib->begin(); tagPtr!=wordLib->end(); tagPtr++){
                 cout<<tagPtr->second->locale<< ":" << tagPtr->second->norm << "\t= " <<printInfon(tagPtr->second->definition)<<"\n";
             }
@@ -110,5 +110,6 @@ int main(int argc, char **argv){
         if (Entry) cout<<"\n"<<printInfon(Entry)<<"\n\n";
         else {cout<<"\nError: "<<q.buf<<"\n\n";}
     }
- return 0;
+    shutdownProteusEngine();
+    return 0;
 }

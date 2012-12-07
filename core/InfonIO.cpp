@@ -100,7 +100,8 @@ void QParser::scanPast(char* str){
     char p; char* ch=str;
     while(*ch!='\0'){
         p=streamGet();
-        if (stream.eof() || stream.fail()) throw "Expected String not found before end-of-file";
+        if (stream.eof() || stream.fail())
+            throw (string("Expected String not found before end-of-file: '")+string(str)+"'").c_str();
         if (*ch==p) ch++; else ch=str;
         if (p=='\n') ++line;
     }
@@ -289,9 +290,11 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                 do{ // Here we process tag definitions
                     tag=ReadTagChain(&locale, &Xlater, scopeID); if (tag==0) throw "Null tag was read";
                     tagList.push_back(tag);
+//cout<<"TAG:"<<tag->norm<<"\n";
                     while((pTok = nxtTokN(2,"%","#"))){ // read tag's (%) or definition's (#) attributes
                         nxtTok("cTok");
                         string attrTag=buf;
+//cout<<"    AttrTag:"<<attrTag<<"\n";
                         chkStr(":");
                         if(*pTok=='%' && attrTag=="say") nxtTok("<abc>");
                         else getbuf((peek()!='%' && peek()!='#' && peek()!='&' && peek()!='='));
@@ -308,14 +311,15 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                 string scopeTag=scopeID + (string)"&"+tag->norm;
                 infon* definition=ReadInfon(scopeTag);
                 definition->attrs=attrs;
-                WordSMap *wordLib=&Xlater->wordLibrary;
+                WordLibrary *wordLib=Xlater->wordLibrary;
                 for(list<WordSPtr>::iterator t=tagList.begin(); t!=tagList.end(); ++t){
                     (*t)->definition=definition;
-                    WordSMap::iterator tagPtr=wordLib->find((*t)->key);
-                    if (tagPtr==wordLib->end() || (tagPtr->second->senseID != (*t)->senseID)) {
+                    WordSPtr tagPtr=wordLib->chkExists((*t)->key, (*t)->senseID); //find((*t)->key);
+//if (tagPtr!=wordLib->end()) cout<<"DEFINING:"<< (*t)->key <<"::"<<(*t)->senseID <<" found: " << tagPtr->second->senseID <<"\n";
+                    if (!tagPtr){//==wordLib->end() || (tagPtr->second->senseID != (*t)->senseID)) {
                         wordLib->insert(pair<wordKey, WordSPtr>((*t)->key, (*t)));
                         DefPtr2Tag.insert(pair<infon*,WordSPtr>(definition,(*t)));
-                    }else{throw("A word/sense is being redefined, which isn't allowed");}
+                    }else{cout<<"REDEFINED: "<<tagPtr->norm<<"\n"; throw("A word/sense is being redefined, which isn't allowed");}
                 }
                 continue;
             }

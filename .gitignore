@@ -2,6 +2,7 @@
 # Build targets
 *.o
 proteus
+.proteus.clip.hist
 #slip
 
 # Vim backup files
@@ -35,4 +36,17 @@ core/clip.d
 core/core
 core/doNose.pyc
 core/functest.pr
+
+slip/core
+slip/less
+slip/slip
+*.bak
+*.old
+
+deps/GMP_BigInts/
+deps/MPFA_Floats/
+deps/Readline/
+deps/SDL/
+deps/SDL_image/
+deps/unicode/
 

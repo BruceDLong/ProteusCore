@@ -23,6 +23,7 @@
 #include <gmpxx.h>
 
 #include "xlater.h"
+#include "wordLibrary.h"
 
 using namespace std;
 
@@ -88,102 +89,19 @@ enum wMisc {noAlts=0, hasAlts=0x10000000, noMoreAlts=0x20000000, isTentative=0x4
 #define ResetTent(inf)         (inf)->wFlag &= ~isTentative
 #define ResetVirtTent(inf)     (inf)->wFlag &= ~(isVirtual+isTentative)
 
-struct infon;
-
-///////////////////  TAG RELATED ITEMS  ///////////////////
-
-enum WordSystemTypes {
-    wstUnknown, wstUnparsed, wstAlternates,
-    wstFunctionWord,                    // A function word for the given language.
-    wstFullDescription,                 // A complete description: selects an item and constrains or defines its states.
-    wstDescriptionalSelector,           // Narrow possibilities using a description
-    wstNounSelector,                    // Narrow possibilities by constraining existing state (* __)
-    wstVerbSelector,                    // Narrow possibilities in a sequence
-    wstAdjSelector,                     // Narrow possibiites by the value of a state (+ __)
-    wstAdvSelector,                     // Misc selectors.
-    wstRelationalSelector,              // Narrow possibilities by relationship to another item.
-    wstNumOrd, wstNumCard, wstNumNominal, wstNumInfonic,
-    wstLastEnum         // Language modules can use this to extend the types of word-systems.
-};
-
-enum DescriptionTypes {
-    dtMonation_shortForm,       // Sara laughed
-    dtMonation,                 // Sara is laughing
-    dtRelation,                 // Ryan dyed the shirt
-    dtRelation_constraint,      // Ryan dyed the shirt blue
-    dtTrilation                 // Ryan gave Sara the shirt
-};
-
-enum WordDegree {dComparative, dSuperlative};  // more, most
-enum WordPositionStyle {sBeforeNoun, sAfterBoBo};
-enum WordFlags {
-        maskForm=0x03, wfForm_S_ES=1, wfForm_ING=2, wfForm_ED=3,
-        maskGndr=0x0c, wfGndrMasc=0x04, wfGndrFem=0x08, wfGndrNeut=0x0c,
-        maskPrsn=0x30, wf1stPrsn=0x10, wf2ndPrsn=0x20, wf3rdPrsn=0x30,
-        wfIsMarkedPossessive=0x40,
-        wfWasHyphenated=0x80, wfAsPrefix=0x100, wfAsSuffix=0x200, wfErrorInAChildWord=0x400,
-        wfHasVerbSense=0x800, wfHasNounSense=0x1000, wfHasAdjSense=0x2000, wfHasAdvSense=0x4000, wfHasDetSense=0x8000,
-        wfHasNumSense=0x10000, wfCanStartNum=0x20000, wfIsPronoun=0x40000, wfVerbHelper=0x80000,
-        wfIsGradable=0x100000,
-        wfIsPossessive=0x1000000, wfIsPlural=0x2000000, wfIsProperNoun=0x4000000, wfIsCountable=0x8000000,
-        maskWordType=0x70000000, wfUnknown, wfFunc, wfNoun, wfVerb,
-                        wfAdj, wfAdv, wfPrep, wfConjunction, wfNegotiator,
-        };
-
-struct WordS;
-//typedef boost::intrusive_ptr<WordS> WordSPtr;
-
-typedef list<WordSPtr> WordList;
-typedef WordList::iterator WordListItr;
-
-struct WordS {  // Word System: single number, word or phrase / clause / sentence.
-    string asRead;        // The word exactly as it was read in.
-    string norm;          // The normalized form of the word.
-    string baseForm;      // The word without inflection. (e.g., ing, ed, s, est, er are removed)
-    string locale;        // The locale used for this word: e.g., "en" or "en_us"
-    string senseID;       // A tag identifying the sense of the word. Either like #n#3 or a synonym or gloss-word.
-    infon *definition;    // The definition/model of this word.
-    map<string, string> attributes; // Attributes including pronunciation, word properties and model/author history.
-    xlater *xLater;       // The translation module for this word / word system.
-    wordKey key;          // The key into a library map.
-
-    int offsetInSource;  // position of this word in the sourceStr.
-
-    WordList words;      // The list of words before and during syntatic and semantic analysis.
-    WordSystemTypes sysType;  // What kind of system? number, noun phrase, sentence, etc.
-    WordSPtr item, itemsConstraints, metaConstraints; // After analysis: "head", "pre-modifiers", "post-modifiers"
-
-    uint wordFlags;      // See Word Flags enum for bit meanings
-    int rank;             // negotiator > verb > noun > adj (opinion, size, shape, condition, age, color, origin) > adv > det > pp
-
-    WordDegree wordDegree;
-    WordPositionStyle PositionStyle;
-
-    WordSPtr nextAlt;    // Other possible meanings for this system.
-
-    WordS(string tag="", int flags=0, infon* def=0, xlater *Xlater=0){
-        asRead=tag; norm=tag; key=""; senseID="";
-        definition=def; xLater=Xlater; wordFlags=flags; sysType=wstUnparsed; offsetInSource=0;// wordClass=cUnknown;
-        item = itemsConstraints = metaConstraints = nextAlt = 0; refCnt=0;
-    }
-    ~WordS();
-    uint refCnt;
-};
-
 extern bool iscsymOrUni (char nTok);
 extern bool isTagStart(char nTok);
 extern bool tagIsBad(string tag, const char* locale);
 extern const icu::Normalizer2 *tagNormer;
 
 extern multimap<infon*,WordSPtr> DefPtr2Tag;
+extern sqlite3 *coreDatabase;
 xlater* fetchXlater(icu::Locale *locale);
 typedef map<string, xlater*> LanguageExtentions;
 extern LanguageExtentions langExtentions;
-extern void populateLangExtentions(); // Use this to load available language modules before normalizing any infons.
+extern int initializeProteusEngine(char* resourceDir, char* dbName);
+extern void shutdownProteusEngine();
 extern int calcScopeScore(string wrdS, string trialS);
-
-inline void intrusive_ptr_add_ref(WordS* ws){++ws->refCnt;}
-inline void intrusive_ptr_release(WordS* ws){if(--ws->refCnt == 0) delete ws;}
 
 ///////////////////  INFON RELATED ITEMS  ///////////////////
 

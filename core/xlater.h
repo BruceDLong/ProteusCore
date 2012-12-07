@@ -19,6 +19,8 @@
 #include <boost/intrusive_ptr.hpp>
 #include "remiss.h"
 
+#include "wordLibrary.h"
+
 using namespace std;
 
 #define streamPut(nChars) {for(int n=nChars; n>0; --n){stream.putback(textParsed[textParsed.size()-1]); textParsed.resize(textParsed.size()-1);}}
@@ -26,25 +28,17 @@ using namespace std;
 #define getBufs(c,parser) {ChkNEOFs(parser->stream); int p=0; for(;(c);parser->buf[p++]=parser->streamGet()){if (p>=bufmax) throw "String Overflow";} parser->buf[p]=0;}
 #define check(ch) {RmvWSC(); ChkNEOF; tok=streamGet(); if(tok != ch) {cout<<"Expected "<<ch<<"\n"; throw "Unexpected character";}}
 
-struct WordS;
-typedef boost::intrusive_ptr<WordS> WordSPtr;
-struct infon;
+
 struct QParser;
-
-typedef string wordKey;
-typedef multimap<wordKey, WordSPtr> WordSMap;
-
-/* The class xlater is used to translate a (possibly) natural language to and from infons.
- * Subclass xlater for each language. Languages are identified by locale identifiers.
-*/
 
 class xlater{
 public:
 
     xlater(){language.createCanonical("");} //locale("").name().c_str());;}
 
-    icu::Locale language;   // In constructor, implementations set this to the locale ID (e.g., en or jp) for the language being provided.
-    WordSMap wordLibrary;   // Here is where the tags to models for this language are stored
+    string localeID;        // e.g. "en" or "fr"
+    icu::Locale language;   // In constructor, implementations set this to  match localeID for the language being provided.
+    WordLibrary *wordLibrary;   // Here is where the tags to models for this language are stored
 
     //////////////////////////////////////////////////////////
     /* ReadLanguageWord() extends a QParser to read a 'word' in some language (possibly a natural language).
@@ -78,7 +72,7 @@ public:
 
 
     // Implementations initialize the language (i.e., load any lists or structures) in loadLanguageData(). Free them in unloadLanguageData();
-    virtual bool loadLanguageData(string dataFilename)=0;
+    virtual bool loadLanguageData(sqlite3 *db)=0;
     virtual bool unloadLanguageData()=0;
     virtual ~xlater(){}; // Implementeations should call unloadLanguageData()
 };

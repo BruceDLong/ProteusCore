@@ -103,12 +103,12 @@ struct WordS {  // Word System: single number, word or phrase / clause / sentenc
     WordDegree wordDegree;
     WordPositionStyle PositionStyle;
 
-    WordSPtr nextAlt;    // Other possible meanings for this system.
+    WordList altDefs;    // Other possible meanings for this system.
 
     WordS(string tag="", int flags=0, infon* def=0, xlater *Xlater=0){
         asRead=tag; norm=tag; key=""; senseID="";
         definition=def; xLater=Xlater; flags1=flags; flags2=0; sysType=wstUnparsed; offsetInSource=0;
-        item = itemsConstraints = metaConstraints = nextAlt = 0; refCnt=0;
+        item = itemsConstraints = metaConstraints = 0; refCnt=0;
     }
     ~WordS();
     uint refCnt;

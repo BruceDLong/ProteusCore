@@ -17,7 +17,7 @@ WordLibrary::WordLibrary(sqlite3 *DB){
 }
 
 WordSMap::iterator WordLibrary::wrappedLowerBound(wordKey &word, xlater* xlatr){
-cout<<"LOWER_BOUND:"<<word<<"\t";
+cout<<"LOWER_BOUND:'"<<word<<"'\n";
     // If (crntWrd not from the database) load it and all like "it %"
     WordSMap::iterator trialItr=lower_bound(word);
     if(trialItr != end()){
@@ -28,7 +28,7 @@ cout<<"LOWER_BOUND:"<<word<<"\t";
     // Add any words found in the database that match.
     if(sqlite3_bind_text(res, 1, xlatr->localeID.c_str(), -1, SQLITE_TRANSIENT)
     || sqlite3_bind_text(res, 2, word.c_str(), -1, SQLITE_TRANSIENT))
-        {cout<<"Error binding word to query\n"; return trialItr;}
+        {cout<<"    Error binding word to query\n"; return trialItr;}
     string locale, resWord, senseID, pos, gloss;
     while (sqlite3_step(res) == SQLITE_ROW) {
         locale  = (char*)sqlite3_column_text(res, 0);
@@ -37,16 +37,20 @@ cout<<"LOWER_BOUND:"<<word<<"\t";
         pos     = (char*)sqlite3_column_text(res, 3);
         gloss   = (char*)sqlite3_column_text(res, 4);
 
-        wordKey wKey=resWord+senseID+"%U";
+        wordKey wKey=resWord+"%U";
         uint POS=0;
-        if(pos=="n") POS=wfNoun; else if(pos=="v") POS=wfVerb;
-        else if(pos=="a") POS=wfAdj; else if(pos=="r") POS=wfAdv;
-        else if(pos=="f") POS=wfMiscFunc;
+        if     (pos=="noun") POS=wfNoun;
+        else if(pos=="verb") POS=wfVerb;
+        else if(pos=="adj") POS=wfAdj;
+        else if(pos=="adv") POS=wfAdv;
+        else if(pos=="func") POS=wfMiscFunc;
         WordSPtr wordPtr=WordSPtr(new WordS(wKey, 0, 0, xlatr));
-        wordPtr->flags2=POS; wordPtr->flags1|=wfIsFromDB;
+        wordPtr->flags2=POS;
+        wordPtr->flags1|=wfIsFromDB;
+        wordPtr->senseID=senseID;
         wordPtr->attributes.insert(pair<string,string>("gloss",gloss));
         insert(pair<wordKey, WordSPtr>(wKey, wordPtr));
-cout<<"INSERTING:"<<resWord<<"  ("<<gloss<<")\n";
+cout<<"INSERTING:"<<resWord<<"  "<<wKey<<"   "<<pos<<POS<<"  ("<<gloss<<")\n";
     }
     sqlite3_reset(res);
     return lower_bound(word);

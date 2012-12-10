@@ -459,10 +459,10 @@ void Grammar::loadRules(){
 
     addRule(1, 1, "$determiner",   "$possessive"); // TODO: handle 'all of the', 'many of the', etc. Also, "the X of Y('s)"
 
-    addRule(1, 2, "$selector%",     "%modifier",   "%modified");
-    addRule(1, 2, "$selector%",     "%modifier",   "$selector%");
+  //  addRule(1, 2, "$selector%",     "%modifier",   "%modified");
+  //  addRule(1, 2, "$selector%",     "%modifier",   "$selector%");
     addRule(1, 2, "$selector%",     "$quantifier", "$selector%");
-    addRule(1, 1, "$selector%",     "$noun"); //"%nounLikeWord");
+    addRule(1, 1, "$selector%",     "%noun");
     addRule(1, 2, "$selector%",     "$selector%", "$selectingPostMod");
 
     addRule(1, 1, "$predicate",   "$verbPhrase");
@@ -471,22 +471,12 @@ void Grammar::loadRules(){
     addRule(1, 3, "$predicate",   "$verbPhrase", "$indirectObj", "$object");
     addRule(1, 3, "$predicate",   "$verbPhrase", "$object", "$objCompl");
 
-    addRule(1, 1, "$verbPhrase",  "$verb");
-
-addRule(1, 1, "$verb",   "ran");
-addRule(1, 1, "$verb",   "laughed");
-addRule(1, 1, "$noun",   "kitti");
-addRule(1, 1, "$noun",   "bob");
-
-addRule(1, 1, "$verb",   "give");
-addRule(1, 1, "$verb",   "gave");
-addRule(1, 1, "$noun",   "bike");
-addRule(1, 1, "$noun",   "cat");
+    addRule(1, 1, "$verbPhrase",  "%verb");
 
 }
 
 ///////////////////////////////////// Burser Code
-// Thanks to https://github.com/tomerfiliba/tau   (Chart parser in Python)
+// Thanks to the author of https://github.com/tomerfiliba/tau   (Chart parser in Python)
 // and Joseph Irwin at https://github.com/cordarei/chart-parser
 // and JOHN AYCOCK AND R. NIGEL HORSPOOL for their paper "Practical Earley Parsing"
 // Parts of the code below and in the header file are borrowed or inspired by their work.
@@ -640,7 +630,7 @@ void Burser::submitWord(WordSPtr word){
         wordNorm=word->norm;
         chart.push_back(Column(i,wordNorm));
     }
-    cout<<"SUBMITTED: "<<wordNorm<<" \n";
+    cout<<"SUBMITTED: "<<wordNorm<<"  col:"<<i<<"  "<<chart[i].size()<<" \n";
  //   print_chart(chart);
     for(uint j = 0; j < chart[i].size(); ++j) {
         ArcPtr stateItm = chart[i][j];
@@ -649,7 +639,7 @@ void Burser::submitWord(WordSPtr word){
             stateItm->end=i;
             string head=stateItm->rule->head;
             // Now check for coherance if needed
-            if(head[head.size()-1]=='%'){
+            if(false && head[head.size()-1]=='%'){
                 if(head=="$selector%"){
                 }
             } else {
@@ -668,34 +658,46 @@ void Burser::submitWord(WordSPtr word){
                         ));
                 }
             } else { // Explode non-terminal symbol   (Predict)
-                cout << "EVALUATING: "<<term<<" for '"<<wordNorm<<"'...\n";
+               // cout << "EVALUATING: "<<term<<"  "<< word.get() <<" for '"<<wordNorm<<"'...\n";
                 if(term[0]=='%'){
                     if(!word) continue;
                     if(term=="%determiner"){
                         if(word->flags1&wfHasDetSense){
                             pushArcToChart(chart[i], ArcPtr(new bArc(i, grammar->addRule(0,1,term.c_str(), word->norm.c_str()))));
                         }
-                    } else if(term=="%modifier"){
-                    } else if(term=="%modified"){
-                    } else if(term=="%noun"){
-                    } else if(term=="%verb"){
-                    } else if(term=="%adverb"){
+                   // } else if(term=="%modifier"){
+                   // } else if(term=="%modified"){
+                    } else if(term=="%noun"){ cout<<"NOUN "<<word->norm<<"  "<<word->flags1<<"\n";
+                        if(word->flags1&wfHasNounSense){
+                            cout<<"     "<< word->altDefs.size()<<"\n";
+                            pushArcToChart(chart[i], ArcPtr(new bArc(i, grammar->addRule(0,1,term.c_str(), word->norm.c_str()))));
+                        }
+                    } else if(term=="%verb"){ cout<<"VERB "<<word->flags1<<"\n";
+                        if(word->flags1&wfHasVerbSense){
+                            cout<<"     "<< word->altDefs.size()<<"\n";
+                            pushArcToChart(chart[i], ArcPtr(new bArc(i, grammar->addRule(0,1,term.c_str(), word->norm.c_str()))));
+                        }
+                    } else if(term=="%adjective"){ cout<<"ADJ "<<"\n";
+                        if(word->flags1&wfHasAdjSense){
+                            cout<<"     "<< word->altDefs.size()<<"\n";
+                            pushArcToChart(chart[i], ArcPtr(new bArc(i, grammar->addRule(0,1,term.c_str(), word->norm.c_str()))));
+                        }
                     } else if(term=="%preposition"){
                      //   if(word->flags1&wfHasPrepositionSense){
                      //       pushArcToChart(chart[i], ArcPtr(new bArc(i, grammar->addRule(0,1,term.c_str(), word->norm.c_str()))));
                      //   }
                     }
-                } else {
+                } else { cout<<"nxtRule\n";
                     RuleRange nextRules=grammar->rules.equal_range(term);
                     for(RuleItr ri=nextRules.first; ri!=nextRules.second; ++ri) {
-                        cout << "     "<< (*ri).second<<"\n";
+                        cout << "     "<< (*(*ri).second).asString()<<"\n";
                         pushArcToChart(chart[i], ArcPtr(new bArc(i, (*ri).second)));
                     }
                 }
             }
         }
-    } // cout<<"at-done1\n";
-    if(!word){ //gather successful parse trees
+    }  cout<<"at-done1\n";
+    if(!word){ // Gather successful parse trees
         cout<<"GATHERING PARSE TREES "<<chart.back().size()<<"\n";
         for(uint c = 0; c < chart.back().size(); ++c) {
             if (chart.back()[c]->complete() && start_symbol == chart.back()[c]->rule->head) {
@@ -711,6 +713,15 @@ void Burser::submitWord(WordSPtr word){
 // Word Identification Section
 
 #define DEB_find(msg) {} //{cout<< msg;}
+
+uint getPOS_Sense(WordSPtr wordWithPOS){
+    uint wordClass = (wordWithPOS->flags2 & maskWordClass);
+    if(wordClass == wfNoun) return wfHasNounSense;
+    if(wordClass == wfVerb) return wfHasVerbSense;
+    if(wordClass == wfAdj)  return wfHasAdjSense;
+    if(wordClass == wfAdv)  return wfHasAdvSense;
+    return 0;
+}
 
 int FunctionWordFlags(WordSPtr tag){
     WordMapIter w = functionWords.find(tag->baseForm);
@@ -809,6 +820,7 @@ int parseWord(WordSMap *wordLib, const string &wrdToParse, const string &scopeID
  *   Words with 's or s' will have wfIsMarkedPossessive set. Similar for -es, -ed, -ing.
  *   A string of words like "seven hundred and twenty five" will have become a number (725)
  *   If a word does not have a definition, the argument words will have its wfErrorInAChildWord flag set.
+ *   If there are multiple definitions they will listed under altDefs. Definition may then be null.
  */
 
 void XlaterENGLISH::findDefinitions(WordS& words){
@@ -822,31 +834,41 @@ void XlaterENGLISH::findDefinitions(WordS& words){
         string trial="", wordKey="";
         if((*crntWrd)->sysType>=wstNumOrd) {++crntWrd; continue;} // It's a number. Don't try to find it.
         for(tmpWrd=crntWrd; tmpWrd!=words.words.end() && numWordsInCompound++ < maxWordsInCompound; tmpWrd++){
-            if((*tmpWrd)->sysType>=wstNumOrd) break; // Numbers cannot be in the compound words.
+            if((*tmpWrd)->sysType>=wstNumOrd) break; // Numbers cannot be in the compound words (yet).
             if(numWordsInCompound>1) wordKey.append("-");
             wordKey.append((*tmpWrd)->norm);
-//            DEB_find("#######>"<<wordKey<<"\t\t"<<scopeID<<"\n")
-            WordSMap::iterator trialItr=wordLibrary->wrappedLowerBound(wordKey, this); // lower_bound(wordKey);
+            cout<<"#######>"<<wordKey<<"\t\t"<<scopeID<<"\n";
+            WordSMap::iterator trialItr=wordLibrary->wrappedLowerBound(wordKey, this);
             if(trialItr==wordLibrary->end()) break;
             trial=trialItr->first;
             bool stopSearch=true;
             int keyLen=wordKey.length();
+            cout<<"TRIAL: '"<<trial<<"'\n";
             while(trial.substr(0,keyLen) == wordKey){
                 stopSearch=false;
-                if(trial[keyLen]=='%'){//DEB_find("\tMATCH!\n")
+                if(trial[keyLen]=='%'){cout<<"\tMATCH: "<<trial<<"  "<<trialItr->second->flags2<<"\n";
                     uint newScopeScore=calcScopeScore(scopeID, trial.substr(keyLen+1));
                     if(newScopeScore > scopeScore) {
+                        (*crntWrd)->altDefs.clear();
                         scopeScore=newScopeScore;
-                        crntChoice=trialItr->second;
+                        (*crntWrd)->altDefs.push_back(trialItr->second);
+                        (*crntWrd)->flags1 |= getPOS_Sense(trialItr->second);
                         numWordsInChosen=numWordsInCompound;
+                    }else if(newScopeScore == scopeScore) {
+                        if(numWordsInCompound>numWordsInChosen){
+                            (*crntWrd)->altDefs.clear();
+                            numWordsInChosen=numWordsInCompound;
+                        }
+                        (*crntWrd)->altDefs.push_back(trialItr->second);
+                        (*crntWrd)->flags1 |= getPOS_Sense(trialItr->second);
                     }
-                }
+                } else cout<<"\tNO-MATCH: "<<trial<<"\n";
                 if(++trialItr != wordLibrary->end()) trial=trialItr->first; else break;
             }
             if(stopSearch) break;
         }
 
-        if(crntChoice==0){
+        if((*crntWrd)->altDefs.empty()){
             (*crntWrd)->baseForm=(*crntWrd)->norm;
             if(tagIsMarkedPossessive(*crntWrd)){}
             wordFlags=FunctionWordFlags(*crntWrd);
@@ -862,7 +884,8 @@ cout<<"AT AAA\n";
                     formatter->parse(ChainText, parseResult, parsePos);
                     delete formatter;
 cout<<"NUMBER WAS:"<<parseResult.getLong()<<".\n";
-                    // crntChoice=XXX;
+                    // (*crntWrd)->altDefs.push_back(XXX); // crntChoice=XXX;
+                    // (*crntWrd)->flags1 |= hasNumberSense; (It SHOULD distinguish between ord and card.)
                     // numWordsInChosen=YYY;
                 }
             }else { // Try parsing inside the word for prefixes, suffixes, etc.
@@ -953,16 +976,20 @@ cout<<"NUMBER WAS:"<<parseResult.getLong()<<".\n";
                     else if(lastAffix=="'m"){}  // I'm
                     else if(lastAffix=="'ll've"){} // -will have
                     else if(lastAffix=="'d've"){}  // -had have -would have
-                    // NOW Construct definition infon
+                    // NOW Construct definition  and push it to altDefs.
                 }
             }
         }
         if(!wordFlags){ // If this isn't a function word...
-            if(crntChoice==0) {words.flags1|=wfErrorInAChildWord; cout<< ((string)"MESG: What does "+(*crntWrd)->norm+" mean?\n"); crntWrd++;}
-            else {
+            if((*crntWrd)->altDefs.empty()) {
+                words.flags1|=wfErrorInAChildWord;
+                cout<< ((string)"MESG: What does "+(*crntWrd)->norm+" mean?\n");
+                crntWrd++;
+            } else {
                 if(numWordsInChosen>1){ // If more than one word was consumed, move them into a new parent.
                     WordSPtr parent=WordSPtr(new WordS);
-                    parent->definition=crntChoice->definition;
+                    parent->altDefs=(*crntWrd)->altDefs;
+                    parent->flags1=(*crntWrd)->flags1;
                     words.words.insert(crntWrd, parent);
                     WordListItr wrd=crntWrd;
                     for(uint i=0; i<numWordsInChosen; ++i){
@@ -971,7 +998,8 @@ cout<<"NUMBER WAS:"<<parseResult.getLong()<<".\n";
                         parent->words.push_back(*wrd);
                         wrd=words.words.erase(wrd);
                     }
-                } else {(*crntWrd)->definition=crntChoice->definition; ++crntWrd;}
+                    crntWrd=wrd;
+                } else {++crntWrd;}
             }
         } else ++crntWrd;
     }
@@ -991,8 +1019,8 @@ void XlaterENGLISH::stitchAndDereference(WordS& text){
     }
 
 
-    WordListItr WLI=text.words.begin(); //++WLI;
-    text.definition=(*WLI)->definition;
+  //  WordListItr WLI=text.words.begin(); //++WLI;
+  //  text.definition=(*(*WLI)->altDefs.begin())->definition;
 }
 
 infon* XlaterENGLISH::infonate(WordS& text){

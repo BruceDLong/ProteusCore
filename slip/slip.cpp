@@ -5,6 +5,8 @@
     You should have received a copy of the GNU General Public License along with the SlipStream Engine.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+const char* resourceDir="../resources";
+
 #define windowTitle "Turbulance"
 #define MAX_PORTALS 24
 
@@ -486,7 +488,7 @@ void DestroyTurbulancePortal(InfonPortal *portal){
 
 int secondsToRun=1200; // time until the program exits automatically. 0 = don't exit.
 void EXIT(char* errmsg){ERRl(errmsg << "\n"); exit(1);}
-void cleanup(void){SDL_Quit();}   //TODO: Add items to cleanup routine
+void cleanup(void){SDL_Quit(); shutdownProteusEngine();}   //TODO: Add items to cleanup routine
 
 enum userActions {TURB_UPDATE_SURFACE=1, TURB_ADD_SCREEN, TURB_DEL_SCREEN, TURB_ADD_WINDOW, TURB_DEL_WINDOW};
 
@@ -557,7 +559,7 @@ void InitializePortalSystem(int argc, char** argv){
   //UNDO:  SDL_EnableUNICODE(1);
     atexit(cleanup);
 
-    populateLangExtentions();
+    initializeProteusEngine(resourceDir, "proteusData.db");
     if(theAgent.loadInfon(worldFile, &theAgent.world)) exit(1);
     User* portalUser=new User;
     if(loadUserRecord(portalUser, username, password)) {MSGl("\nUser could not be authenticated. Exiting..."); exit(5);}

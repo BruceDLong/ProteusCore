@@ -26,7 +26,7 @@ xlater* fetchXlater(icu::Locale *locale){
 }
 
 LanguageExtentions langExtentions; // This map stores valid locales and their xlater if available.
-int initializeProteusEngine(char* resourceDir, char* dbName){     // Use this to load available language modules before normalizing any infons.
+int initializeProteusCore(char* resourceDir, char* dbName){     // Use this to load available language modules before normalizing any infons.
     // Connect to Proteus Database
     string dbPath=resourceDir; dbPath+="/"; dbPath+=dbName;
     int rc = sqlite3_open(dbPath.c_str(), &coreDatabase);

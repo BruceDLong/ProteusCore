@@ -56,10 +56,10 @@ enum WordFlags1 {
         maskForm=0x03, wfForm_S_ES=1, wfForm_ING=2, wfForm_ED=3,
         maskGndr=0x0c, wfGndrMasc=0x04, wfGndrFem=0x08, wfGndrNeut=0x0c,
         maskPrsn=0x30, wf1stPrsn=0x10, wf2ndPrsn=0x20, wf3rdPrsn=0x30,
-        wfErrorInAChildWord=0x40, wfWasHyphenated=0x80, wfAsPrefix=0x100, wfAsSuffix=0x200, wfIsFromDB,
+        wfErrorInAChildWord=0x40, wfWasHyphenated=0x80, wfAsPrefix=0x100, wfAsSuffix=0x200, wfIsFromDB=0x400,
         wfHasVerbSense=0x800, wfHasNounSense=0x1000, wfHasAdjSense=0x2000, wfHasAdvSense=0x4000, wfHasDetSense=0x8000,
-        wfHasNumSense=0x10000, wfCanStartNum=0x20000, wfIsPronoun=0x40000, wfVerbHelper=0x80000,
-        wfIsGradable=0x100000, wfIsMarkedPossessive=0x200000,
+        wfHasNumSense=0x10000, wfCanStartNum=0x20000, wfHasPrepositionSense=0x40000, wfHasIntesifierSense=0x80000,
+        wfIsGradable=0x100000, wfIsMarkedPossessive=0x200000, wfIsPronoun=0x400000, wfVerbHelper=0x800000,
         wfIsPossessive=0x1000000, wfIsPlural=0x2000000, wfIsProperNoun=0x4000000, wfIsCountable=0x8000000,
         };
 

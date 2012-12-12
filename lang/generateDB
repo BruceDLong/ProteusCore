@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Install the following as needed.
+# sudo apt-get install wordnet
+# sudo apt-get install libwordnet-querydata-perl
+# sudo apt-get install libdbd-sqlite3-perl
+
 rm -f proteusData.db
 rm -f proteusData.db-journal
 sqlite3 proteusData.db "CREATE TABLE 'wordShells' (id integer PRIMARY KEY, sourceID text, locale text, word text, senseID text, pos text, key text, gloss text, pronunciation text, attrs text, skillLvl integer);"

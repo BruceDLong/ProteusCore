@@ -58,7 +58,7 @@ bool IsHardFunc(string tag);
 int main(int argc, char **argv){
     char* resourceDir="../resources";
     char* dbName="proteusData.db";
-    if(initializeProteusEngine(resourceDir, dbName)) throw "Could not initialize the Proteus Engine";
+    if(initializeProteusCore(resourceDir, dbName)) throw "Could not initialize the Proteus Engine";
     initReadline();
     signal(SIGSEGV, reportFault);
 

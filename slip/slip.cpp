@@ -559,7 +559,7 @@ void InitializePortalSystem(int argc, char** argv){
   //UNDO:  SDL_EnableUNICODE(1);
     atexit(cleanup);
 
-    initializeProteusEngine(resourceDir, "proteusData.db");
+    initializeProteusCore(resourceDir, "proteusData.db");
     if(theAgent.loadInfon(worldFile, &theAgent.world)) exit(1);
     User* portalUser=new User;
     if(loadUserRecord(portalUser, username, password)) {MSGl("\nUser could not be authenticated. Exiting..."); exit(5);}

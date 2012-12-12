@@ -99,7 +99,7 @@ extern sqlite3 *coreDatabase;
 xlater* fetchXlater(icu::Locale *locale);
 typedef map<string, xlater*> LanguageExtentions;
 extern LanguageExtentions langExtentions;
-extern int initializeProteusEngine(char* resourceDir, char* dbName);
+extern int initializeProteusCore(char* resourceDir, char* dbName);
 extern void shutdownProteusEngine();
 extern int calcScopeScore(string wrdS, string trialS);
 

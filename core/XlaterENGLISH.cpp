@@ -459,8 +459,7 @@ void Grammar::loadRules(){
 
     addRule(1, 1, "$determiner",   "$possessive"); // TODO: handle 'all of the', 'many of the', etc. Also, "the X of Y('s)"
 
-  //  addRule(1, 2, "$selector%",     "%modifier",   "%modified");
-  //  addRule(1, 2, "$selector%",     "%modifier",   "$selector%");
+    addRule(1, 2, "$selector%",     "%modifier",   "$selector%");
     addRule(1, 2, "$selector%",     "$quantifier", "$selector%");
     addRule(1, 1, "$selector%",     "%noun");
     addRule(1, 2, "$selector%",     "$selector%", "$selectingPostMod");
@@ -512,12 +511,22 @@ struct Column:vector<ArcPtr> {
     Column(uint Index, string Word):index(Index), word(Word){};
 };
 struct Chart:vector<Column> {
+    void GatherTreeRoots(ArcPtrs &parsesOut, string headSymbol);
     void BuildTrees(BNodes* results, ArcPtr usedArc, string indent = "");
     void BuildTreesHelper(BNodes* results,BNodes* children, ArcPtr usedArc, int ruleIndex, uint endColumn, string indent = "");
     void printDiagram(BNode &tree, string indent="");
     void printForest(BNodes& forest);
     string asString();
 };
+
+void Chart::GatherTreeRoots(ArcPtrs &parsesOut, string headSymbol){
+    for(uint c = 0; c < back().size(); ++c) {
+        if (back()[c]->complete() && headSymbol == back()[c]->rule->head) {
+            cout<<"PARSE HEAD: "<<back()[c]->rule<<"\n";
+            parsesOut.push_back(back()[c]);
+        }
+    }
+}
 
 void Chart::BuildTrees(BNodes* results, ArcPtr usedArc, string indent){
     cout<<indent<<"BUILD TREE FOR: "<<usedArc->rule->head<<"\n";
@@ -559,10 +568,11 @@ void Chart::printDiagram(BNode &tree, string indent){
     if(tree.children && tree.children->empty()) cout << indent <<
        tree.arc->rule->head << ": '" << (*this)[tree.arc->start+1].word<<"'\n";
     else {
-        cout << indent << tree.arc->rule->head << " =\n";
-        for(BNodes::iterator T=tree.children->begin(); T != tree.children->end(); ++T)
+    //    cout << indent << tree.arc->rule->head << " =\n";
+        for(BNodes::iterator T=tree.children->begin(); T != tree.children->end(); ++T){
             printDiagram(*T, (indent+"   ."));
-    //    cout << indent << ")\n";
+        }
+    cout << indent << tree.arc->rule->head << " =\n";
     }
 }
 
@@ -572,6 +582,20 @@ void Chart::printForest(BNodes& forest){
         printDiagram((*tree));
         cout<<"-----------------------\n";
     }
+}
+
+infon* infonate(Chart &chart, BNode &tree){
+    string head=tree.arc->rule->head;
+    if(tree.children && tree.children->empty()){
+        if(head=="%noun"){
+        }else if(head=="%verb"){
+        }else if(head=="%adj"){
+        }
+//       cout << tree.arc->rule->head << ": '" << (chart[tree.arc->start+1].word<<"'\n";
+    }else {
+
+    }
+    return 0;
 }
 
 string Chart::asString() {
@@ -638,11 +662,18 @@ void Burser::submitWord(WordSPtr word){
             cout << "RULE COMPLETE:"<< stateItm->rule->asString()<<"\n";
             stateItm->end=i;
             string head=stateItm->rule->head;
-            // Now check for coherance if needed
-            if(false && head[head.size()-1]=='%'){
+            if(head[head.size()-1]=='%'){ // Now check for coherence if needed
                 if(head=="$selector%"){
+                    cout<<"$SELECTOR%"<<"  "<<i<<"\n";
+             //       ArcPtrs parsesOut;
+             //       chart.GatherTreeRoots(parsesOut, head);
+                    BNodes forest;
+             //       for(ArcPtrs::iterator arc=parsesOut.begin(); arc != parsesOut.end(); ++arc){
+                        chart.BuildTrees(&forest, stateItm);// (*arc));
+                        chart.printForest(forest);
+             //       }
                 }
-            } else {
+            }  {
                 for(Column::iterator k = chart[stateItm->start].begin(); k != chart[stateItm->start].end(); ++k ) {
                     if (!(*k)->complete() && (*k)->nextTerm() == head) {
                        pushArcToChart(chart[i],ArcPtr(new bArc((*k)->start,(*k)->rule, (*k)->dotPos+1, (*k)->start)) );
@@ -661,31 +692,23 @@ void Burser::submitWord(WordSPtr word){
                // cout << "EVALUATING: "<<term<<"  "<< word.get() <<" for '"<<wordNorm<<"'...\n";
                 if(term[0]=='%'){
                     if(!word) continue;
+                    bool wordIsOK=false;
                     if(term=="%determiner"){
-                        if(word->flags1&wfHasDetSense){
-                            pushArcToChart(chart[i], ArcPtr(new bArc(i, grammar->addRule(0,1,term.c_str(), word->norm.c_str()))));
-                        }
-                   // } else if(term=="%modifier"){
-                   // } else if(term=="%modified"){
+                        if(word->flags1&wfHasDetSense){ wordIsOK=true;}
+                    } else if(term=="%modifier"){
+                        if(word->flags1&(wfHasNounSense+wfHasAdjSense+wfHasIntesifierSense)){ wordIsOK=true;}
                     } else if(term=="%noun"){ cout<<"NOUN "<<word->norm<<"  "<<word->flags1<<"\n";
-                        if(word->flags1&wfHasNounSense){
-                            cout<<"     "<< word->altDefs.size()<<"\n";
-                            pushArcToChart(chart[i], ArcPtr(new bArc(i, grammar->addRule(0,1,term.c_str(), word->norm.c_str()))));
-                        }
+                        if(word->flags1&wfHasNounSense){ wordIsOK=true;}
                     } else if(term=="%verb"){ cout<<"VERB "<<word->flags1<<"\n";
-                        if(word->flags1&wfHasVerbSense){
-                            cout<<"     "<< word->altDefs.size()<<"\n";
-                            pushArcToChart(chart[i], ArcPtr(new bArc(i, grammar->addRule(0,1,term.c_str(), word->norm.c_str()))));
-                        }
+                        if(word->flags1&wfHasVerbSense){ wordIsOK=true;}
                     } else if(term=="%adjective"){ cout<<"ADJ "<<"\n";
-                        if(word->flags1&wfHasAdjSense){
-                            cout<<"     "<< word->altDefs.size()<<"\n";
-                            pushArcToChart(chart[i], ArcPtr(new bArc(i, grammar->addRule(0,1,term.c_str(), word->norm.c_str()))));
-                        }
+                        if(word->flags1&wfHasAdjSense){ wordIsOK=true;}
                     } else if(term=="%preposition"){
-                     //   if(word->flags1&wfHasPrepositionSense){
-                     //       pushArcToChart(chart[i], ArcPtr(new bArc(i, grammar->addRule(0,1,term.c_str(), word->norm.c_str()))));
-                     //   }
+                        if(word->flags1&wfHasPrepositionSense){ wordIsOK=true;}
+                    }
+                    if(wordIsOK){
+                        cout<<"     "<< word->altDefs.size()<<"\n";
+                        pushArcToChart(chart[i], ArcPtr(new bArc(i, grammar->addRule(0,1,term.c_str(), word->norm.c_str()))));
                     }
                 } else { cout<<"nxtRule\n";
                     RuleRange nextRules=grammar->rules.equal_range(term);
@@ -699,12 +722,14 @@ void Burser::submitWord(WordSPtr word){
     }  cout<<"at-done1\n";
     if(!word){ // Gather successful parse trees
         cout<<"GATHERING PARSE TREES "<<chart.back().size()<<"\n";
-        for(uint c = 0; c < chart.back().size(); ++c) {
+        chart.GatherTreeRoots(parses, start_symbol);
+
+/*        for(uint c = 0; c < chart.back().size(); ++c) {
             if (chart.back()[c]->complete() && start_symbol == chart.back()[c]->rule->head) {
                 cout<<"PARSE HEAD: "<<chart.back()[c]->rule<<"\n";
                 parses.push_back(chart.back()[c]);
             }
-        }
+        } */
         if(parses.size()==0) cout<<"Parsing Failed: I don't understand what you entered\n";
     }
 }
@@ -1013,9 +1038,12 @@ void XlaterENGLISH::stitchAndDereference(WordS& text){
     }
     burser.submitWord(0); // End the Parsing
     BNodes forest;
+    infon* result=0;
     for(ArcPtrs::iterator arc=burser.parses.begin(); arc != burser.parses.end(); ++arc){
         burser.chart.BuildTrees(&forest, (*arc));
         burser.chart.printForest(forest);
+ //       result=infonate(chart, forest);
+        cout<<". . . . . . . . . . . . . . . . . . . . . . . . . . .\n";
     }
 
 

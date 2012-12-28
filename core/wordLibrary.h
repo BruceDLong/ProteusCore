@@ -65,7 +65,7 @@ enum WordFlags1 {
 
 enum WordFlags2 {
         maskWordClass=0xf, wfUnknown=0x0, wfMiscFunc=0x1, wfNoun=0x2, wfVerb=0x3, wfAdj=0x4, wfAdv=0x5,
-                           wfPrep=0x6,  wfConj=0x7, wfNegotiater=0x8,
+                           wfPrep=0x6,  wfConj=0x7, wfNegotiater=0x8
         };
 
 struct WordS;

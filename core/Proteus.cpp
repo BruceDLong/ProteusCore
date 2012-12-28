@@ -314,7 +314,7 @@ void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags){
     if(fm==iToPath || fm==iToPathH || fm==iToArgs || fm==iToVars) {
         to->spec1=from->spec1;
         if (ptrs) to->top=(*ptrs)[from->top];
-    } else if((fm==iGetFirst || fm==iGetLast || fm==iGetMiddle) && from->spec1) {
+    } else if(fm>=iGetLast && from->spec1) {
         PtrMap *ptrMap = (ptrs)?ptrs:new PtrMap;
         if ((to->prev) && (tmp=to->prev->spec1) && (tmp->wFlag&mIsHeadOfGetLast) && (tmp=tmp->next)) to->spec1=tmp;
         else {to->spec1=new infon; }

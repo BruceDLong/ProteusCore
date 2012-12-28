@@ -254,9 +254,8 @@ void numberFromString(char* buf, pureInfon* pInf, int base){
 
 infon* grok(infon* item, UInt tagCode, int* code){
     if((item->wFlag&mFindMode)==iTagUse) {(*code)|=tagCode; return item;}
-    //else if((item->wFlag&mFindMode)==iGetLast) {return item->spec1;}
     else {
-        if (tagCode==c1Left || tagCode==c1Right) {
+        if (tagCode==c1Left || tagCode==c1Right || tagCode==c1LeftAuto) {
             if((item->wFlag&mFindMode)>=iGetLast) {return item->spec1;}
         } else if (tagCode==c2Left || tagCode==c2Right) {
             if((item->wFlag&mFindMode)>=iGetLast) {
@@ -264,7 +263,7 @@ infon* grok(infon* item, UInt tagCode, int* code){
                 if ((item->spec1->spec2->wFlag&mFindMode)>=iGetLast) return item->spec1->spec2->spec1;
             } else{ // { [A V R] | ...} ::= ABC
                 // if (item->spec2 a tag)  mark inner-tag; return it.
-                if ((item->spec2->wFlag&mFindMode)>=iGetLast) return item; //item->spec2->spec1;
+                if ((item->spec2->wFlag&mFindMode)>=iGetLast) return item;
             }
         }
     }
@@ -420,8 +419,16 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
         eTok=nxtTokN(2,"==","=");
         if(isEq(cTok,":") && (eTok==0)){
             if(peek()=='>') {streamPut(1); break;}
-            toRef=i; i=ReadInfon(scopeID, 0); toSet=grok(i,c1Left,&idFlags);
-            if((toRef->wFlag&mFindMode)!=iTagUse) toRef->top=i;
+            if(peek()=='<') {
+                char tok; check('<');
+                toRef=i; toSet=ReadInfon(scopeID, 0); idFlags=c1LeftAuto;
+                wFlag&=~(mFindMode+mAssoc); wFlag|=iGetAuto; i=new infon(wFlag,0,0,0,toSet);
+                check('>');
+                if((toRef->wFlag&mFindMode)!=iTagUse) toRef->top=i;
+            } else {
+                toRef=i; i=ReadInfon(scopeID, 0); toSet=grok(i,c1Left,&idFlags);
+                if((toRef->wFlag&mFindMode)!=iTagUse) toRef->top=i;
+            }
         } else {
             cTok2=nxtTokN(2,"::",":");
             if(isEq(cTok,":")){
@@ -451,9 +458,8 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
     }
     if(!(noIDs&2)){  // Load function "calls". In addOne<:5, i->spec2 is the 5.
         if(nxtTok(":>" )) {infon* j=ReadInfon(scopeID, 1); j->wFlag|=sUseAsFirst; j->spec2=i; i=j; chk4HardFunc(i);}
-        else if(nxtTok("<:")) {i->wFlag|=sUseAsFirst;
-            i->spec2=ReadInfon(scopeID, 1);  chk4HardFunc(i);}
-        else if(nxtTok("!>")) {}
+        else if(nxtTok("<:")) {i->wFlag|=sUseAsFirst; i->spec2=ReadInfon(scopeID, 1);  chk4HardFunc(i);}
+        else if(nxtTok("!>")){}
         else if(nxtTok("<!")){}
     }
     /*textEnd=textParsed.size(); */

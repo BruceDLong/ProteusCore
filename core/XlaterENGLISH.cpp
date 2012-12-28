@@ -394,8 +394,9 @@ bool tagIsMarkedPossessive(WordSPtr &tag){
 ////////////////////////////////////////////////////////////
 //  Parser Utilities
 
-bRule::bRule(char* ruleHead, int n, ...){
+bRule::bRule(char* ruleHead, int id, int n, ...){
     head=ruleHead;
+    ID=id;
     va_list ap; va_start(ap,n); int i;
     for(i=n; i; --i){
         char* item=va_arg(ap, char*);
@@ -413,11 +414,11 @@ string bRule::asString() {
     return ret;
 }
 
-bRulePtr Grammar::addRule(bool mainLib, int n, ...){
+bRulePtr Grammar::addRule(bool mainLib, int id, int n, ...){
     Rules *rLib = (mainLib)?&rules:&dynRules;
     va_list ap; ++n; va_start(ap,n); int i;
     char* ruleHead=va_arg(ap, char*);
-    bRule *rule=new bRule(ruleHead,0);
+    bRule *rule=new bRule(ruleHead,id,0);
     for(i=n-1; i; --i){
         char* item=va_arg(ap, char*);
         rule->rhs.push_back(item);
@@ -432,45 +433,53 @@ bRulePtr Grammar::addRule(bool mainLib, int n, ...){
 
     bRulePtr tmpRule=bRulePtr(rule);
     rLib->insert(pair<string,bRulePtr>(ruleHead, tmpRule));
-    cout<<"INSERTING RULE: "<< rule->asString()<<"\n";
+ //   cout<<"INSERTING RULE: "<< rule->asString()<<"\n";
     return tmpRule;
     }
+
+enum rules {rNone, rStart_sent, start_neg, sent_clause, clause_SP, clause_AC, clause_CA, clause_SAP,
+    subj_NP, SC_NP, obj_NP, objC_NP, iObj_NP,
+    NP_DetSel, NP_Sel, det_poss, sel_modSel, sel_qntSel, sel_selSel, sel_noun, sel_selPost,
+    pred_VP, pred_VSc, pred_VO, pred_VIO, pred_VOO, VP_verb,
+    auto_N, auto_V, auto_Adj, auto_Adv, auto_Mod, auto_Det, auto_Prep
+};
 
 void Grammar::loadRules(){
     ///////////// Here is the grammar for English
 
-    addRule(1, 1, "$START",        "$sentence");
-    addRule(1, 1, "$START",        "$negotiator");
-    addRule(1, 1, "$sentence",     "$clause");    // Clause must have finite verb
+    addRule(1, rStart_sent, 1, "$START",        "$sentence");
+    addRule(1, start_neg,   1, "$START",        "$negotiator");
+    addRule(1, sent_clause, 1, "$sentence",     "$clause");    // Clause must have finite verb
 
-    addRule(1, 2, "$clause",       "$subject", "$predicate");
-    addRule(1, 2, "$clause",       "$adjunct", "$clause");
-    addRule(1, 2, "$clause",       "$clause", "$adjunct");
-    addRule(1, 3, "$clause",       "$subject", "$adjunct", "$predicate");
+    addRule(1, clause_SP, 2, "$clause",       "$subject", "$predicate");
+    addRule(1, clause_AC, 2, "$clause",       "$adjunct", "$clause");
+    addRule(1, clause_CA, 2, "$clause",       "$clause", "$adjunct");
+    addRule(1, clause_SAP,3, "$clause",       "$subject", "$adjunct", "$predicate");
 
-    addRule(1, 1, "$subject",      "$nounPhrase");
-    addRule(1, 1, "$subjCompl",    "$nounPhrase");
-    addRule(1, 1, "$object",       "$nounPhrase");
-    addRule(1, 1, "$objCompl",     "$nounPhrase");
-    addRule(1, 1, "$indirectObj",  "$nounPhrase");
+    addRule(1, subj_NP, 1, "$subject",      "$nounPhrase");
+    addRule(1, SC_NP,   1, "$subjCompl",    "$nounPhrase");
+    addRule(1, obj_NP,  1, "$object",       "$nounPhrase");
+    addRule(1, objC_NP, 1, "$objCompl",     "$nounPhrase");
+    addRule(1, iObj_NP, 1, "$indirectObj",  "$nounPhrase");
 
-    addRule(1, 2, "$nounPhrase",   "%determiner", "$selector%");
-    addRule(1, 1, "$nounPhrase",   "$selector%");
+    addRule(1, NP_DetSel, 2, "$nounPhrase",   "%determiner", "$selector%");
+    addRule(1, NP_Sel,    1, "$nounPhrase",   "$selector%");
 
-    addRule(1, 1, "$determiner",   "$possessive"); // TODO: handle 'all of the', 'many of the', etc. Also, "the X of Y('s)"
+    addRule(1, det_poss,  1, "$determiner",   "$possessive"); // TODO: handle 'all of the', 'many of the', etc. Also, "the X of Y('s)"
 
-    addRule(1, 2, "$selector%",     "%modifier",   "$selector%");
-    addRule(1, 2, "$selector%",     "$quantifier", "$selector%");
-    addRule(1, 1, "$selector%",     "%noun");
-    addRule(1, 2, "$selector%",     "$selector%", "$selectingPostMod");
+    addRule(1, sel_modSel, 2, "$selector%",     "%modifier",   "$selector%");
+    addRule(1, sel_qntSel, 2, "$selector%",     "$quantifier", "$selector%");
+    addRule(1, sel_noun,   1, "$selector%",     "%noun");
+    addRule(1, sel_selSel, 2, "$selector%",     "$selector%",   "$selector%");
+    addRule(1, sel_selPost,2, "$selector%",     "$selector%", "$selectingPostMod");
 
-    addRule(1, 1, "$predicate",   "$verbPhrase");
-    addRule(1, 2, "$predicate",   "$verbPhrase", "$subjCompl");
-    addRule(1, 2, "$predicate",   "$verbPhrase", "$object");
-    addRule(1, 3, "$predicate",   "$verbPhrase", "$indirectObj", "$object");
-    addRule(1, 3, "$predicate",   "$verbPhrase", "$object", "$objCompl");
+    addRule(1, pred_VP,  1, "$predicate",   "$verbPhrase");
+    addRule(1, pred_VSc, 2, "$predicate",   "$verbPhrase", "$subjCompl");
+    addRule(1, pred_VO,  2, "$predicate",   "$verbPhrase", "$object");
+    addRule(1, pred_VIO, 3, "$predicate",   "$verbPhrase", "$indirectObj", "$object");
+    addRule(1, pred_VOO, 3, "$predicate",   "$verbPhrase", "$object", "$objCompl");
 
-    addRule(1, 1, "$verbPhrase",  "%verb");
+    addRule(1, VP_verb,  1, "$verbPhrase",  "%verb");
 
 }
 
@@ -486,7 +495,8 @@ typedef vector<ArcPtr> ArcPtrs;
 
 struct bArc {  // Arc for the burser. AKA 'Earley state'
     uint start, end, dotPos;
-    bRulePtr rule;   // TODO: Make this a pointer if possible. We're copying lots of rules.
+    bRulePtr rule;
+    WordSPtr wordS;  // This will hold alternatives the arc can take.
 
     bArc(uint s, bRulePtr r, uint pos=0, uint e=0):start(s),end(e),dotPos(pos),rule(r){};
     bool complete() const { return (dotPos == rule->rhs.size()); }
@@ -508,7 +518,8 @@ typedef deque<BNode> BNodes;
 struct Column:vector<ArcPtr> {
     uint index;
     string word;
-    Column(uint Index, string Word):index(Index), word(Word){};
+    WordSPtr wordS;
+    Column(uint Index, string Word, WordSPtr WordS):index(Index), word(Word), wordS(WordS){};
 };
 struct Chart:vector<Column> {
     void GatherTreeRoots(ArcPtrs &parsesOut, string headSymbol);
@@ -539,22 +550,20 @@ void Chart::BuildTreesHelper(BNodes* results,BNodes* children, ArcPtr usedArc, i
     BNodes HResults, VResults;
     results->clear();
     string ruleHead ="<null>"; if (ruleIndex>=0) ruleHead= usedArc->rule->rhs[ruleIndex];
-    cout<<indent<<"ruleIndex:"<<ruleIndex<<"   arc.start:"<<usedArc->start<<"   endColumn:"<<endColumn<<"   RULEHEAD:"<<ruleHead<<"\n";
+//    cout<<indent<<"ruleIndex:"<<ruleIndex<<"   arc.start:"<<usedArc->start<<"   endColumn:"<<endColumn<<"   RULEHEAD:"<<ruleHead<<"\n";
     if(ruleIndex<0 || (ruleHead[0]!='$' && ruleHead[0]!='%')) {results->push_back(BNode(usedArc, children)); return;}
     else if(ruleIndex==0) startColumn = usedArc->start;
     else startColumn=-1;
 
     for(uint st = 0; st < (*this)[endColumn].size(); ++st){
         ArcPtr ST=(*this)[endColumn][st];
- cout<<indent<<"   ColumnArc:"<<ST->rule->head<<"     \t";
-        if (ST.get() == usedArc.get()) {cout<<indent<<"BREAKING\n"; break;}
-        if (!ST->complete() || ST->rule->head != ruleHead) {cout<<indent<<"CONTINEW-1\n"; continue;}
-        if (startColumn != -1 && (int)ST->start != startColumn) {cout<<indent<<"CONTINEW-2\n"; continue;}
-        cout<<indent<<"THROUGH!\n";
+ //cout<<indent<<"   ColumnArc:"<<ST->rule->head<<"     \t";
+        if (ST.get() == usedArc.get()) {break;}
+        if (!ST->complete() || ST->rule->head != ruleHead) {continue;}
+        if (startColumn != -1 && (int)ST->start != startColumn) {continue;}
         BuildTrees(&VResults, ST, indent+"     ");
-        cout<<indent<<"OUT!  ResultSize:"<<VResults.size()<<"\n";
         for(BNodes::iterator subTree=VResults.begin(); subTree != VResults.end(); ++subTree){
-            cout<<indent<<"   subtree:"<<(*subTree).arc->rule->head<<"\n";
+ //           cout<<indent<<"   subtree:"<<(*subTree).arc->rule->head<<"\n";
             BNodes* childList=new BNodes(*children); childList->push_front((*subTree));
             BuildTreesHelper(&HResults, childList, usedArc, ruleIndex - 1, ST->start, indent+"    .");
             for(BNodes::iterator node=HResults.begin(); node != HResults.end(); ++node){
@@ -568,11 +577,11 @@ void Chart::printDiagram(BNode &tree, string indent){
     if(tree.children && tree.children->empty()) cout << indent <<
        tree.arc->rule->head << ": '" << (*this)[tree.arc->start+1].word<<"'\n";
     else {
-    //    cout << indent << tree.arc->rule->head << " =\n";
+        cout << indent << tree.arc->rule->head << " =\n";
         for(BNodes::iterator T=tree.children->begin(); T != tree.children->end(); ++T){
             printDiagram(*T, (indent+"   ."));
         }
-    cout << indent << tree.arc->rule->head << " =\n";
+  //  cout << indent << tree.arc->rule->head << " =\n";
     }
 }
 
@@ -586,14 +595,21 @@ void Chart::printForest(BNodes& forest){
 
 infon* infonate(Chart &chart, BNode &tree){
     string head=tree.arc->rule->head;
-    if(tree.children && tree.children->empty()){
-        if(head=="%noun"){
+    Column &col=chart[tree.arc->start+1];
+    WordSPtr WordSystem=col.wordS;
+    if(tree.children==0 || tree.children->empty()){
+        if(head=="%noun"){  // try each noun sense...
         }else if(head=="%verb"){
         }else if(head=="%adj"){
         }
-//       cout << tree.arc->rule->head << ": '" << (chart[tree.arc->start+1].word<<"'\n";
+//       cout << head << ": '" << (col.word<<"'\n";
     }else {
-
+        int numChilds=tree.children->size();
+        for(BNodes::iterator T=tree.children->begin(); T != tree.children->end(); ++T){
+            infonate(chart, *T);
+        }
+        if(head=="$selector%" && numChilds==2){}
+    cout << head << " =\n";
     }
     return 0;
 }
@@ -613,6 +629,57 @@ string Chart::asString() {
     return ret;
 }
 
+void filterCpy(WordSPtr in, WordSPtr out, uint filter){ // Copy alts matching filter from in to out.
+    for(WordListItr i=in->altDefs.begin(); i!=in->altDefs.end(); ++i){
+        uint wordClass=(*i)->flags2&maskWordClass;
+        if(filter){
+            if(wordClass == filter) {out->altDefs.push_back((*i)); cout<<"WORD_IN:"<<(*i)->norm<<" ("<<(*i)->attributes["gloss"]<<")\n";}
+        }else{
+            if(wordClass == wfAdj || wordClass == wfNoun || ((*i)->flags1&wfHasIntesifierSense)) {
+                cout<<"WORD_IN:"<<(*i)->norm<<" ("<<(*i)->attributes["gloss"]<<")\n";
+                out->altDefs.push_back((*i));
+            }
+        }
+    }
+}
+
+int preInfonate(Chart chart, ArcPtr arc){
+    string head=arc->rule->head;
+    BNode *item1=0, *item2=0, *item3=0, *item4=0;
+    WordSPtr word1=0, word2=0, word3=0, word4=0;
+    BNodes forest;
+    chart.BuildTrees(&forest, arc);
+    chart.printForest(forest);
+    BNode node=forest.front();
+    uint numKids=node.children->size();
+    cout<<"EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE "<<head<<"  SIZE:"<<numKids<<"  "<<arc.get()<<"\n";
+    switch(numKids){
+        case 4: item4 = &node.children->at(3);  word4 = item4->arc->wordS;
+        case 3: item3 = &node.children->at(2);  word3 = item3->arc->wordS;
+        case 2: item2 = &node.children->at(1);  word2 = item2->arc->wordS; cout<<"item2:"<<item2->arc->rule->head<<"  "<<item2->arc.get()<<"  "<<word2->norm<<".\n";
+        case 1: item1 = &node.children->at(0);  word1 = item1->arc->wordS; cout<<"item1:"<<item1->arc->rule->head<<"  "<<item1->arc.get()<<"  "<<word1->norm<<".\n";
+    }
+if(node.arc->wordS!=0) cout<<"Arc's WordS filled too many times!!!!!\n\n";
+    WordSPtr wrdOut=node.arc->wordS=new(WordS);
+    WordSPtr wrdIn=chart[arc->start+1].wordS;
+    switch(node.arc->rule->ID){
+        case auto_N:   filterCpy(wrdIn, wrdOut, wfNoun); break;
+        case auto_V:   filterCpy(wrdIn, wrdOut, wfVerb); break;
+        case auto_Adj: filterCpy(wrdIn, wrdOut, wfAdj); break;
+        case auto_Mod: filterCpy(wrdIn, wrdOut, 0); break;
+        case sel_noun: wrdOut->altDefs=word1->altDefs; break;
+        case sel_modSel: // Test whether an item1 can modify item2?
+        cout<<"SEL-MODifier, Selector: "<<word1->norm<<":  ";
+            for(WordListItr i=word1->altDefs.begin(); i!=word1->altDefs.end(); ++i){ cout<<"X" <<(*i)->norm << " ---> [";
+                for(WordListItr j=word2->altDefs.begin(); j!=word2->altDefs.end(); ++j){cout <<(*j)->norm << ", ";
+
+                } cout<<"]\n";
+            } cout<<"\n";
+             break;
+        default: item4=item4; break; // Stops compiler warning.
+    }
+}
+
 struct Burser{ // Gathers items owed from various sources. e.g., subjects, objects, verbs, phrases, etc.
     const string start_symbol="$START";
     uint crntPos;  //  The number of the chart-slot and word we are on.
@@ -622,7 +689,7 @@ struct Burser{ // Gathers items owed from various sources. e.g., subjects, objec
 
     Burser(Grammar *grmr, infon* context):crntPos(0), grammar(grmr){
         //init chart
-        chart.push_back(Column(0, start_symbol));
+        chart.push_back(Column(0, start_symbol, 0));
         RuleRange strtRules=grammar->rules.equal_range(start_symbol);
         for(RuleItr ri=strtRules.first; ri!=strtRules.second; ++ri)
             chart[0].push_back(ArcPtr(new bArc(0,(*ri).second)));
@@ -652,7 +719,7 @@ void Burser::submitWord(WordSPtr word){
     uint i=crntPos++; string wordNorm="<EOT>";
     if(word){
         wordNorm=word->norm;
-        chart.push_back(Column(i,wordNorm));
+        chart.push_back(Column(i, wordNorm, word));
     }
     cout<<"SUBMITTED: "<<wordNorm<<"  col:"<<i<<"  "<<chart[i].size()<<" \n";
  //   print_chart(chart);
@@ -661,23 +728,11 @@ void Burser::submitWord(WordSPtr word){
         if (stateItm->complete()) {  // (Complete)
             cout << "RULE COMPLETE:"<< stateItm->rule->asString()<<"\n";
             stateItm->end=i;
-            string head=stateItm->rule->head;
-            if(head[head.size()-1]=='%'){ // Now check for coherence if needed
-                if(head=="$selector%"){
-                    cout<<"$SELECTOR%"<<"  "<<i<<"\n";
-             //       ArcPtrs parsesOut;
-             //       chart.GatherTreeRoots(parsesOut, head);
-                    BNodes forest;
-             //       for(ArcPtrs::iterator arc=parsesOut.begin(); arc != parsesOut.end(); ++arc){
-                        chart.BuildTrees(&forest, stateItm);// (*arc));
-                        chart.printForest(forest);
-             //       }
-                }
-            }  {
-                for(Column::iterator k = chart[stateItm->start].begin(); k != chart[stateItm->start].end(); ++k ) {
-                    if (!(*k)->complete() && (*k)->nextTerm() == head) {
-                       pushArcToChart(chart[i],ArcPtr(new bArc((*k)->start,(*k)->rule, (*k)->dotPos+1, (*k)->start)) );
-                    }
+            int numAltsAdded = preInfonate(chart, stateItm);
+            //  TODO: if no alts were added, close this arc.
+            for(Column::iterator k = chart[stateItm->start].begin(); k != chart[stateItm->start].end(); ++k ) {
+                if (!(*k)->complete() && (*k)->nextTerm() == stateItm->rule->head) {
+                   pushArcToChart(chart[i],ArcPtr(new bArc((*k)->start,(*k)->rule, (*k)->dotPos+1, (*k)->start)) );
                 }
             }
         } else {
@@ -692,44 +747,39 @@ void Burser::submitWord(WordSPtr word){
                // cout << "EVALUATING: "<<term<<"  "<< word.get() <<" for '"<<wordNorm<<"'...\n";
                 if(term[0]=='%'){
                     if(!word) continue;
-                    bool wordIsOK=false;
+                    bool wordIsOK=false; int newHeadID=0;
                     if(term=="%determiner"){
-                        if(word->flags1&wfHasDetSense){ wordIsOK=true;}
+                        if(word->flags1&wfHasDetSense){ wordIsOK=true; newHeadID=auto_Det;}
                     } else if(term=="%modifier"){
-                        if(word->flags1&(wfHasNounSense+wfHasAdjSense+wfHasIntesifierSense)){ wordIsOK=true;}
+                        if(word->flags1&(wfHasNounSense+wfHasAdjSense+wfHasIntesifierSense)){ wordIsOK=true; newHeadID=auto_Mod;}
                     } else if(term=="%noun"){ cout<<"NOUN "<<word->norm<<"  "<<word->flags1<<"\n";
-                        if(word->flags1&wfHasNounSense){ wordIsOK=true;}
+                        if(word->flags1&wfHasNounSense){ wordIsOK=true; newHeadID=auto_N;}
                     } else if(term=="%verb"){ cout<<"VERB "<<word->flags1<<"\n";
-                        if(word->flags1&wfHasVerbSense){ wordIsOK=true;}
+                        if(word->flags1&wfHasVerbSense){ wordIsOK=true; newHeadID=auto_V;}
                     } else if(term=="%adjective"){ cout<<"ADJ "<<"\n";
-                        if(word->flags1&wfHasAdjSense){ wordIsOK=true;}
+                        if(word->flags1&wfHasAdjSense){ wordIsOK=true; newHeadID=auto_Adj;}
+                    } else if(term=="%adverb"){ cout<<"ADV "<<"\n";
+                        if(word->flags1&wfHasAdvSense){ wordIsOK=true; newHeadID=auto_Adv;}
                     } else if(term=="%preposition"){
-                        if(word->flags1&wfHasPrepositionSense){ wordIsOK=true;}
+                        if(word->flags1&wfHasPrepositionSense){ wordIsOK=true; newHeadID=auto_Prep;}
                     }
                     if(wordIsOK){
                         cout<<"     "<< word->altDefs.size()<<"\n";
-                        pushArcToChart(chart[i], ArcPtr(new bArc(i, grammar->addRule(0,1,term.c_str(), word->norm.c_str()))));
+                        pushArcToChart(chart[i], ArcPtr(new bArc(i, grammar->addRule(0,newHeadID,1,term.c_str(), word->norm.c_str()))));
                     }
-                } else { cout<<"nxtRule\n";
+                } else {// cout<<"nxtRule\n";
                     RuleRange nextRules=grammar->rules.equal_range(term);
                     for(RuleItr ri=nextRules.first; ri!=nextRules.second; ++ri) {
-                        cout << "     "<< (*(*ri).second).asString()<<"\n";
+                      //  cout << "     "<< (*(*ri).second).asString()<<"\n";
                         pushArcToChart(chart[i], ArcPtr(new bArc(i, (*ri).second)));
                     }
                 }
             }
         }
-    }  cout<<"at-done1\n";
+    } // cout<<"at-done1\n";
     if(!word){ // Gather successful parse trees
         cout<<"GATHERING PARSE TREES "<<chart.back().size()<<"\n";
         chart.GatherTreeRoots(parses, start_symbol);
-
-/*        for(uint c = 0; c < chart.back().size(); ++c) {
-            if (chart.back()[c]->complete() && start_symbol == chart.back()[c]->rule->head) {
-                cout<<"PARSE HEAD: "<<chart.back()[c]->rule<<"\n";
-                parses.push_back(chart.back()[c]);
-            }
-        } */
         if(parses.size()==0) cout<<"Parsing Failed: I don't understand what you entered\n";
     }
 }
@@ -1038,7 +1088,7 @@ void XlaterENGLISH::stitchAndDereference(WordS& text){
     }
     burser.submitWord(0); // End the Parsing
     BNodes forest;
-    infon* result=0;
+ //   infon* result=0;
     for(ArcPtrs::iterator arc=burser.parses.begin(); arc != burser.parses.end(); ++arc){
         burser.chart.BuildTrees(&forest, (*arc));
         burser.chart.printForest(forest);

@@ -18,10 +18,11 @@
 using namespace std;
 
 struct bRule{
+    int ID;
     string head;
     vector<string> rhs;
 
-    bRule(char* ruleHead, int n, ...);
+    bRule(char* ruleHead, int id, int n, ...);
     string asString();
     friend bool operator==(bRule const& left, bRule const& right) {
             return (left.head == right.head) && (left.rhs.size()==right.rhs.size())
@@ -37,7 +38,7 @@ typedef pair<RuleItr,RuleItr> RuleRange;
 struct Grammar{
     Rules rules;     // Grammar rules
     Rules dynRules;  // Dynamically created rules
-    bRulePtr addRule(bool mainLib, int n, ...);
+    bRulePtr addRule(bool mainLib, int id, int n, ...);
     void loadRules();
 };
 

@@ -3,7 +3,7 @@ cmake_policy(SET CMP0015 NEW)
 
 set(LANG_MODULES XlaterENGLISH.cpp)
 
-add_definitions(-m32 -std=gnu++11 -Wno-deprecated -Wno-write-strings -fpermissive -g -Wall)
+add_definitions( -std=gnu++11 -Wno-deprecated -Wno-write-strings -fpermissive -g -Wall)
 
 set(PROTEUS_SRCS Proteus.cpp convs.cpp InfonIO.cpp Functions.cpp wordLibrary.cpp ${LANG_MODULES})
 set(UNICODE_LIBS icuio icui18n icutu icuuc icudata icule iculx icutest dl)
@@ -21,4 +21,4 @@ link_directories(#../builds/libs/GMP_BigInts/gmp-5.0.4/lib/
 #add_library(Proteus SHARED ${PROTEUS_SRCS})
 add_executable(clip clip.cpp ${PROTEUS_SRCS})
 target_link_libraries(clip readline gmpxx gmp sqlite3 ${UNICODE_LIBS})
-set_target_properties(clip PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
+#set_target_properties(clip PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")

@@ -1097,8 +1097,8 @@ void XlaterENGLISH::stitchAndDereference(WordS& text){
     }
 
 
-  //  WordListItr WLI=text.words.begin(); //++WLI;
-  //  text.definition=(*(*WLI)->altDefs.begin())->definition;
+  WordListItr WLI=text.words.begin(); //++WLI;
+  text.definition=(*(*WLI)->altDefs.begin())->definition;
 }
 
 infon* XlaterENGLISH::infonate(WordS& text){

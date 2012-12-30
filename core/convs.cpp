@@ -68,6 +68,18 @@ infon* infon::findTag(WordS& word){
     return word.xLater->tags2Proteus(word);
 }
 
+void infon::updateIndex(){
+    if(value.listHead==0) return;
+    index.clear();
+    for(infon* p=value.listHead;p;) {
+        if(!InfIsTentative(p) && p->type && p->type->norm!=""){
+            index[p->type->norm]=p;
+            cout<<"INDEXED "<<printInfon(p)<<"\n"; 
+        }
+        if (InfIsBottom(p)) p=0; else p=p->next;
+    } 
+}
+
 int infonSizeCmp(infon* left, infon* right) { // -1: L<R,  0: L=R, 1: L>R. Infons must have fLiteral, numeric sizes
     UInt leftType=InfsType(left), rightType=InfsType(right);
     if(leftType==0 || SizeIsUnknown(left) || SizeIsUnknown(right)) return 2; // Let's say '2' is an error.

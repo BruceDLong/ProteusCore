@@ -337,6 +337,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                 if(FormatIsConcat(*flags) && (InfsType(j)!=tUnknown)) {SetBits((*flags), mType, InfsType(j));}
             }
             if (foundRet==1) {check('>'); pInf->listHead=j; foundRet++; /* *pFlag|=intersect; */}  // TODO: when repairing Middle-Indexing, repair 'intersect'
+            if(j->type){cout<<"TYPE"<<j->type->norm;}
             j->top=head; j->next=head; prev->next=j; j->prev=prev; head->prev=j; prev=j; RmvWSC();
         }
         if(head){
@@ -411,7 +412,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
     infon* i=new infon(wFlag, &iSize,&iVal,0,s1,s2,0); i->wSize=size; i->type=tags;
     if(ValueIsConcat(i) && (*i->size.dataHead)==1){infon* ret=i->value.listHead; delete(i); ret->top=ret->next=ret->prev=0; return ret;} // BUT we lose i's idents and some flags (desc, ...)
     if (i->size.listHead) i->size.listHead->top=i;
-    if (i->value.listHead)i->value.listHead->top=i;
+    if (i->value.listHead){i->value.listHead->top=i; i->updateIndex();}
     if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~(mFindMode+mAssoc); i->wFlag|=mIsHeadOfGetLast; i=new infon(wFlag,0,0,0,i); i->spec1->top2=i;}
     for(char c=Peek(); !(noIDs&1) && (c==':' || c=='='); c=Peek()){
         infon *R, *toSet=0, *toRef=0; int idFlags=0;

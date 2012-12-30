@@ -147,6 +147,7 @@ struct infon {
     bool getReal(double* d);
     bool getStng(string* str);
     infon* findTag(WordS& tag);
+    void updateIndex();
 
     UInt wFlag;
     uint64_t pos;
@@ -158,6 +159,7 @@ struct infon {
     infNode* wrkList;
     WordSPtr type;
     map<string, string> *attrs; // Misc attributes: <tag, data-string>
+    map<string, infon*> index;  // For faster finds.
     ~infon(){delete attrs;};
 };
 int infValueCmp(infon* A, infon* B);

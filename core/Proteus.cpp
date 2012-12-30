@@ -600,6 +600,13 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
                     deTagWrkList(CI);
                 } else{OUT("\nBad tag:'"<<CI->type->norm<<"'\n");throw("A tag was used but never defined");}
                 break;}
+            case iGetAuto:{
+                string tag=CI->spec1->type->norm;
+                map<string, infon*>::iterator itr=CI->index.find(tag);
+                if(itr!=CI->index.end()) newID=itr->second;
+                
+        cout <<"note: alts in iGetAuto not copied. ["<<tag<<"]\n";
+            break;}
             case iGetFirst:  StartTerm (CI, &newID); break;
             case iGetMiddle: break; // TODO: iGetMiddle
             case iGetLast:

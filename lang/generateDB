@@ -7,11 +7,22 @@
 
 rm -f proteusData.db
 rm -f proteusData.db-journal
-sqlite3 proteusData.db "CREATE TABLE 'wordShells' (id integer PRIMARY KEY, sourceID text, locale text, word text, senseID text, pos text, key text, gloss text, pronunciation text, attrs text, skillLvl integer);"
+sqlite3 proteusData.db "CREATE TABLE 'words' (id integer PRIMARY KEY, sourceID text, locale text, word text, senseID text, pos text, key text, gloss text, pronunciation text, attrs text, skillLvl integer, modelID integer);"
+
+sqlite3 proteusData.db "CREATE TABLE 'models' (id integer PRIMARY KEY, sourceID text, attrs text, proteus text);"
+
 sqlite3 proteusData.db .tables
 
 cd English
 perl GenEnglishWords.pl
-
 cd ..
+
+#cd French
+#perl GenFrenchWords.pl
+#cd ..
+
+#cd Japanese
+#perl GenJapaneseWords.pl
+#cd ..
+
 cp proteusData.db ../resources/

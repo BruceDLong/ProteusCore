@@ -17,7 +17,7 @@ WordLibrary::WordLibrary(sqlite3 *DB){
 }
 
 WordSMap::iterator WordLibrary::wrappedLowerBound(wordKey &word, xlater* xlatr){
-cout<<"LOWER_BOUND:'"<<word<<"'\n";
+//cout<<"LOWER_BOUND:'"<<word<<"'\n";
     // If (crntWrd not from the database) load it and all like "it %"
     WordSMap::iterator trialItr=lower_bound(word);
     if(trialItr != end()){

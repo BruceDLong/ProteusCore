@@ -33,7 +33,7 @@ bool IsHardFunc(string tag){
 int getStrArg(infon* i, string* str, agent* a){
     i->spec2->top=i;
     a->normalize(i->spec2);
-    i->getStng(str);
+    i->spec2->getStng(str);
     return 1;
 }
 

@@ -128,7 +128,7 @@ void XlaterENGLISH::ReadTagChain(QParser *parser, icu::Locale &locale, WordS& he
 
 infon* XlaterENGLISH::tags2Proteus(WordS& words){   // Converts a list of words read by ReadTagChain() into an infon and returns a pointer to it.
     findDefinitions(words);
-    stitchAndDereference(words);
+  //  stitchAndDereference(words);
     infon* proteusCode = infonate(words);
     return proteusCode;
 }
@@ -924,16 +924,16 @@ void XlaterENGLISH::findDefinitions(WordS& words){
                 if(trial[keyLen]=='%'){cout<<"\tMATCH: "<<trial<<"  "<<trialItr->second->flags2<<"\n";
                     uint newScopeScore=calcScopeScore(scopeID, trial.substr(keyLen+1));
                     if(newScopeScore > scopeScore) {
-                        (*crntWrd)->altDefs.clear();
-                        scopeScore=newScopeScore;
+                        (*crntWrd)->altDefs.clear();  cout<<"CLEAR-X! "<<*crntWrd<<"\n";
+                        scopeScore=newScopeScore; cout<<"PUSHING-X:"<<trialItr->second<<"\n";
                         (*crntWrd)->altDefs.push_back(trialItr->second);
                         (*crntWrd)->flags1 |= getPOS_Sense(trialItr->second);
                         numWordsInChosen=numWordsInCompound;
                     }else if(newScopeScore == scopeScore) {
                         if(numWordsInCompound>numWordsInChosen){
-                            (*crntWrd)->altDefs.clear();
+                            (*crntWrd)->altDefs.clear(); cout<<"CLEAR!\n";
                             numWordsInChosen=numWordsInCompound;
-                        }
+                        }cout<<"PUSHING "<<*crntWrd<<"\n";
                         (*crntWrd)->altDefs.push_back(trialItr->second);
                         (*crntWrd)->flags1 |= getPOS_Sense(trialItr->second);
                     }
@@ -1097,10 +1097,14 @@ void XlaterENGLISH::stitchAndDereference(WordS& text){
     }
 
 
-  WordListItr WLI=text.words.begin(); //++WLI;
-  text.definition=(*(*WLI)->altDefs.begin())->definition;
+  //  WordListItr WLI=text.words.begin(); //++WLI;
+  //  text.definition=(*(*WLI)->altDefs.begin())->definition;
 }
 
 infon* XlaterENGLISH::infonate(WordS& text){
+    cout<<"NORM:"<<(*text.words.begin())<<(*text.words.begin())->norm<<"   def:"<<(*(*text.words.begin())->altDefs.begin())->norm<<"\n";
+    if (text.definition) return text.definition;
+    WordListItr WLI=text.words.begin(); //++WLI;
+    text.definition=(*(*WLI)->altDefs.begin())->definition;
     return text.definition;
 }

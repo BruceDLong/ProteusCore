@@ -1,0 +1,53 @@
+// English Grammar Models
+<%{
+    &Engligh Grammar = {
+
+        &language element = {parse==words, meaning}
+
+     //   &parse = {language element | ...}
+
+        // &language utterance = // negotiator or sentence
+        // $sentence = finite clause
+
+        &clause = (
+            language element = { // oneOf:
+                    {(%^:<parse> = {subject, predicate }), (%^:<meaning> = {(%^:<parse>:<subject> = %^:<parse>:<predicate>)})},
+                    {(%^:<parse> = {adjunct, clause}), (%^:<meaning> = {})},
+                    {(%^:<parse> = {clause, adjunct }), (%^:<meaning> = {})},
+                    {(%^:<parse> = {subject, adjunct, predicate }), (%^:<meaning> = {})}
+
+            }*_+[...]
+        )
+
+        &subject            = (language element = noun phrase)
+        &subject complement = (language element = noun phrase)
+        &object             = (language element = noun phrase)
+        &object complement  = (language element = noun phrase)
+        &indirect object    = (language element = noun phrase)
+
+        &noun phrase = { // oneOf:
+                    {(%^:<parse> = {determiner, selector }), (%^:<meaning> = {(%^:<parse>:<subject> = %^:<parse>:<predicate>)})},
+                    {(%^:<parse> = {possessor chain, selector }), (%^:<meaning> = {})},// TODO: handle 'all of the', 'many of the', etc. Also, "the X of Y('s)"
+
+            }*_+[...]
+
+        &selector = { // oneOf:
+                    {(%^:<parse> = {modifier,   selector }), (%^:<meaning> = {(%^:<parse>:<subject> = %^:<parse>:<predicate>)})},
+                    {(%^:<parse> = {quantifier, selector }), (%^:<meaning> = {})},
+                    {(%^:<parse> = {selector,   selector }), (%^:<meaning> = {})}
+                    {(%^:<parse> = noun), (%^:<meaning> = {})},
+                    {(%^:<parse> = {selector, selector postmodifier }), (%^:<meaning> = {})},
+
+            }*_+[...]
+    }
+}%>
+
+
+
+    addRule(1, pred_VP,  1, "$predicate",   "$verbPhrase");
+    addRule(1, pred_VSc, 2, "$predicate",   "$verbPhrase", "$subjCompl");
+    addRule(1, pred_VO,  2, "$predicate",   "$verbPhrase", "$object");
+    addRule(1, pred_VIO, 3, "$predicate",   "$verbPhrase", "$indirectObj", "$object");
+    addRule(1, pred_VOO, 3, "$predicate",   "$verbPhrase", "$object", "$objCompl");
+
+    addRule(1, VP_verb,  1, "$verbPhrase",  "%verb");

@@ -274,20 +274,22 @@ char errMsg[100];
 UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2, string &scopeID){
     UInt p=0, size=0, stay=1; char rchr, tok; const char* pTok; infon *head=0, *prev; infon* j;
     infDataPtr* i=&(pInf)->dataHead;
-    if(nxtTok("(") || nxtTok("{") || nxtTok("[")){
+    if(nxtTok("(") || nxtTok("{") || nxtTok("[") || nxtTok("<")){
         if(nTok=='(') {rchr=')'; SetBits(*flags, mFormat+mType,(fConcat+tNum));}
         else if(nTok=='['){rchr=']'; *flags|=(tList+fLiteral); *wFlag=iGetLast;}
+        else if(nTok=='<'){rchr='>'; *flags|=(tList+fLiteral); *wFlag=iGetLast;} // Later: iGetMiddle
         else {rchr='}'; *flags|=(tList+fLiteral);}
         RmvWSC(); int foundRet=0; int foundBar=0;
         for(tok=peek(); tok != rchr && stay; tok=peek()){
             if(tok=='&') { // This is a definition, not an element
+                if(rchr=='>') throw "Definitions (&) are not allowed inside <TYPE>";
                 streamGet();
                 xlater *Xlater;
-                map<string, string> *attrs=0; // For model attributes
+                attrStorePtr attrs=0; // For model attributes
                 list<WordSPtr> tagList;
                 WordSPtr tag=0; bool done=false;
                 do{ // Here we process tag definitions
-                    tag=ReadTagChain(&locale, &Xlater, scopeID); if (tag==0) throw "Null tag was read";
+                    tag=ReadTagChain(&agnt->locale, &Xlater, scopeID); if (tag==0) throw "Null tag was read";
                     tagList.push_back(tag);
 //cout<<"TAG:"<<tag->norm<<"\n";
                     while((pTok = nxtTokN(2,"%","#"))){ // read tag's (%) or definition's (#) attributes
@@ -300,7 +302,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                         string attrText=buf;
                         if(*pTok=='%') tag->attributes.insert(pair<string,string>(attrTag,attrText));
                         else if(*pTok=='#'){
-                            if(attrs==0) attrs=new map<string, string>;
+                            if(attrs==0) attrs=new attrStore;
                             attrs->insert(pair<string,string>(attrTag,attrText));
                         }
                     }
@@ -324,7 +326,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
             }
 
             // OK, process an element or description of this list
-            if(tok=='<') {foundRet=1; streamGet(); j=ReadInfon(scopeID);}
+            if(tok=='<' && rchr==']') {foundRet=1; streamGet(); j=ReadInfon(scopeID);}
             else if(nxtTok("...")){
                 pureInfon pSize(size+1);
                 j=new infon(iNone+isVirtual, &pSize); SetValueFormat(j, fUnknown); j->pos=(size+1); stay=0;
@@ -333,15 +335,28 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                 if(!foundRet && !foundBar && stay && nxtTok("|")){
                     *s2=j; *flags|=fLoop; size=0; foundBar=1; RmvWSC(); continue;
                 }
-                pInf->listHead=j; head=prev=j; head->wFlag|=isFirst+isTop;
+                pInf->listHead=j; head=prev=j;
                 if(FormatIsConcat(*flags) && (InfsType(j)!=tUnknown)) {SetBits((*flags), mType, InfsType(j));}
             }
-            if (foundRet==1) {check('>'); pInf->listHead=j; foundRet++; /* *pFlag|=intersect; */}  // TODO: when repairing Middle-Indexing, repair 'intersect'
+            if (foundRet==1) {
+                check('>'); pInf->listHead=j; foundRet++;
+                if(peek()==':') throw "'<TYPE>' syntax was used in non-working context.";
+                /* *pFlag|=intersect; */  // TODO: when repairing Middle-Indexing, repair 'intersect'
+            }
             if(j->type){cout<<"TYPE"<<j->type->norm;}
             j->top=head; j->next=head; prev->next=j; j->prev=prev; head->prev=j; prev=j; RmvWSC();
         }
         if(head){
-            head->prev->wFlag|=isBottom;
+            if(rchr=='>'){ // Create negative copy of type-to-find.
+                if(size!=1) throw "<TYPE> must have exctly one element";
+                infon* negCpy=new infon; agnt->deepCopy(head->prev, negCpy); negCpy->wFlag|=asNot; // Copy the last item.
+                negCpy->next=head; negCpy->prev=head->prev; negCpy->top=head->top;
+                head->prev->top = head->prev->next = negCpy;
+                head->prev = head->top = negCpy;
+                pInf->listHead = head = negCpy;
+                size++;
+            }
+            head->prev->wFlag|=isBottom; head->wFlag|=isFirst+isTop;
             if (!(VsFlag(head)&fIncomplete) && stay) head->prev->wFlag|=isLast;
         }
         check(rchr);
@@ -372,7 +387,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
     else if( nxtTok("%")){
         iVal.flags|=fUnknown;
         if (nxtTok("123")){
-            wFlag|=iTagUse; if(!(tags=ReadTagChain(&locale, 0, scopeID))) throw "Null Words found after %123. Shouldn't happen";
+            wFlag|=iTagUse; if(!(tags=ReadTagChain(&agnt->locale, 0, scopeID))) throw "Null Words found after %123. Shouldn't happen";
         }else if (nxtTok("cTok")){
             if      (strcmp(buf,"W")==0){wFlag|=iToWorld;}
             else if (strcmp(buf,"C")==0){wFlag|=iToCtxt;}
@@ -381,9 +396,9 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
         } else if (nTok=='\\' || nTok=='^'){  // TODO: Don't allow these (or %A or %V) outside of := or :
             for(s1=0; (nTok=streamGet())=='\\';) {s1=(infon*)((UInt)s1+1); ChkNEOF;}
             if (nTok=='^') wFlag|=iToPath; else {wFlag|=iToPathH; streamPut(1);}
-        }
+        } else throw "'%' was seen but not used.";
     }else if(isTagStart(Peek())){
-        wFlag|=iTagUse; if(!(tags=ReadTagChain(&locale, 0, scopeID))) throw "Null Words found. Shouldn't happen";
+        wFlag|=iTagUse; if(!(tags=ReadTagChain(&agnt->locale, 0, scopeID))) throw "Null Words found. Shouldn't happen";
         nxtTok(",");
     }else{  // OK, then we're parsing some form of *... +...
         wFlag|=iNone;
@@ -420,16 +435,16 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
         eTok=nxtTokN(2,"==","=");
         if(isEq(cTok,":") && (eTok==0)){
             if(peek()=='>') {streamPut(1); break;}
-            if(peek()=='<') {
-                char tok; check('<');
-                toRef=i; toSet=ReadInfon(scopeID, 0); idFlags=c1LeftAuto;
-                wFlag&=~(mFindMode+mAssoc); wFlag|=iGetAuto; i=new infon(wFlag,0,0,0,toSet);
-                check('>');
-                if((toRef->wFlag&mFindMode)!=iTagUse) toRef->top=i;
-            } else {
+//            if(peek()=='<') {
+//                char tok; check('<');cout<<"***************IN\n";
+//                toRef=i; toSet=ReadInfon(scopeID, 0); idFlags=c1LeftAuto;
+//                wFlag&=~(mFindMode+mAssoc); wFlag|=iGetAuto; i=new infon(wFlag,0,0,0,toSet);
+//                check('>');cout<<"***************OUT of "<<toSet->type->norm<<"\n";
+//                if((toRef->wFlag&mFindMode)!=iTagUse) toRef->top=i;
+//            } else {
                 toRef=i; i=ReadInfon(scopeID, 0); toSet=grok(i,c1Left,&idFlags);
                 if((toRef->wFlag&mFindMode)!=iTagUse) toRef->top=i;
-            }
+//            }
         } else {
             cTok2=nxtTokN(2,"::",":");
             if(isEq(cTok,":")){
@@ -454,7 +469,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
         }
         if(toSet==0) throw ":= operator requires [....] on the left side";
         if(toRef==0) throw "=: operator requires [....] on the right side";
-        if((toRef->type==0) && !(idFlags&mLooseType)) toRef->type=toSet->type;
+        if((toRef->type==0) && !(idFlags&mLooseType)/* && idFlags!=c1LeftAuto*/) toRef->type=toSet->type;
         insertID(&toSet->wrkList, toRef, idFlags);
     }
     if(!(noIDs&2)){  // Load function "calls". In addOne<:5, i->spec2 is the 5.

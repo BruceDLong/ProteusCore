@@ -121,6 +121,16 @@ struct infonData :BigFrac {
 };
 typedef boost::intrusive_ptr<infonData> infDataPtr;
 
+struct attrStore:map<string, string>{UInt refCnt;};
+typedef boost::intrusive_ptr<attrStore> attrStorePtr;
+inline void intrusive_ptr_add_ref(attrStore* p){++p->refCnt;}
+inline void intrusive_ptr_release(attrStore* p){if(--p->refCnt == 0) delete p;}
+
+struct infonIndex:map<string, infon*>{UInt refCnt;};
+typedef boost::intrusive_ptr<infonIndex> infonIndexPtr;
+inline void intrusive_ptr_add_ref(infonIndex* p){++p->refCnt;}
+inline void intrusive_ptr_release(infonIndex* p){if(--p->refCnt == 0) delete p;}
+
 struct pureInfon {
     UInt flags;
     BigFrac offset;
@@ -158,9 +168,9 @@ struct infon {
     infon *spec1, *spec2;   // Used to store indexes, functions args, etc.
     infNode* wrkList;
     WordSPtr type;
-    map<string, string> *attrs; // Misc attributes: <tag, data-string>
-    map<string, infon*> index;  // For faster finds.
-    ~infon(){delete attrs;};
+    attrStorePtr attrs; // Misc attributes: <tag, data-string>
+    infonIndexPtr index;  // For faster finds.
+    ~infon(){};
 };
 int infValueCmp(infon* A, infon* B);
 int infonSizeCmp(infon* left, infon* right); // -1: L<R,  0: L=R, 1: L>R. Infons must have fLiteral, numeric sizes
@@ -247,7 +257,7 @@ struct QParser{
     char nTok; // First character of last token
     int line;  // linenumber, position in text
     string textParsed;
-    icu::Locale locale;
+    agent* agnt;
     infon* ti; // top infon
 };
 
@@ -260,12 +270,13 @@ extern bool try2CatStr(string* s, pureInfon* i, UInt wSize);
 #define isEq(L,R) (L && R && strcmp(L,R)==0)
 
 #define getTop(item) ((InfIsTop(item)||item->top==0)? item->top : item->top->top)
-#define prependID(list, node){infNode *IDp=(*list); if(IDp){node->next=IDp->next; IDp->next=node;} else {(*list)=node; node->next=node;}}
+#define prependID(list, node){infNode *IDp=(*list); if(IDp){(node)->next=IDp->next; IDp->next=node;} else {(*list)=node; (node)->next=node;}}
 #define appendID(list, node) {infNode *IDp=(*list); (*list)=node; if(IDp){(*list)->next=IDp->next; IDp->next=(*list);} else (*list)->next=(*list);}
 #define insertID(list, itm, flag) {appendID(list, new infNode(itm,flag));}
+#define insertIDatTop(list, itm, flag) {prependID(list, new infNode(itm,flag));}
 #define cpType(from, to) {if(to->type==0) to->type=from->type;}
 #define cpFlags(from, to, mask) {(to)->wFlag=(((to)->wFlag& ~(mask))+(((from)->wFlag)&mask)); cpType(from,to);}
-#define copyTo(from, to) {if((from)!=(to)){(to)->size=(from)->size; (to)->value=(from)->value; cpFlags((from),(to),0x00ffffff);}}
+#define copyTo(from, to) {if((from)!=(to)){(to)->size=(from)->size; (to)->value=(from)->value; cpFlags((from),(to),0x00ffffff); (to)->attrs=(from)->attrs; (to)->index=(from)->index;}}
 
 #define PrntLocale(L) {icu::UnicodeString lang,country; cout<<L.getDisplayLanguage(L, lang) <<"-"<< L.getDisplayCountry(L, country) <<" (" << L.getBaseName()<<")\n"; }
 

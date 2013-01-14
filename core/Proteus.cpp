@@ -95,7 +95,7 @@ int agent::loadInfon(const char* filename, infon** inf, bool normIt){
     cout<<"Loading:'"<<filename<<"'..."<<flush;
     fstream InfonIn(filename);
     if(InfonIn.fail()){cout<<"Error: The file "<<filename<<" was not found.\n"<<flush; return 1;}
-    QParser T(InfonIn); T.locale=locale;
+    QParser T(InfonIn); T.agnt=this;
     *inf=T.parse();
     if (*inf) {cout<<"done.   "<<flush;}
     else {cout<<"Error:"<<T.buf<<"   "<<flush; return 1;}
@@ -249,6 +249,7 @@ infon* agent::append(infon* i, infon* list){ // appends an item to the end of a 
     copyTo(i, q); if(InfsType(q)==tList && q->size.listHead) q->value.listHead->top=q;
     q->spec1=i->spec1; q->spec2=i->spec2; q->wrkList=i->wrkList;
     ResetVirtTent(q);
+    if(q->type && q->type->norm!="") (*list->index)[q->type->norm]=q;
     normalize(q);
     return q;
 }
@@ -330,6 +331,9 @@ void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags){
     if ((from->wFlag&mFindMode)==iAssocNxt) {to->spec2=from;}  // Breadcrumbs to later find next associated item.
     else if(!from->spec2) to->spec2=0;
     else {to->spec2=new infon; deepCopy(from->spec2, to->spec2,0,flags);}
+
+    to->attrs=from->attrs;
+    to->index=from->index;
 
     infNode *p=from->wrkList, *q;  // Merge Identity Lists
     if(p) do {
@@ -560,7 +564,7 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
             case sUseAsList: CI->spec1->wFlag|=toExec;  newID=CI->spec1;
         }
         switch(CIFindMode){
-            case iToWorld: copyTo(world, CI); break;
+            case iToWorld: copyTo(world, CI); cout<<"WORLD:"<<CI<<"\n"; break;
             case iToCtxt:   copyTo(&context, CI); break; // TODO: Search agent::context
             case iToArgs: case iToVars:
                 for (newID=CI->top; newID && !(newID->top->wFlag&mIsHeadOfGetLast); newID=newID->top){}
@@ -602,9 +606,11 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
                 break;}
             case iGetAuto:{
                 string tag=CI->spec1->type->norm;
-                map<string, infon*>::iterator itr=CI->index.find(tag);
-                if(itr!=CI->index.end()) newID=itr->second;
-                
+                infon* infToSearch=CI->spec1->wrkList->next->item;
+                normalize(infToSearch);
+                infonIndex::iterator itr=infToSearch->index->find(tag);
+                if(itr!=infToSearch->index->end()) newID=itr->second;
+                else {cout<<"'"<<tag<<"' not found in index "<<infToSearch->index.get()<<".\n"<<world->index.get(); exit(1);}
         cout <<"note: alts in iGetAuto not copied. ["<<tag<<"]\n";
             break;}
             case iGetFirst:  StartTerm (CI, &newID); break;
@@ -665,12 +671,12 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
     infNode *wrkNode=ci->wrkList; infon *item, *IDfol, *tmp, *theOne=0; Qitem cn;
     UInt altCount=0, level, tempRes, isIndef=0, result=DoNothing, f, looseType, noNewContent=true;
     if(CIfol && !CIfol->pred) CIfol->pred=ci;
-    if(wrkNode)do{
+    if(wrkNode)do{ cout<<"@@@@@@@@\n";
         wrkNode=wrkNode->next; item=wrkNode->item;
-        bool cpySize=0, cpyValue=0, resetCIsTentative=0, linkCIFol=false, invertAcceptance=(ci->wFlag&asNot); int reject=rAccept;
+        bool cpySize=0, cpyValue=0, resetCIsTentative=0, linkCIFol=false, invertAcceptance=((ci->wFlag&asNot) ^ (item->wFlag&asNot)); int reject=rAccept;
         if (wrkNode->idFlags&skipFollower) CIfol=0;
         switch (wrkNode->idFlags&WorkType){
-        case InitSearchList: // E.g., {[....]|...}::={3 4 5 6}
+        case InitSearchList: cout<<"InitSrchList"<<printInfon(ci)<<"\n"; // E.g., {[....]|...}::={3 4 5 6}
             tmp=new infon();
             tmp->top2=ci; tmp->value.listHead=ci->value.listHead->spec1;
             {tmp->size=ci->size; cpFlags(ci,tmp,0xff0000);} VsFlag(tmp)|=(fLoop+fUnknown+tList); // TODO: Should fUnknown really be here?
@@ -683,7 +689,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             tmp->value.listHead->next->size=(mpq_class)2;
             result=DoNext; noNewContent=false;
             break;
-        case ProcessAlternatives:
+        case ProcessAlternatives: cout<<"PROCESS_ALTS"<<printInfon(ci)<<"\n";
             if (altCount>=1) break; // Don't keep looking after found
             if(wrkNode->idFlags&isRawFlag){
               tmp=new infon(ci->wFlag,&ci->size, &ci->value,0,ci->spec1,ci->spec2,ci->next);
@@ -727,6 +733,11 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                 if (ItemsType && CIsType!=tList && CIsType!=ItemsType){reject=rInvertable;}
                 else if((ci->type && !(ci->wFlag&iHardFunc)) && (item->type && !checkTypeMatch(ci->type,item->type))){reject=rInvertable;}
             }
+
+    cout<<"##################### ("<<reject<<") COMPARING: ";
+    if(ci->type) cout<<"ci:"<<ci->type->norm<<" to "; else cout<<"CI:"<<ci<<" TO ";
+    if(item->type)cout <<printInfon(item);//->type->norm;
+    cout<<"\n";
             int infTypes=CIsType+4*ItemsType;
             if (!reject) switch(infTypes){
                 case tUnknown+4*tUnknown: case tNum+4*tUnknown: case tString+4*tUnknown:
@@ -781,7 +792,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
 
                 break;
                 case tString+4*tList:
-                case tNum+4*tList:   InitList(item); addIDs(ci,item->value.listHead,looseType, asAlt); result=DoNext;break; // this should probably be insertID not addIDs. Check it out.
+                case tNum+4*tList: InitList(item); cout<<"GOING INTO:"<<printInfon(item->value.listHead)<<"\n";  addIDs(ci,item->value.listHead,looseType, asAlt); linkCIFol=false; result=DoNext;break; // this should probably be insertID not addIDs. Check it out.
 
                 case tList+4*tUnknown:
                 case tList+4*tString:
@@ -792,8 +803,8 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             }
             if (invertAcceptance) {
                 if(reject==rInvertable){reject=rAccept; result=DoNext; linkCIFol=true;}
-                else {reject=rNullable; linkCIFol=false;}
-            } else if (!reject){ // Not inverted acceptance
+                else { cout<<"\nNULLABLE ("<<reject<<")\n"; reject=rNullable; linkCIFol=false;}
+            } else if (!reject){ cout <<"\nCI MATCHED ITEM\n"; // Not inverted acceptance
                 if (cpySize)  ci->size=item->size;
                 if (cpyValue) ci->value=item->value; //  do we ever need to also copy wFlags and type fields?
                 if (resetCIsTentative) ResetTent(ci);
@@ -814,7 +825,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                     addIDs(CIfol, tmp, looseType, asAlt);
                 }
             }
-            if (reject){
+            if (reject){cout <<"\nCI NOOOOOOOOOOOO MATCHED ITEM\n";
                 result=BypassDeadEnd;
                 if(reject >= rNullable){
                     infon* CA=getTop(ci); if (CA) {AddSizeAlternate(CA, item, 0, ((UInt)ci->next->pos)-1, ci, looseType); }
@@ -830,6 +841,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
     }
     if(result==DoNext && noNewContent && InfIsTentative(ci)) result=DoNextBounded;
     ci->wFlag|=isNormed; ci->wFlag&=~(sizeIndef);
+ci->updateIndex(); // TODO: This should be optimized into merge of values.
     return result;
 }
 

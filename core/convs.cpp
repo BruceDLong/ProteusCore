@@ -16,7 +16,7 @@ using namespace std;
 
 infon::infon(UInt wf, pureInfon* s, pureInfon* v, infNode*ID,infon*s1,infon*s2,infon*n):
         wFlag(wf), wSize(0), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {
-    prev=0; top=0; top2=0; type=0; pos=0; attrs=0;
+    prev=0; top=0; top2=0; type=0; pos=0; attrs=0; index=0;
     if(s) size=*s;
     if(v) value=*v;
 };
@@ -70,14 +70,15 @@ infon* infon::findTag(WordS& word){
 
 void infon::updateIndex(){
     if(value.listHead==0) return;
-    index.clear();
+    if(index==0) index=new(infonIndex);
+    else index->clear();
     for(infon* p=value.listHead;p;) {
         if(!InfIsTentative(p) && p->type && p->type->norm!=""){
-            index[p->type->norm]=p;
-            cout<<"INDEXED "<<printInfon(p)<<"\n"; 
+            (*index)[p->type->norm]=p;
+            cout<<"INDEXED "<<printInfon(p)<<" in "<<index.get()<<"\n";
         }
         if (InfIsBottom(p)) p=0; else p=p->next;
-    } 
+    }
 }
 
 int infonSizeCmp(infon* left, infon* right) { // -1: L<R,  0: L=R, 1: L>R. Infons must have fLiteral, numeric sizes

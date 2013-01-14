@@ -912,28 +912,28 @@ void XlaterENGLISH::findDefinitions(WordS& words){
             if((*tmpWrd)->sysType>=wstNumOrd) break; // Numbers cannot be in the compound words (yet).
             if(numWordsInCompound>1) wordKey.append("-");
             wordKey.append((*tmpWrd)->norm);
-            cout<<"#######>"<<wordKey<<"\t\t"<<scopeID<<"\n";
+      //tmp      cout<<"#######>"<<wordKey<<"\t\t"<<scopeID<<"\n";
             WordSMap::iterator trialItr=wordLibrary->wrappedLowerBound(wordKey, this);
             if(trialItr==wordLibrary->end()) break;
             trial=trialItr->first;
             bool stopSearch=true;
             int keyLen=wordKey.length();
-            cout<<"TRIAL: '"<<trial<<"'\n";
+        //tmp    cout<<"TRIAL: '"<<trial<<"'\n";
             while(trial.substr(0,keyLen) == wordKey){
                 stopSearch=false;
                 if(trial[keyLen]=='%'){cout<<"\tMATCH: "<<trial<<"  "<<trialItr->second->flags2<<"\n";
                     uint newScopeScore=calcScopeScore(scopeID, trial.substr(keyLen+1));
                     if(newScopeScore > scopeScore) {
-                        (*crntWrd)->altDefs.clear();  cout<<"CLEAR-X! "<<*crntWrd<<"\n";
-                        scopeScore=newScopeScore; cout<<"PUSHING-X:"<<trialItr->second<<"\n";
+                        (*crntWrd)->altDefs.clear();  //tmp cout<<"CLEAR-X! "<<*crntWrd<<"\n";
+                        scopeScore=newScopeScore; //tmp cout<<"PUSHING-X:"<<trialItr->second<<"\n";
                         (*crntWrd)->altDefs.push_back(trialItr->second);
                         (*crntWrd)->flags1 |= getPOS_Sense(trialItr->second);
                         numWordsInChosen=numWordsInCompound;
                     }else if(newScopeScore == scopeScore) {
                         if(numWordsInCompound>numWordsInChosen){
-                            (*crntWrd)->altDefs.clear(); cout<<"CLEAR!\n";
+                            (*crntWrd)->altDefs.clear(); //tmp cout<<"CLEAR!\n";
                             numWordsInChosen=numWordsInCompound;
-                        }cout<<"PUSHING "<<*crntWrd<<"\n";
+                        }//tmp cout<<"PUSHING "<<*crntWrd<<"\n";
                         (*crntWrd)->altDefs.push_back(trialItr->second);
                         (*crntWrd)->flags1 |= getPOS_Sense(trialItr->second);
                     }
@@ -1102,9 +1102,10 @@ void XlaterENGLISH::stitchAndDereference(WordS& text){
 }
 
 infon* XlaterENGLISH::infonate(WordS& text){
-    cout<<"NORM:"<<(*text.words.begin())<<(*text.words.begin())->norm<<"   def:"<<(*(*text.words.begin())->altDefs.begin())->norm<<"\n";
+ //tmp   cout<<"NORM:"<<(*text.words.begin())<<(*text.words.begin())->norm<<"   def:"<<(*(*text.words.begin())->altDefs.begin())->norm<<"\n";
     if (text.definition) return text.definition;
     WordListItr WLI=text.words.begin(); //++WLI;
     text.definition=(*(*WLI)->altDefs.begin())->definition;
+ //tmp   cout<<"DEF:"<<text.definition<<"\n";
     return text.definition;
 }

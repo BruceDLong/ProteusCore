@@ -93,7 +93,7 @@ int main(int argc, char **argv){
         //cout << "Parsing ["<<entry<<"]\n";
         entry="<% { " + entry + " \n} %>";
         istrstream fin(entry.c_str());
-        QParser q(fin); q.locale=a.locale;
+        QParser q(fin); q.agnt=&a;
         Entry=q.parse(); // cout <<"Parsed.\n";
         if (Entry) try{
 

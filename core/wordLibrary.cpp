@@ -28,7 +28,7 @@ WordSMap::iterator WordLibrary::wrappedLowerBound(wordKey &word, xlater* xlatr){
     // Add any words found in the database that match.
     if(sqlite3_bind_text(res, 1, xlatr->localeID.c_str(), -1, SQLITE_TRANSIENT)
     || sqlite3_bind_text(res, 2, word.c_str(), -1, SQLITE_TRANSIENT))
-        {cout<<"    Error binding word to query\n"; return trialItr;}
+        {cout<<"    Error binding '"<<word.c_str()<<"' to query\n"; return trialItr;}
     string locale, resWord, senseID, pos, gloss;
     while (sqlite3_step(res) == SQLITE_ROW) {
         locale  = (char*)sqlite3_column_text(res, 0);

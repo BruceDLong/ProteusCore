@@ -120,7 +120,7 @@ inline void intrusive_ptr_release(WordS* ws){if(--ws->refCnt == 0) delete ws;}
 struct WordLibrary:WordSMap {
     sqlite3 *db;
     sqlite3_stmt *res;
-    string query="select locale,word,senseID,pos,gloss from wordShells WHERE locale like ?1 || '%' AND (word = ?2 OR word like ?2 || ' %') order by word,senseID;";
+    string query="select locale,word,senseID,pos,gloss from words WHERE locale like ?1 || '%' AND (word = ?2 OR word like ?2 || ' %') order by word,senseID;";
     WordSMap::iterator wrappedLowerBound(wordKey &word, xlater* xlatr);
     WordSPtr chkExists(wordKey &word, string &senseID);
     WordSPtr insertWord();

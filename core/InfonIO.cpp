@@ -277,7 +277,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
     if(nxtTok("(") || nxtTok("{") || nxtTok("[") || nxtTok("<")){
         if(nTok=='(') {rchr=')'; SetBits(*flags, mFormat+mType,(fConcat+tNum));}
         else if(nTok=='['){rchr=']'; *flags|=(tList+fLiteral); *wFlag=iGetLast;}
-        else if(nTok=='<'){rchr='>'; *flags|=(tList+fLiteral); *wFlag=iGetLast;} // Later: iGetMiddle
+        else if(nTok=='<'){rchr='>'; *flags|=(tList+fLiteral); *wFlag=(iGetLast+xOptmize1);} // Later: iGetMiddle
         else {rchr='}'; *flags|=(tList+fLiteral);}
         RmvWSC(); int foundRet=0; int foundBar=0;
         for(tok=peek(); tok != rchr && stay; tok=peek()){
@@ -425,26 +425,20 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
         }
     }
     infon* i=new infon(wFlag, &iSize,&iVal,0,s1,s2,0); i->wSize=size; i->type=tags;
-    if(ValueIsConcat(i) && (*i->size.dataHead)==1){infon* ret=i->value.listHead; delete(i); ret->top=ret->next=ret->prev=0; return ret;} // BUT we lose i's idents and some flags (desc, ...)
-    if (i->size.listHead) i->size.listHead->top=i;
-    if (i->value.listHead){i->value.listHead->top=i; i->updateIndex();}
-    if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~(mFindMode+mAssoc); i->wFlag|=mIsHeadOfGetLast; i=new infon(wFlag,0,0,0,i); i->spec1->top2=i;}
+    if(ValueIsConcat(i) && (*i->size.dataHead)==1){infon* ret=i->value.listHead; delete(i); i=ret; i->top=i->next=i->prev=0;} // BUT we lose some flags (desc, ...)
+    else {
+        if (i->size.listHead) i->size.listHead->top=i;
+        if (i->value.listHead){i->value.listHead->top=i; i->updateIndex();}
+        if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~(mFindMode+mAssoc); i->wFlag|=mIsHeadOfGetLast; i=new infon(wFlag,0,0,0,i); i->spec1->top2=i;}
+    }
     for(char c=Peek(); !(noIDs&1) && (c==':' || c=='='); c=Peek()){
         infon *R, *toSet=0, *toRef=0; int idFlags=0;
         cTok=nxtTokN(2,"::",":");
         eTok=nxtTokN(2,"==","=");
-        if(isEq(cTok,":") && (eTok==0)){
-            if(peek()=='>') {streamPut(1); break;}
-//            if(peek()=='<') {
-//                char tok; check('<');cout<<"***************IN\n";
-//                toRef=i; toSet=ReadInfon(scopeID, 0); idFlags=c1LeftAuto;
-//                wFlag&=~(mFindMode+mAssoc); wFlag|=iGetAuto; i=new infon(wFlag,0,0,0,toSet);
-//                check('>');cout<<"***************OUT of "<<toSet->type->norm<<"\n";
-//                if((toRef->wFlag&mFindMode)!=iTagUse) toRef->top=i;
-//            } else {
-                toRef=i; i=ReadInfon(scopeID, 0); toSet=grok(i,c1Left,&idFlags);
-                if((toRef->wFlag&mFindMode)!=iTagUse) toRef->top=i;
-//            }
+        if(isEq(cTok,":") && (eTok==0)){  // X:Y is about the same as Y := X.
+            if(peek()=='>') {streamPut(1); break;}  // Oops, this is a function :> Parse it below.
+            toRef=i; i=ReadInfon(scopeID, 0); toSet=grok(i,c1Left,&idFlags);
+            if((toRef->wFlag&mFindMode)!=iTagUse) toRef->top=i;
         } else {
             cTok2=nxtTokN(2,"::",":");
             if(isEq(cTok,":")){

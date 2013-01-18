@@ -36,9 +36,10 @@ enum InfonFlags {  // Currently called 'pureInfon'
     dDecimal=1<<8, dHex=2<<8, dBinary=3<<8
     };
 
-enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,iHardFunc=0x9,iGetSize,iGetType,iAssocNxt,iGetLast,iGetFirst,iGetMiddle,iGetAuto};
+enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,iHardFunc=0x9,iGetSize,iGetType,iAssocNxt,iGetLast,iGetFirst,iGetMiddle};
+enum {xOptmize1=0x20};
 enum seeds {mSeed=0x300, sNone=0x000, sUseAsFirst=0x100, sUseAsList=0x200, sUseAsLast=0x300};
-enum wMasks {mFindMode = 0x1f, mIsTopRefNode = 0x1000, mIsHeadOfGetLast=0x2000, mAsProxie=0x4000, mAssoc=0x8000};
+enum wMasks {mFindMode = 0x0f, mIsTopRefNode = 0x1000, mIsHeadOfGetLast=0x2000, mAsProxie=0x4000, mAssoc=0x8000};
 enum masks {mMode=0x080000, isNormed=0x200000, asDesc=0x400000, toExec=0x800000, asNot=0x400, sizeIndef=0x800, mListPos=0xff000000};
 enum normState {mnStates=0x2f0000, nsListInited=0x10000, nsNormBegan=0x20000, nsPreNormed=0x40000, nsWorkListDone=0x80000, nsBottomNotLast=0x100000, nsNormComplete=0x200000};
 enum listPos {isFirst=0x01000000, isLast=0x02000000, isTop=0x04000000, isBottom=0x08000000};

@@ -73,7 +73,7 @@ void infon::updateIndex(){
     if(index==0) index=new(infonIndex);
     else index->clear();
     for(infon* p=value.listHead;p;) {
-        if(!InfIsTentative(p) && p->type && p->type->norm!=""){
+        if(!InfIsTentative(p) && p->type && p->type->norm!="" && !(p->wFlag&asNot)){
             (*index)[p->type->norm]=p;
             cout<<"INDEXED "<<printInfon(p)<<" in "<<index.get()<<"\n";
         }

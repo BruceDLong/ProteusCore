@@ -604,18 +604,24 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
                     deTagWrkList(CI);
                 } else{OUT("\nBad tag:'"<<CI->type->norm<<"'\n");throw("A tag was used but never defined");}
                 break;}
-            case iGetAuto:{
-                string tag=CI->spec1->type->norm;
+            case iGetFirst:  StartTerm (CI, &newID); break;
+            case iGetMiddle: break; // TODO: iGetMiddle
+            case iGetLast:
+            if( false && CI->wFlag&xOptmize1){
+                string tag=CI->spec1->value.listHead->prev->type->norm;
                 infon* infToSearch=CI->spec1->wrkList->next->item;
                 normalize(infToSearch);
                 infonIndex::iterator itr=infToSearch->index->find(tag);
                 if(itr!=infToSearch->index->end()) newID=itr->second;
                 else {cout<<"'"<<tag<<"' not found in index "<<infToSearch->index.get()<<".\n"<<world->index.get(); exit(1);}
         cout <<"note: alts in iGetAuto not copied. ["<<tag<<"]\n";
-            break;}
-            case iGetFirst:  StartTerm (CI, &newID); break;
-            case iGetMiddle: break; // TODO: iGetMiddle
-            case iGetLast:
+            break;
+            }
+
+
+
+      ///////////////// Below is the unchanged, working code. Above is experimental search optimization code.
+
                 if (SizeIsInverted(CI->spec1)){ // TODO: This block is a hack to make simple backward references work. Fix for full back-parsing.
                     normalize(CI->spec1, cn->firstID);
                     newID=CI;

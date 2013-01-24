@@ -438,7 +438,8 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
         eTok=nxtTokN(2,"==","=");
         if(isEq(cTok,":") && (eTok==0)){  // X:Y is about the same as Y := X.
             if(peek()=='>') {streamPut(1); break;}  // Oops, this is a function :> Parse it below.
-            toRef=i; i=ReadInfon(scopeID, 0); toSet=grok(i,c1Left,&idFlags);
+            if(noIDs&8){streamPut(1); break;}
+            toRef=i; i=ReadInfon(scopeID, 8); toSet=grok(i,c1Left,&idFlags);
             if((toRef->wFlag&mFindMode)!=iTagUse) toRef->top=i;
         } else {
             cTok2=nxtTokN(2,"::",":");

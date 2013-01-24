@@ -607,16 +607,20 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
             case iGetFirst:  StartTerm (CI, &newID); break;
             case iGetMiddle: break; // TODO: iGetMiddle
             case iGetLast:
-            if( false && CI->wFlag&xOptmize1){
-                string tag=CI->spec1->value.listHead->prev->type->norm;
-                infon* infToSearch=CI->spec1->wrkList->next->item;
-                normalize(infToSearch);
-                infonIndex::iterator itr=infToSearch->index->find(tag);
-                if(itr!=infToSearch->index->end()) newID=itr->second;
-                else {cout<<"'"<<tag<<"' not found in index "<<infToSearch->index.get()<<".\n"<<world->index.get(); exit(1);}
-        cout <<"note: alts in iGetAuto not copied. ["<<tag<<"]\n";
-            break;
-            }
+
+
+                if(CI->wFlag&xOptmize1){  // Look up <type>
+                    string tag=CI->spec1->value.listHead->prev->type->norm;
+                    infNode* wrkLst=CI->spec1->wrkList;
+                    if(wrkLst==0) throw "<type> not attached to a list to search";
+                    infon* infToSearch=wrkLst->next->item;
+                    normalize(infToSearch);
+                    infonIndex::iterator itr=infToSearch->index->find(tag);
+                    if(itr!=infToSearch->index->end()) newID=itr->second;
+                    else {cout<<"'"<<tag<<"' not found in index "<<infToSearch->index.get()<<".\n"<<world->index.get(); exit(1);}
+            cout <<"note: alts in iGetAuto not copied. ["<<tag<<"]\n";
+                break;
+                }
 
 
 
@@ -677,7 +681,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
     infNode *wrkNode=ci->wrkList; infon *item, *IDfol, *tmp, *theOne=0; Qitem cn;
     UInt altCount=0, level, tempRes, isIndef=0, result=DoNothing, f, looseType, noNewContent=true;
     if(CIfol && !CIfol->pred) CIfol->pred=ci;
-    if(wrkNode)do{ cout<<"@@@@@@@@\n";
+    if(wrkNode)do{
         wrkNode=wrkNode->next; item=wrkNode->item;
         bool cpySize=0, cpyValue=0, resetCIsTentative=0, linkCIFol=false, invertAcceptance=((ci->wFlag&asNot) ^ (item->wFlag&asNot)); int reject=rAccept;
         if (wrkNode->idFlags&skipFollower) CIfol=0;
@@ -740,10 +744,6 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                 else if((ci->type && !(ci->wFlag&iHardFunc)) && (item->type && !checkTypeMatch(ci->type,item->type))){reject=rInvertable;}
             }
 
-    cout<<"##################### ("<<reject<<") COMPARING: ";
-    if(ci->type) cout<<"ci:"<<ci->type->norm<<" to "; else cout<<"CI:"<<ci<<" TO ";
-    if(item->type)cout <<printInfon(item);//->type->norm;
-    cout<<"\n";
             int infTypes=CIsType+4*ItemsType;
             if (!reject) switch(infTypes){
                 case tUnknown+4*tUnknown: case tNum+4*tUnknown: case tString+4*tUnknown:
@@ -755,10 +755,10 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                     result=DoNext;
                     linkCIFol=true;
                     if (!isIndef && ci->wFlag&sizeIndef && ((infTypes== tNum+4*tNum) || (infTypes== tString+4*tString ))){
-                        if (infValueCmp(item, ci)==0) cpySize=true; // Override a previous alt's size if size was not definite.
+                        if (!ValueIsKnown(item) || (infValueCmp(item, ci)==0)) cpySize=true; // Override a previous alt's size if size was not definite.
                         else {reject=rNullable; break;}
                     }
-                    else if(ItemsType!=tUnknown){
+                    if(ItemsType!=tUnknown){
                         if (ItemsType==tList) InitList(item);
                         // MERGE SIZES
                         if(!looseType &&  SizeIsKnown(item)){
@@ -785,6 +785,10 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                                     }
                                 } else {ci->value=item->value; cpFlags(item,ci,0xff);if(SizeIsKnown(ci) && *ci->size.dataHead==0){IDfol=item;} else item->value.listHead->top=ci;}
                             }
+                        } else { // Copy back to item if item is a ref to an infon that was found via >= iGetLast.
+                            // TODO: What about partial knowns and more complex situations?
+                            item->value=ci->value;
+                            cout<<"\n              COPYING BACK:"<<printInfon(ci)<<"\n";
                         }
                         if(true){
                             // This is used when we are merging two lists and the 'item' is not tentative but ci is.
@@ -809,8 +813,8 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             }
             if (invertAcceptance) {
                 if(reject==rInvertable){reject=rAccept; result=DoNext; linkCIFol=true;}
-                else { cout<<"\nNULLABLE ("<<reject<<")\n"; reject=rNullable; linkCIFol=false;}
-            } else if (!reject){ cout <<"\nCI MATCHED ITEM\n"; // Not inverted acceptance
+                else { reject=rNullable; linkCIFol=false;}
+            } else if (!reject){ // Not inverted acceptance
                 if (cpySize)  ci->size=item->size;
                 if (cpyValue) ci->value=item->value; //  do we ever need to also copy wFlags and type fields?
                 if (resetCIsTentative) ResetTent(ci);
@@ -831,7 +835,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                     addIDs(CIfol, tmp, looseType, asAlt);
                 }
             }
-            if (reject){cout <<"\nCI NOOOOOOOOOOOO MATCHED ITEM\n";
+            if (reject){
                 result=BypassDeadEnd;
                 if(reject >= rNullable){
                     infon* CA=getTop(ci); if (CA) {AddSizeAlternate(CA, item, 0, ((UInt)ci->next->pos)-1, ci, looseType); }

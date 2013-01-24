@@ -95,7 +95,7 @@ int infValueCmp(infon* dest, infon* src){
     // dest is where the size-to-compare comes from.
     UInt dest_flag=dest->value.flags&(mType+mFormat), src_flag=src->value.flags&(mType+mFormat);
     if(dest_flag != (tNum+fLiteral) && dest_flag != (tString+fLiteral)) return 2;
-    if(src_flag != (tNum+fLiteral) && src_flag != (tString+fLiteral)) return 2;
+    if(src_flag  != (tNum+fLiteral) && src_flag  != (tString+fLiteral)) return 2;
 
     if(dest_flag==(tNum+fLiteral) && src_flag==(tNum+fLiteral)) return cmp(*dest->value.dataHead, *src->value.dataHead); // TODO: Account for sizes
     if(dest_flag==(tString+fLiteral) && src_flag==(tString+fLiteral))

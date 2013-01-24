@@ -255,7 +255,7 @@ void numberFromString(char* buf, pureInfon* pInf, int base){
 infon* grok(infon* item, UInt tagCode, int* code){
     if((item->wFlag&mFindMode)==iTagUse) {(*code)|=tagCode; return item;}
     else {
-        if (tagCode==c1Left || tagCode==c1Right || tagCode==c1LeftAuto) {
+        if (tagCode==c1Left || tagCode==c1Right) {
             if((item->wFlag&mFindMode)>=iGetLast) {return item->spec1;}
         } else if (tagCode==c2Left || tagCode==c2Right) {
             if((item->wFlag&mFindMode)>=iGetLast) {
@@ -347,7 +347,8 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
             j->top=head; j->next=head; prev->next=j; j->prev=prev; head->prev=j; prev=j; RmvWSC();
         }
         if(head){
-            if(rchr=='>'){ // Create negative copy of type-to-find.
+            if(rchr=='>'){ // Create negative copy of type-to-find. <type> == [{~type|...} type]
+                // NOTE: currently, negCpy is not exactly correctly constructed as we're waiting for the internal repetition syntax type|...
                 if(size!=1) throw "<TYPE> must have exctly one element";
                 infon* negCpy=new infon; agnt->deepCopy(head->prev, negCpy); negCpy->wFlag|=asNot; // Copy the last item.
                 negCpy->next=head; negCpy->prev=head->prev; negCpy->top=head->top;
@@ -429,7 +430,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
     else {
         if (i->size.listHead) i->size.listHead->top=i;
         if (i->value.listHead){i->value.listHead->top=i; i->updateIndex();}
-        if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~(mFindMode+mAssoc); i->wFlag|=mIsHeadOfGetLast; i=new infon(wFlag,0,0,0,i); i->spec1->top2=i;}
+        if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~(mFindMode+mAssoc+xOptmize1); i->wFlag|=mIsHeadOfGetLast; i=new infon(wFlag,0,0,0,i); i->spec1->top2=i;}
     }
     for(char c=Peek(); !(noIDs&1) && (c==':' || c=='='); c=Peek()){
         infon *R, *toSet=0, *toRef=0; int idFlags=0;
@@ -447,7 +448,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
                     i->spec1->top=R;
                     if((noIDs&4)==0){ // Set 'top' for any \\^, etc.
                         infon *p, *q;
-                        for(p=i; (p->wFlag&mFindMode)==iGetLast; p=q){
+                        for(p=i; (p->wFlag&mFindMode)>=iGetLast; p=q){
                             q=p->spec1->top; q->top=i; p->spec1->top=0;
                         }
                     }
@@ -463,7 +464,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
         }
         if(toSet==0) throw ":= operator requires [....] on the left side";
         if(toRef==0) throw "=: operator requires [....] on the right side";
-        if((toRef->type==0) && !(idFlags&mLooseType)/* && idFlags!=c1LeftAuto*/) toRef->type=toSet->type;
+        if((toRef->type==0) && !(idFlags&mLooseType)) toRef->type=toSet->type;
         insertID(&toSet->wrkList, toRef, idFlags);
     }
     if(!(noIDs&2)){  // Load function "calls". In addOne<:5, i->spec2 is the 5.

@@ -112,7 +112,7 @@ typedef mpq_class BigFrac;
 
 struct infNode {infon* item; infon* slot; UInt idFlags; infNode* next; infNode(infon* itm=0, UInt f=0):item(itm),idFlags(f){};};
 enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, InitSearchList=2, SetComplete=3, NodeDoneFlag=8, NoMatch=16,isRawFlag=32, skipFollower=64, mLooseType=128};
-enum colonFlags {c1Left=0x100, c2Left=0x200, c1Right=0x400, c2Right=0x800, c1LeftAuto=0x1000};
+enum colonFlags {c1Left=0x100, c2Left=0x200, c1Right=0x400, c2Right=0x800};
 
 struct infonData :BigFrac {
     UInt refCnt;

@@ -75,7 +75,7 @@ void infon::updateIndex(){
     for(infon* p=value.listHead;p;) {
         if(!InfIsTentative(p) && p->type && p->type->norm!="" && !(p->wFlag&asNot)){
             (*index)[p->type->norm]=p;
-            cout<<"INDEXED "<<printInfon(p)<<" in "<<index.get()<<"\n";
+        //    cout<<"INDEXED "<<printInfon(p)<<" in "<<index.get()<<"\n";
         }
         if (InfIsBottom(p)) p=0; else p=p->next;
     }

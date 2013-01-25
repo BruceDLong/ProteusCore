@@ -37,7 +37,7 @@ def test_engine():
    ('1', 'typed list merge 1', '*4+{3 _ $ *3+{...}} = *4+{3 4 "hi" {5 6 7}}', '{*1+3 *1+4 "hi" {*1+5 *1+6 *1+7 } }'),
    ('1', 'typed list merge 2', '*3+{...} = {1 2 3}', '{*1+1 *1+2 *1+3 }'),
    ('1', 'typed list merge 3', '{} = {}', '{}'),
-   ('1', 'typed list merge 4', '*_+{...} = {2 3 4}', '{*1+2 *1+3 *1+4 }'),
+   ('1', 'typed list merge 4', '*_+{...} = {2 3 4}', '{*1+2 *1+3 *1+4 }'), # Started Failing.
    ('1', 'typed list merge 5','{...} = {2 3 4 ...}', '{*1+2 *1+3 *1+4 ...}'),
    #            Add tests with zero size / value, value larger than size, later: negative, fractional, expression.
    #            Add Rainy day tests: Mis-matched types, mis-matched sizes, mis-matched values

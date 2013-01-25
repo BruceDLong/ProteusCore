@@ -611,10 +611,17 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
 
                 if(CI->wFlag&xOptmize1){  // Look up <type>
                     string tag=CI->spec1->value.listHead->prev->type->norm;
-                    infNode* wrkLst=CI->spec1->wrkList;
-                    if(wrkLst==0) throw "<type> not attached to a list to search";
-                    infon* infToSearch=wrkLst->next->item;
-                    normalize(infToSearch);
+                    infNode* wrkNode=CI->spec1->wrkList;
+                    if(wrkNode==0) throw "<type> not attached to a list to search";
+                    infon* infToSearch=wrkNode->next->item;
+
+                    QitemPtr Qi(new Qitem(infToSearch));
+                    fetch_NodesNormalForm(Qi);
+              //      normalize(infToSearch);
+                    if (infToSearch->wFlag&mAsProxie) {infToSearch=infToSearch->value.proxie;}
+                    else if(wrkNode->idFlags&c1Right){
+                        if(infToSearch->spec1){infToSearch=infToSearch->spec1;} else throw "Right side was not a reference ";
+                    }
                     infonIndex::iterator itr=infToSearch->index->find(tag);
                     if(itr!=infToSearch->index->end()) newID=itr->second;
                     else {cout<<"'"<<tag<<"' not found in index "<<infToSearch->index.get()<<".\n"<<world->index.get(); exit(1);}
@@ -630,7 +637,7 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
                     normalize(CI->spec1, cn->firstID);
                     newID=CI;
 cout<<"NEGATIVE INDEX: "<<CI->spec1->getSize().get_ui()<<"\n";
-                    for(UInt i=(UInt)CI->spec1->getSize().get_ui(); i>0; --i){cout<<"   NewID: "<<printInfon(newID)<<"   ("<<newID->pos<<")\n"; newID=newID->prev;}
+                    for(UInt i=(UInt)CI->spec1->getSize().get_ui(); i>0; --i){newID=newID->prev;}
                     {insertID(&CI->wrkList, newID,0); if(ValueIsUnknown(CI)) {CI->size=newID->size;} cpFlags(newID, CI,~mListPos);}
   //                  SetValueFormat(CI, fUnknown);
                 } else{
@@ -723,7 +730,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             if(!InfIsNormed(item) && ((item->wFlag&mFindMode)!=iNone || (item->wrkList && !InfIsNormed(item)))) { // Norm item. esp %W, %//^
                 if(item->top==0) {item->top=ci->top;}
                 QitemPtr Qi(new Qitem(item));
-                fetch_NodesNormalForm(Qi);
+                fetch_NodesNormalForm(Qi); item->wFlag|=isNormed;
                 if(Qi->whatNext!=DoNextBounded) noNewContent=false;
                 if (item->wFlag&mAsProxie) {item=item->value.proxie;}
                 else if(wrkNode->idFlags&c1Right){

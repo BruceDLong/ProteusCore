@@ -394,6 +394,8 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
             else if (strcmp(buf,"C")==0){wFlag|=iToCtxt;}
             else if (strcmp(buf,"A")==0){wFlag|=iToArgs;}
             else if (strcmp(buf,"V")==0){wFlag|=iToVars;}
+           // else if (strcmp(buf,"P")==0){wFlag|=iToPrev;}
+           // else if (strcmp(buf,"L")==0){wFlag|=iToLastOfPrev;}
         } else if (nTok=='\\' || nTok=='^'){  // TODO: Don't allow these (or %A or %V) outside of := or :
             for(s1=0; (nTok=streamGet())=='\\';) {s1=(infon*)((UInt)s1+1); ChkNEOF;}
             if (nTok=='^') wFlag|=iToPath; else {wFlag|=iToPathH; streamPut(1);}

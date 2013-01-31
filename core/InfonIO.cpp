@@ -343,7 +343,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                 if(peek()==':') throw "'<TYPE>' syntax was used in non-working context.";
                 /* *pFlag|=intersect; */  // TODO: when repairing Middle-Indexing, repair 'intersect'
             }
-            if(j->type){cout<<"TYPE"<<j->type->norm;}
+            if(j->type){}//cout<<"TYPE"<<j->type->norm;}
             j->top=head; j->next=head; prev->next=j; j->prev=prev; head->prev=j; prev=j; RmvWSC();
         }
         if(head){

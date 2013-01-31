@@ -132,6 +132,8 @@ typedef boost::intrusive_ptr<infonIndex> infonIndexPtr;
 inline void intrusive_ptr_add_ref(infonIndex* p){++p->refCnt;}
 inline void intrusive_ptr_release(infonIndex* p){if(--p->refCnt == 0) delete p;}
 
+struct agent;
+
 struct pureInfon {
     UInt flags;
     BigFrac offset;
@@ -158,6 +160,9 @@ struct infon {
     bool getReal(double* d);
     bool getStng(string* str);
     infon* findTag(WordS& tag);
+    void subscribeTo(infon* content, UInt flags=0);
+    void unsubscribe(UInt flags);
+    void fulfillSubscriptions(agent *a);
     void updateIndex();
 
     UInt wFlag;
@@ -171,6 +176,7 @@ struct infon {
     WordSPtr type;
     attrStorePtr attrs; // Misc attributes: <tag, data-string>
     infonIndexPtr index;  // For faster finds.
+    list<infon*> subscriptions;
     ~infon(){};
 };
 int infValueCmp(infon* A, infon* B);

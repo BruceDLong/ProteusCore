@@ -678,6 +678,7 @@ if(node.arc->wordS!=0) cout<<"Arc's WordS filled too many times!!!!!\n\n";
              break;
         default: item4=item4; break; // Stops compiler warning.
     }
+    return 0;
 }
 
 struct Burser{ // Gathers items owed from various sources. e.g., subjects, objects, verbs, phrases, etc.
@@ -728,7 +729,7 @@ void Burser::submitWord(WordSPtr word){
         if (stateItm->complete()) {  // (Complete)
             cout << "RULE COMPLETE:"<< stateItm->rule->asString()<<"\n";
             stateItm->end=i;
-            int numAltsAdded = preInfonate(chart, stateItm);
+//commented to stop var-not-used warning            int numAltsAdded = preInfonate(chart, stateItm);
             //  TODO: if no alts were added, close this arc.
             for(Column::iterator k = chart[stateItm->start].begin(); k != chart[stateItm->start].end(); ++k ) {
                 if (!(*k)->complete() && (*k)->nextTerm() == stateItm->rule->head) {

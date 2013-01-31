@@ -564,7 +564,7 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
             case sUseAsList: CI->spec1->wFlag|=toExec;  newID=CI->spec1;
         }
         switch(CIFindMode){
-            case iToWorld: copyTo(world, CI); cout<<"WORLD:"<<CI<<"\n"; break;
+            case iToWorld: copyTo(world, CI); break;
             case iToCtxt:   copyTo(&context, CI); break; // TODO: Search agent::context
             case iToArgs: case iToVars:
                 for (newID=CI->top; newID && !(newID->top->wFlag&mIsHeadOfGetLast); newID=newID->top){}
@@ -609,7 +609,7 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
             case iGetLast:
 
 
-                if(CI->wFlag&xOptmize1){  // Look up <type>
+                if(CI->wFlag&xOptmize1){  // Optimized way to look up <type>
                     string tag=CI->spec1->value.listHead->prev->type->norm;
                     infNode* wrkNode=CI->spec1->wrkList;
                     if(wrkNode==0) throw "<type> not attached to a list to search";
@@ -794,8 +794,10 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                             }
                         } else { // Copy back to item if item is a ref to an infon that was found via >= iGetLast.
                             // TODO: What about partial knowns and more complex situations?
-                            item->value=ci->value;
-                            cout<<"\n              COPYING BACK:"<<printInfon(ci)<<"\n";
+                            if(ValueIsKnown(ci)){ // Copy when refered-to-item is written.
+                                item->value=ci->value;
+                                if(!item->subscriptions.empty()) item->fulfillSubscriptions(this);
+                            }else ci->subscribeTo(item); // Subscribe to item's value;
                         }
                         if(true){
                             // This is used when we are merging two lists and the 'item' is not tentative but ci is.
@@ -928,7 +930,7 @@ int agent::fetch_NodesNormalForm(QitemPtr cn){
             }
            //cn->CI->wFlag|=nsWorkListDone;
         }
-        // NOWDO: Notify-and-remove subscribers
+        if(!cn->CI->subscriptions.empty()) cn->CI->fulfillSubscriptions(this);
     return 0;
 }
 

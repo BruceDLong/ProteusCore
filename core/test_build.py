@@ -90,7 +90,11 @@ def test_engine():
 
     ('1', "Test internal find-&-write", r'{4 5 _ 7} =: [_ _ 6]', '{*1+4 *1+5 *1+6 *1+7 }'),
     ('1', "Test external find-&-write", r'{4 5 _ 7} =: ([???]=6)', '{*1+4 *1+5 *1+6 *1+7 }'),
-    ('2', "Test tagged find-&-write", r'&setToSix=([???]=6)', '{; }', r'{4 5 _ 7} =: setToSix', '{*1+4 *1+5 *1+6 *1+7 }')
+    ('2', "Test tagged find-&-write", r'&setToSix=([???]=6)', '{; }', r'{4 5 _ 7} =: setToSix', '{*1+4 *1+5 *1+6 *1+7 }'),
+    ('2', "Test chained find-by-type", "&partX=44 \n &partZ=88 \n &obj={partX, partZ}", '', "obj \n %W:<obj>:<partZ>", '88'),
+    ('2', "Test chained write-by-type", "&partX=_  &partZ=_  &obj={partX, partZ}", '', "obj \n %W:<obj>:(<partZ>=77) \n %W:<obj>", '{_, 77, }'),
+    ('2', "Test set-by-type", r'&partX=44  &partZ=_  &obj={partX, partZ==(%\\\^:<partX>)}', '', "obj \n {%W:<obj>}", '{{*1+44 44, } }'),
+    ('2', "Test write&set-by-type", r'&partX=_  &partZ=_  &obj={partX, partZ==(%\\\^:<partX>)}', '', "obj \n %W:<obj>:(<partX>==123) \n {%W:<obj>}", '{{123, 123, } }')
 
     # TEST: Find (big red bike)
     # TEST: Find (very red bike)

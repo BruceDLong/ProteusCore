@@ -506,34 +506,6 @@ int agent::checkTypeMatch(WordSPtr LType, WordSPtr RType){
     return LType->norm==RType->norm;
 }
 
-int agent::compute(infon* i){
-    infon* p=i->value.listHead; BigInt vAcc, sAcc; int count=0;
-    if(p) do{
-        normalize(p); // TODO: appending inline rather than here would allow streaming.
-        if(SizeType(p)==tNum && InfsType(p)==tNum){
-            if (SizeIsUnknown(p)) return 0;
-            if (SizeIsConcat(p)) compute(p->size.listHead);
-            if (SizeType(p)!=tNum) return 0;
-            if (ValueIsUnknown(p)) return 0;
-            if (InfsFormat(p)>=fConcat) compute(p->value.listHead);
-            if (InfsType(p)!=tNum) return 0;
-            BigInt val;
-            if((p)->value.flags & fInvert) {val=-(*p->value.dataHead);} else {val=(*p->value.dataHead);}
-            if(SizeIsInverted(p)){
-                if (++count==1){sAcc= *p->size.dataHead; vAcc=val;}
-                else {sAcc/= *p->size.dataHead; vAcc=(vAcc/ *p->size.dataHead)+val;}
-            } else {
-                if (++count==1){sAcc= *p->size.dataHead; vAcc=val;}
-                else {sAcc*= *p->size.dataHead; vAcc=(vAcc*(*p->size.dataHead))+val;}
-            }//cout<<"V:"<<vAcc.get_str()<<"\n";
-        } else return 0;
-        p=p->next;
-    } while (p!= i->value.listHead);
-    i->value=(mpq_class)vAcc; i->size=(mpq_class)sAcc;
-   // i->pFlag=(i->pFlag&0xFF00FF00)+(tNum<<goSize)+tNum;
-    return 1;
-}
-
 void resolve(infon* i, infon* theOne){ //cout<<"RESOLVING";
     infon *prev=0;
     while(i && theOne){
@@ -622,6 +594,7 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
                     else if(wrkNode->idFlags&c1Right){
                         if(infToSearch->spec1){infToSearch=infToSearch->spec1;} else throw "Right side was not a reference ";
                     }
+                    if(infToSearch->index==0) {cout<<"No index for tag '"<<tag<<"'\n"; exit(1);}
                     infonIndex::iterator itr=infToSearch->index->find(tag);
                     if(itr!=infToSearch->index->end()) newID=itr->second;
                     else {cout<<"'"<<tag<<"' not found in index "<<infToSearch->index.get()<<".\n"<<world->index.get(); exit(1);}
@@ -877,9 +850,7 @@ void agent::pushNextInfon(infon* CI, QitemPtr cn, infQ &ItmQ){
         }
     case DoNext:
         if(cn->whatNext==DoNext) cn->bufCnt=0;
-        if((VsFlag(CI)&(mFormat+mType))==(fConcat+tNum)){
-            compute(CI); if(cn->CIfol && !InfIsLast(CI)){pushCIsFollower;}
-        }else if(!(InfAsDesc(CI)&&!cn->override)&&((CI->value.listHead&&(InfsType(CI)==tList))||ValueIsConcat(CI)) && !InfIsNormed(CI->value.listHead)){
+        if(!(InfAsDesc(CI)&&!cn->override)&&((CI->value.listHead&&(InfsType(CI)==tList))||ValueIsConcat(CI)) && !InfIsNormed(CI->value.listHead)){
             ItmQ.push(QitemPtr(new Qitem(CI->value.listHead,cn->firstID,((cn->IDStatus==1) & !ValueIsConcat(CI))?2:cn->IDStatus,cn->level+1,0,cn))); // Push CI->value
         }else if (cn->CIfol){pushCIsFollower;}
         break;
@@ -935,19 +906,36 @@ int agent::fetch_NodesNormalForm(QitemPtr cn){
 }
 
 infon* agent::normalize(infon* i, infon* firstID){
-    infon* parent;
+    infon *p, *n, *parent;
     if (i==0) return 0;
     QitemPtr Qi(new Qitem(i,firstID,(firstID)?1:0,0));
     infQ ItmQ; ItmQ.push(Qi);
     while (!ItmQ.empty()){
         QitemPtr cn=ItmQ.front(); ItmQ.pop(); infon* CI=cn->item;
         fetch_NodesNormalForm(cn);
-        if((CI != i) && (parent=getTop(CI)) && (InfsType(parent)==tNum) && (InfsFormat(parent)==fConcat) && !InfIsTop(CI) && InfIsLiteralNum(CI) && InfIsLiteralNum(CI->prev) ){
-            {}// combine with prev...
-            // if(InfIsTop(Currnt) && InfIsBottom(Crrnt)) {/* Remove one layer */}
-        }
-        //wait?
         pushNextInfon(CI, cn, ItmQ);
+        // Below: handle numeric concats. e.g.: (3 4 5)
+        if((CI != i) && (parent=getTop(CI)) && (InfsType(parent)==tNum) && (InfsFormat(parent)==fConcat) && !InfIsTop(CI) && (InfsType(CI)==tNum) && InfIsLiteralNum(CI->prev) ){
+            if(InfIsLiteralNum(CI)){// Combine with previous...
+                p=CI->prev; n=CI->next;
+                p->next=n; n->prev=p; if(n->pred==CI) n->pred=p;
+
+                BigInt val;
+                if((CI)->value.flags & fInvert) {val=-(*CI->value.dataHead);} else {val=(*CI->value.dataHead);}
+                if(SizeIsInverted(CI)){
+                    *p->size.dataHead /= *CI->size.dataHead;
+                    (p->value)=(*p->value.dataHead / *p->size.dataHead)+val;
+                } else {
+                    *p->size.dataHead *= *CI->size.dataHead;
+                    (p->value)=(*p->value.dataHead * *p->size.dataHead)+val;
+                }
+                if(CI->wFlag&(isLast+isBottom)) p->wFlag|=(CI->wFlag&(isLast+isBottom));
+
+                if(InfIsTop(p) && InfIsLast(p)) {// Remove one layer
+                    parent->value=p->value; parent->size=p->size;
+                }
+            } else {} // subscribe
+        }
     }
     return 0;
 }

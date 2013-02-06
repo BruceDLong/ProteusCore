@@ -213,7 +213,6 @@ struct agent {
     infon* gListNxt(infon** ItmPtr);
     infon* append(infon* i, infon* list);
     int checkTypeMatch(WordSPtr LType, WordSPtr RType);
-    int compute(infon* i);
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
     void prepWorkList(infon* CI, Qitem *cn);
     infon* normalize(infon* i, infon* firstID=0);

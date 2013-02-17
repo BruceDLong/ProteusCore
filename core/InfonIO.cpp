@@ -399,7 +399,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
         } else if (nTok=='\\' || nTok=='^'){  // TODO: Don't allow these (or %A or %V) outside of := or :
             for(s1=0; (nTok=streamGet())=='\\';) {s1=(infon*)((UInt)s1+1); ChkNEOF;}
             if (nTok=='^') wFlag|=iToPath; else {wFlag|=iToPathH; streamPut(1);}
-        } else throw "'%' was seen but not used.";
+        } else {s1=0; wFlag|=iToPathH;}
     }else if(isTagStart(Peek())){
         wFlag|=iTagUse; if(!(tags=ReadTagChain(&agnt->locale, 0, scopeID))) throw "Null Words found. Shouldn't happen";
         nxtTok(",");

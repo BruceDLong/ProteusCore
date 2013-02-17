@@ -87,6 +87,11 @@ infon* infon::isntLast(){ // 0=this is the last one. >0 = pointer to predecessor
     return 0;
 }
 
+infon* getParent(infon* i){
+    for(i=getTop(i); i && ValueIsConcat(i) && (InfsType(i)!=tList); i=getTop(i)){}
+    return i;
+}
+
 #define recAlts(lval, rval) {if(InfsType(rval)==tString) alts[dblPtr((char*)rval->value.dataHead->get_num_mpz_t()->_mp_d,lval)]++;}
 #define fetchLastItem(lval, item) {for(lval=item; InfsType(lval)==tList;lval=lval->value->prev);}
 #define fetchFirstItem(lval, item) {for(lval=item; InfsTYpe(lval)==tList;lval=lval->value){};}
@@ -387,14 +392,14 @@ void agent::processVirtual(infon* v){
     infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT=0;
     char posArea=isPosLorEorGtoSize(v->pos, parent);
     if(posArea=='G'){cout << "EXTRA ITEM ALERT!\n"; closeListAtItem(v); return;}
-    UInt tmpFlags=v->wFlag&mListPos;  // TODO B4: move this flag stuff into deepCopy. Clean the following block.
+    UInt tmpFlags=v->wFlag&mListPos;
     if (spec){
         if((spec->wFlag&mFindMode)==iAssocNxt) {
             copyTo(spec, v); SetSizeType(v,tNum); SetSizeFormat(v,fUnknown); VsFlag(v)=fUnknown; v->spec1=spec->spec2;
         } else {deepCopy(spec, v,0,1); }
         if(posArea=='?' && v->spec1) posArea= 'N';
     }
-    v->wFlag|=tmpFlags;  // TODO B4: move this flag stuff into deepCopy.
+    v->wFlag|=tmpFlags;
     ResetVirt(v);
     if(EOT){ if(posArea=='?'){posArea='E'; closeListAtItem(v);}
         else if(posArea!='E') throw "List was too short";}
@@ -550,9 +555,9 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
                 break;
             case iToPath: //  Handle ^, \^, \\^, \\\^, etc.
             case iToPathH:{  //  Handle \, \\, \\\, etc. Path with 'Home'
-                newID=CI->top;
+                newID=getHead(CI);
                 for(int s=1; s<(UInt)CI->spec1; ++s) {  // for  backslashes-1 go to parent
-                    newID=getTop(newID); if (newID==0 ) {cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';}
+                    newID=getParent(newID); if (newID==0 ) {cout << "Too many '\\'s in "<<printInfon(CI)<< '\n';}
                 }
                 if(CIFindMode==iToPathH) {  // If no '^', move to first item in list.
                     if(!InfIsTop(newID)) {newID=newID->top; }
@@ -570,10 +575,11 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
                 if (found) {
                     bool asNotFlag=((CI->wFlag&asNot)==asNot);
 //                    CI->type=0;
-                    UInt tmpFlags=CI->wFlag&mListPos; deepCopy(found,CI,0,0); CI->wFlag|=tmpFlags; // TODO B4: move this flag stuff into deepCopy.
+                    UInt tmpFlags=CI->wFlag&mListPos; deepCopy(found,CI,0,0); CI->wFlag|=tmpFlags;
                     if(CI->wFlag&asNot) asNotFlag = !asNotFlag;
                     SetBits(CI->wFlag, asNot, (asNotFlag)?asNot:0);
                     deTagWrkList(CI);
+        CI->updateIndex();
                 } else{OUT("\nBad tag:'"<<CI->type->norm<<"'\n");throw("A tag was used but never defined");}
                 break;}
             case iGetFirst:  StartTerm (CI, &newID); break;
@@ -597,7 +603,7 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
                     if(infToSearch->index==0) {cout<<"No index for tag '"<<tag<<"'\n"; exit(1);}
                     infonIndex::iterator itr=infToSearch->index->find(tag);
                     if(itr!=infToSearch->index->end()) newID=itr->second;
-                    else {cout<<"'"<<tag<<"' not found in index "<<infToSearch->index.get()<<".\n"<<world->index.get(); exit(1);}
+                    else {cout<<"'"<<tag<<"' not found in index "<<infToSearch->index.get()<<".\n"<<world->index.get()<<"\n";}
             cout <<"note: alts in iGetAuto not copied. ["<<tag<<"]\n";
                 break;
                 }
@@ -658,6 +664,7 @@ cout<<"NEGATIVE INDEX: "<<CI->spec1->getSize().get_ui()<<"\n";
 enum rejectModes {rAccept=0, rReject, rNullable, rInvertable};
 
 int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
+    // PARSE: if no worknode, and stream is '=='...
     infNode *wrkNode=ci->wrkList; infon *item, *IDfol, *tmp, *theOne=0; Qitem cn;
     UInt altCount=0, level, tempRes, isIndef=0, result=DoNothing, f, looseType, noNewContent=true;
     if(CIfol && !CIfol->pred) CIfol->pred=ci;
@@ -865,6 +872,7 @@ infon* agent::Normalize(infon* i, infon* firstID){
     infQ ItmQ; ItmQ.push(QitemPtr(new Qitem(i,firstID,(firstID)?1:0,0)));
     while (!ItmQ.empty()){
         QitemPtr cn=ItmQ.front(); ItmQ.pop(); CI=cn->item; cn->doShortNorm=0;
+        //// PARSE: if empty and stream is attached,
         if(CI->wFlag&nsBottomNotLast) return 0;
         prepWorkList(CI, &*cn);
         if (cn->doShortNorm) return 0;
@@ -919,16 +927,7 @@ infon* agent::normalize(infon* i, infon* firstID){
             if(InfIsLiteralNum(CI)){// Combine with previous...
                 p=CI->prev; n=CI->next;
                 p->next=n; n->prev=p; if(n->pred==CI) n->pred=p;
-
-                BigInt val;
-                if((CI)->value.flags & fInvert) {val=-(*CI->value.dataHead);} else {val=(*CI->value.dataHead);}
-                if(SizeIsInverted(CI)){
-                    *p->size.dataHead /= *CI->size.dataHead;
-                    (p->value)=(*p->value.dataHead / *p->size.dataHead)+val;
-                } else {
-                    *p->size.dataHead *= *CI->size.dataHead;
-                    (p->value)=(*p->value.dataHead * *p->size.dataHead)+val;
-                }
+                p->join(CI);
                 if(CI->wFlag&(isLast+isBottom)) p->wFlag|=(CI->wFlag&(isLast+isBottom));
 
                 if(InfIsTop(p) && InfIsLast(p)) {// Remove one layer

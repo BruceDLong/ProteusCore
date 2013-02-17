@@ -63,6 +63,26 @@ bool infon::getStng(string* str) {
     return try2CatStr(str, &value, getSize().get_ui());
 }
 
+void infon::join(infon* rVal){
+/* NOTES:
+ * Joins two infons. Should use real arithmetic and work with strings
+ * Can this replace try2CatStr above?
+ * Consider 'p-adic numbers / analysis' and Quote-Notation
+ * "/1+[_]"  goes in reverse but:
+ * "*(-1)+[_]" turns around and goes forward.
+*/
+
+    BigInt val;
+    if((rVal)->value.flags & fInvert) {val=-(*rVal->value.dataHead);} else {val=(*rVal->value.dataHead);}
+    if(SizeIsInverted(rVal)){
+        *size.dataHead /= *rVal->size.dataHead;
+        value=(*value.dataHead / *size.dataHead)+val;
+    } else {
+        *size.dataHead *= *rVal->size.dataHead;
+        value=(*this->value.dataHead * *size.dataHead)+val;
+    }
+}
+
 infon* infon::findTag(WordS& word){
     if(word.definition) return word.definition;
     return word.xLater->tags2Proteus(word);
@@ -103,7 +123,7 @@ void infon::updateIndex(){
     for(infon* p=value.listHead;p;) {
         if(!InfIsTentative(p) && p->type && p->type->norm!="" && !(p->wFlag&asNot)){
             (*index)[p->type->norm]=p;
-        //    cout<<"INDEXED "<<printInfon(p)<<" in "<<index.get()<<"\n";  //TODO: optimization: Likely there are more indexings than needed.
+            cout<<"INDEXED "<<printInfon(p)<<" in "<<index.get()<<"\n";  //TODO: optimization: Likely there are more indexings than needed.
         }
         if (InfIsBottom(p)) p=0; else p=p->next;
     }

@@ -159,6 +159,7 @@ struct infon {
     bool getInt(BigInt* num);
     bool getReal(double* d);
     bool getStng(string* str);
+    void join(infon* rVal);
     infon* findTag(WordS& tag);
     void subscribeTo(infon* content, UInt flags=0);
     void unsubscribe(UInt flags);
@@ -276,6 +277,7 @@ extern bool try2CatStr(string* s, pureInfon* i, UInt wSize);
 #define isEq(L,R) (L && R && strcmp(L,R)==0)
 
 #define getTop(item) ((InfIsTop(item)||item->top==0)? item->top : item->top->top)
+#define getHead(item) ((InfIsTop(item)||item->top==0)? item : item->top)
 #define prependID(list, node){infNode *IDp=(*list); if(IDp){(node)->next=IDp->next; IDp->next=node;} else {(*list)=node; (node)->next=node;}}
 #define appendID(list, node) {infNode *IDp=(*list); (*list)=node; if(IDp){(*list)->next=IDp->next; IDp->next=(*list);} else (*list)->next=(*list);}
 #define insertID(list, itm, flag) {appendID(list, new infNode(itm,flag));}

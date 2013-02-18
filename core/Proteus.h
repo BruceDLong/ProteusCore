@@ -32,8 +32,8 @@ using namespace std;
 enum InfonFlags {  // Currently called 'pureInfon'
     mType=3, tUnknown=0, tNum=1, tString=2, tList=3,
     mFormat=0x7<<2, fUnknown=0x4, fLiteral=0x8, fConcat=0x0C, fFloat=0x10, fFract=0x14,  // Format of size and value fields. 0,6,7 not yet used.
-    fLoop=0x20, fInvert=0x40, fIncomplete=0x80, fInvalid=0x100,
-    dDecimal=1<<8, dHex=2<<8, dBinary=3<<8
+    fLoop=0x20, fInvert=0x40, fIncomplete=0x80, fInvalid=0x100, fEmbedSeq=0x200,
+    dDecimal=1<<12, dHex=2<<12, dBinary=3<<12,
     };
 
 enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,iHardFunc=0x9,iGetSize,iGetType,iAssocNxt,iGetLast,iGetFirst,iGetMiddle};

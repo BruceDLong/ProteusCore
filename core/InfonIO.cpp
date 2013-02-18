@@ -272,10 +272,10 @@ infon* grok(infon* item, UInt tagCode, int* code){
 
 char errMsg[100];
 UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2, string &scopeID){
-    UInt p=0, size=0, stay=1; char rchr, tok; const char* pTok; infon *head=0, *prev; infon* j;
+    UInt p=0, size=0, stay=1; char rchr, tok, seperator='\0'; const char* pTok; infon *head=0, *prev; infon* j;
     infDataPtr* i=&(pInf)->dataHead;
     if(nxtTok("(") || nxtTok("{") || nxtTok("[") || nxtTok("<")){
-        if(nTok=='(') {rchr=')'; SetBits(*flags, mFormat+mType,(fConcat+tNum));}
+        if(nTok=='(') {rchr=')'; seperator='?'; SetBits(*flags, mFormat+mType,(fConcat+tNum));}
         else if(nTok=='['){rchr=']'; *flags|=(tList+fLiteral); *wFlag=iGetLast;}
         else if(nTok=='<'){rchr='>'; *flags|=(tList+fLiteral); *wFlag=(iGetLast+xOptmize1);} // Later: iGetMiddle
         else {rchr='}'; *flags|=(tList+fLiteral);}
@@ -345,6 +345,14 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
             }
             if(j->type){}//cout<<"TYPE"<<j->type->norm;}
             j->top=head; j->next=head; prev->next=j; j->prev=prev; head->prev=j; prev=j; RmvWSC();
+
+            char sepIsBoundry=(nxtTok(","))?',':' ';
+            if(seperator){ // In (...) ensure items are seperated by either ',' or ' ', not a mixture.
+                if(seperator=='?') {
+                    seperator=sepIsBoundry;
+                    if(seperator==','){SetBits(*flags, fEmbedSeq+mFormat+mType,(fEmbedSeq+fLiteral+tList));}
+                }else {if(seperator != sepIsBoundry && nTok!=rchr) throw "All seperators in (...) must be the same; either ',' or nothing.";}
+            }
         }
         if(head){
             if(rchr=='>'){ // Create negative copy of type-to-find. <type> == [{~type|...} type]
@@ -418,13 +426,10 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
             if (op=='+'){size=ReadPureInfon(&iVal,&fv,&wFlag,&s2, scopeID);}
             else {iVal=0; fv=tNum+fLiteral;}    // Use identity summand '0'
         } else { // No operator given
-            if(nxtTok(";")){iVal=0; SetBits(iVal.flags, (mFormat), fUnknown)}
-            else {
-                nxtTok(",");
+             //   nxtTok(",");
                 iVal=iSize; iSize=pureInfon(size); fv=iVal.flags&(mFormat+mType);
                 if (size==0 && (fv==(fUnknown+tNum) || fv==(fUnknown+tString))) iSize.flags=fUnknown+tNum; // Set size's flags for _ and $
                 else if(((fv&mType)==tList) && iVal.listHead && InfIsVirtual(iVal.listHead->prev)) {iSize.flags=fUnknown+tNum;} // Set size's flags for {...}
-            }
         }
     }
     infon* i=new infon(wFlag, &iSize,&iVal,0,s1,s2,0); i->wSize=size; i->type=tags;

@@ -55,6 +55,7 @@ string printInfon(infon* i, infon* CI){
     UInt mode=i->wFlag&mFindMode;
 //    if(InfToExec(i)) s+="@";
     if(InfAsDesc(i)) s+="#";
+    if(i->wFlag&xDevToHome) s+="\\";
     if(i->wFlag & asNot) s+="!";
     if (mode==iTagUse) {
         s+=i->type->norm; s+=" ";
@@ -276,8 +277,8 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
     infDataPtr* i=&(pInf)->dataHead;
     if(nxtTok("(") || nxtTok("{") || nxtTok("[") || nxtTok("<")){
         if(nTok=='(') {rchr=')'; seperator='?'; SetBits(*flags, mFormat+mType,(fConcat+tNum));}
-        else if(nTok=='['){rchr=']'; *flags|=(tList+fLiteral); *wFlag=iGetLast;}
-        else if(nTok=='<'){rchr='>'; *flags|=(tList+fLiteral); *wFlag=(iGetLast+xOptmize1);} // Later: iGetMiddle
+        else if(nTok=='['){rchr=']'; *flags|=(tList+fLiteral); *wFlag|=iGetLast;}
+        else if(nTok=='<'){rchr='>'; *flags|=(tList+fLiteral); *wFlag|=(iGetLast+xOptmize1);} // Later: iGetMiddle
         else {rchr='}'; *flags|=(tList+fLiteral);}
         RmvWSC(); int foundRet=0; int foundBar=0;
         for(tok=peek(); tok != rchr && stay; tok=peek()){
@@ -391,6 +392,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
     WordSPtr tags=0; const char* cTok, *eTok, *cTok2; /*int textEnd=0; int textStart=textParsed.size();*/
     if(nxtTok("@")){wFlag|=toExec;}
     if(nxtTok("#")){wFlag|=asDesc;}
+    if(nxtTok("\\")){wFlag|=xDevToHome;}
     if(nxtTok("!")){wFlag|=asNot;}
     if(nxtTok("?")){iSize.flags=fUnknown; iVal.flags=fUnknown; wFlag=iNone;}
     else if( nxtTok("%")){
@@ -426,7 +428,6 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
             if (op=='+'){size=ReadPureInfon(&iVal,&fv,&wFlag,&s2, scopeID);}
             else {iVal=0; fv=tNum+fLiteral;}    // Use identity summand '0'
         } else { // No operator given
-             //   nxtTok(",");
                 iVal=iSize; iSize=pureInfon(size); fv=iVal.flags&(mFormat+mType);
                 if (size==0 && (fv==(fUnknown+tNum) || fv==(fUnknown+tString))) iSize.flags=fUnknown+tNum; // Set size's flags for _ and $
                 else if(((fv&mType)==tList) && iVal.listHead && InfIsVirtual(iVal.listHead->prev)) {iSize.flags=fUnknown+tNum;} // Set size's flags for {...}
@@ -435,10 +436,18 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
     infon* i=new infon(wFlag, &iSize,&iVal,0,s1,s2,0); i->wSize=size; i->type=tags;
     if(ValueIsConcat(i) && (*i->size.dataHead)==1){infon* ret=i->value.listHead; delete(i); i=ret; i->top=i->next=i->prev=0;} // BUT we lose some flags (desc, ...)
     else {
+        if ((i->wFlag&mFindMode)==iGetLast){
+            i->wFlag&=~(mFindMode+mAssoc+xOptmize1); i->wFlag|=mIsHeadOfGetLast;
+            i=new infon(wFlag,0,0,0,i); i->spec1->top2=i;
+            if(i->wFlag&xDevToHome){
+                if(!((i->wFlag&mFindMode)>=iGetLast)){throw "'\' Must be followed by a selecting list like [...] or <...>";}
+                copyTo(i->spec1->value.listHead->prev, i); i->wFlag|=(xOptmize1+xDevToHome);
+            }
+        }
         if (i->size.listHead) i->size.listHead->top=i;
         if (i->value.listHead){i->value.listHead->top=i; i->updateIndex();}
-        if ((i->wFlag&mFindMode)==iGetLast){i->wFlag&=~(mFindMode+mAssoc+xOptmize1); i->wFlag|=mIsHeadOfGetLast; i=new infon(wFlag,0,0,0,i); i->spec1->top2=i;}
     }
+
     for(char c=Peek(); !(noIDs&1) && (c==':' || c=='='); c=Peek()){
         infon *R, *toSet=0, *toRef=0; int idFlags=0;
         cTok=nxtTokN(2,"::",":");

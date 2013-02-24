@@ -11,10 +11,10 @@
 
         &clause = (
             language element = { // oneOf:
-                    {(%^:<parse> = {subject, predicate }), (%^:<meaning> = {(%^:<parse>:<subject> = %^:<parse>:<predicate>)})},
-                    {(%^:<parse> = {adjunct, clause}), (%^:<meaning> = {})},
-                    {(%^:<parse> = {clause, adjunct }), (%^:<meaning> = {})},
-                    {(%^:<parse> = {subject, adjunct, predicate }), (%^:<meaning> = {})}
+                    {(\<parse> = {subject, predicate }), (\<meaning> = {(\<parse>:<subject> = \<parse>:<predicate>)})},
+                    {(\<parse> = {adjunct, clause}), (\<meaning> = {})},
+                    {(\<parse> = {clause, adjunct }), (\<meaning> = {})},
+                    {(\<parse> = {subject, adjunct, predicate }), (\<meaning> = {})}
 
             }*_+[...]
         )
@@ -26,17 +26,17 @@
         &indirect object    = (language element = noun phrase)
 
         &noun phrase = { // oneOf:
-                    {(%^:<parse> = {determiner, selector }), (%^:<meaning> = {(%^:<parse>:<subject> = %^:<parse>:<predicate>)})},
-                    {(%^:<parse> = {possessor chain, selector }), (%^:<meaning> = {})},// TODO: handle 'all of the', 'many of the', etc. Also, "the X of Y('s)"
+                    {(\<parse> = {determiner, selector }), (\<meaning> = {(\<parse>:<subject> = \<parse>:<predicate>)})},
+                    {(\<parse> = {possessor chain, selector }), (\<meaning> = {})},// TODO: handle 'all of the', 'many of the', etc. Also, "the X of Y('s)"
 
             }*_+[...]
 
         &selector = { // oneOf:
-                    {(%^:<parse> = {modifier,   selector }), (%^:<meaning> = {(%^:<parse>:<subject> = %^:<parse>:<predicate>)})},
-                    {(%^:<parse> = {quantifier, selector }), (%^:<meaning> = {})},
-                    {(%^:<parse> = {selector,   selector }), (%^:<meaning> = {})}
-                    {(%^:<parse> = noun), (%^:<meaning> = {})},
-                    {(%^:<parse> = {selector, selector postmodifier }), (%^:<meaning> = {})},
+                    {(\<parse> = {modifier,   selector }), (\<meaning> = {(\<parse>:<subject> = \<parse>:<predicate>)})},
+                    {(\<parse> = {quantifier, selector }), (\<meaning> = {})},
+                    {(\<parse> = {selector,   selector }), (\<meaning> = {})}
+                    {(\<parse> = noun), (\<meaning> = {})},
+                    {(\<parse> = {selector, selector postmodifier }), (\<meaning> = {})},
 
             }*_+[...]
     }

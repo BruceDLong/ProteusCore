@@ -37,7 +37,7 @@ enum InfonFlags {  // Currently called 'pureInfon'
     };
 
 enum Intersections {iNone=0, iToWorld,iToCtxt,iToArgs,iToVars,iToPath,iToPathH,iTagUse,iTagDef,iHardFunc=0x9,iGetSize,iGetType,iAssocNxt,iGetLast,iGetFirst,iGetMiddle};
-enum {xOptmize1=0x20};
+enum {xOptmize1=0x20, xDevToHome=0x40};
 enum seeds {mSeed=0x300, sNone=0x000, sUseAsFirst=0x100, sUseAsList=0x200, sUseAsLast=0x300};
 enum wMasks {mFindMode = 0x0f, mIsTopRefNode = 0x1000, mIsHeadOfGetLast=0x2000, mAsProxie=0x4000, mAssoc=0x8000};
 enum masks {mMode=0x080000, isNormed=0x200000, asDesc=0x400000, toExec=0x800000, asNot=0x400, sizeIndef=0x800, mListPos=0xff000000};

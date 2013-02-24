@@ -240,9 +240,10 @@ infon* agent::gListNxt(infon** ItmPtr){
     getNextTerm(ItmPtr);
     return ret;
 }
-
+infon* entry;
 ///////////// Routines for copying, appending, etc.
 infon* agent::append(infon* i, infon* list){ // appends an item to the end of a tentative list
+    entry=i;
     if(! (list && list->value.listHead && list->value.listHead->prev)) return 0;
     infon *last=list->value.listHead->prev;
     infon *p=last, *q;
@@ -588,6 +589,7 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
 
 
                 if(CI->wFlag&xOptmize1){  // Optimized way to look up <type>
+                    if(CI->wFlag&xDevToHome){break;} // This is beign recorded, not looked up. TODO: Later, let it go below to refine it's position.
                     string tag=CI->spec1->value.listHead->prev->type->norm;
                     infNode* wrkNode=CI->spec1->wrkList;
                     if(wrkNode==0) throw "<type> not attached to a list to search";
@@ -603,7 +605,7 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
                     if(infToSearch->index==0) {cout<<"No index for tag '"<<tag<<"'\n"; exit(1);}
                     infonIndex::iterator itr=infToSearch->index->find(tag);
                     if(itr!=infToSearch->index->end()) newID=itr->second;
-                    else {cout<<"'"<<tag<<"' not found in index "<<infToSearch->index.get()<<".\n"<<world->index.get()<<"\n";}
+                    else {cout<<"'"<<tag<<"' not found in index "<<infToSearch->index.get()<<".\n"<<world->index.get()<<"\n"; exit(2);}
             cout <<"note: alts in iGetAuto not copied. ["<<tag<<"]\n";
                 break;
                 }
@@ -915,6 +917,7 @@ int agent::fetch_NodesNormalForm(QitemPtr cn){
 
 infon* agent::normalize(infon* i, infon* firstID){
     infon *p, *n, *parent;
+cout<<printInfon(entry)<<"\n";
     if (i==0) return 0;
     QitemPtr Qi(new Qitem(i,firstID,(firstID)?1:0,0));
     infQ ItmQ; ItmQ.push(Qi);
@@ -929,8 +932,8 @@ infon* agent::normalize(infon* i, infon* firstID){
                 p->next=n; n->prev=p; if(n->pred==CI) n->pred=p;
                 p->join(CI);
                 if(CI->wFlag&(isLast+isBottom)) p->wFlag|=(CI->wFlag&(isLast+isBottom));
-
-                if(InfIsTop(p) && InfIsLast(p)) {// Remove one layer
+                if(InfIsFirst(p) && p->next==p) {// Remove one layer
+                    SetValueFormat(parent, fLiteral);
                     parent->value=p->value; parent->size=p->size;
                 }
             } else {} // subscribe

@@ -224,6 +224,7 @@ struct agent {
     void deepCopyPure(pureInfon* from, pureInfon* to, int flags);
     void deepCopy(infon* from, infon* to, PtrMap* ptrs=0, int flags=0);
     int loadInfon(const char* filename, infon** inf, bool normIt=true);
+    infon* loadInfonFromString(string ProteusString, infon** inf, bool normIt=false);
 
     int fetch_NodesNormalForm(QitemPtr cn);
     void pushNextInfon(infon* CI, QitemPtr cn, infQ &ItmQ);
@@ -276,8 +277,8 @@ extern bool try2CatStr(string* s, pureInfon* i, UInt wSize);
 #define ImAt(loc,parm) {cout<<"####### At:"<<(loc)<<"  "<<(parm)<<"\n";}
 #define isEq(L,R) (L && R && strcmp(L,R)==0)
 
-#define getTop(item) ((InfIsTop(item)||item->top==0)? item->top : item->top->top)
-#define getHead(item) ((InfIsTop(item)||item->top==0)? item : item->top)
+#define getTop(item) ((InfIsTop(item)||(item)->top==0)? (item)->top : (item)->top->top)
+#define getHead(item) ((InfIsTop(item)||(item)->top==0)? (item) : (item)->top)
 #define prependID(list, node){infNode *IDp=(*list); if(IDp){(node)->next=IDp->next; IDp->next=node;} else {(*list)=node; (node)->next=node;}}
 #define appendID(list, node) {infNode *IDp=(*list); (*list)=node; if(IDp){(*list)->next=IDp->next; IDp->next=(*list);} else (*list)->next=(*list);}
 #define insertID(list, itm, flag) {appendID(list, new infNode(itm,flag));}

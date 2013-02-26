@@ -36,14 +36,14 @@ string printPure (pureInfon* i, UInt wSize, infon* CI){
         else doAsList=true;
     }
     if(type==tList || doAsList){
-        s+=(FormatIsConcat(f))?"(":"{";
+        s+=(FormatIsConcat(f) || (f&fEmbedSeq))?"(":"{";
         for(infon* p=i->listHead;p;) {
            // if(p==i->listHead && f&fLoop && ((infon*)i)->spec2){printInfon(((infon*)i)->spec2,CI); s+=" | ";} // TODO: when overhauling printing, use this.
             if(InfIsTentative(p)) {s+="..."; break;}
             else {s+=printInfon(p, CI); s+=' ';}
             if (InfIsBottom(p)) p=0; else p=p->next;
         }
-        s+=(FormatIsConcat(f))?")":"}";
+        s+=(FormatIsConcat(f) || (f&fEmbedSeq))?")":"}";
     }
     return s;
 }
@@ -436,16 +436,18 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
     infon* i=new infon(wFlag, &iSize,&iVal,0,s1,s2,0); i->wSize=size; i->type=tags;
     if(ValueIsConcat(i) && (*i->size.dataHead)==1){infon* ret=i->value.listHead; delete(i); i=ret; i->top=i->next=i->prev=0;} // BUT we lose some flags (desc, ...)
     else {
+        if (i->size.listHead) i->size.listHead->top=i;
+        if (i->value.listHead){i->value.listHead->top=i; i->updateIndex();}
         if ((i->wFlag&mFindMode)==iGetLast){
             i->wFlag&=~(mFindMode+mAssoc+xOptmize1); i->wFlag|=mIsHeadOfGetLast;
             i=new infon(wFlag,0,0,0,i); i->spec1->top2=i;
             if(i->wFlag&xDevToHome){
                 if(!((i->wFlag&mFindMode)>=iGetLast)){throw "'\' Must be followed by a selecting list like [...] or <...>";}
                 copyTo(i->spec1->value.listHead->prev, i); i->wFlag|=(xOptmize1+xDevToHome);
+                // TODO: i-<updateIndex()
             }
         }
-        if (i->size.listHead) i->size.listHead->top=i;
-        if (i->value.listHead){i->value.listHead->top=i; i->updateIndex();}
+
     }
 
     for(char c=Peek(); !(noIDs&1) && (c==':' || c=='='); c=Peek()){

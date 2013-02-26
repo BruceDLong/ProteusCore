@@ -111,10 +111,13 @@ def test_engine():
    for t in testsLst:
       #print t;
       if(t[0]=='0'):
+         #print 'TEST0("%s", "%s", "%s");' % (t[1], t[2], t[3])
          yield (ChkParser, t)
       elif(t[0]=='1'):
+         #print 'NORMTEST("NAME", "%s", "%s", "%s");' % (t[1], t[2], t[3])
          yield (ChkNorm, t)
       elif(t[0]=='2'):
+         #print 'TEST2("%s", "%s", "%s");' % (t[1], t[2], t[3])
          yield (ChkWorld, t)
 
 

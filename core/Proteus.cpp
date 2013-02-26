@@ -5,6 +5,8 @@
     The Proteus Engine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
     You should have received a copy of the GNU General Public License along with the Proteus Engine.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <strstream>
+#include <iostream>
 #include <fstream>
 #include <sqlite3.h>
 #include "Proteus.h"
@@ -114,25 +116,30 @@ int agent::loadInfon(const char* filename, infon** inf, bool normIt){
     return 0;
 }
 
+infon* agent::loadInfonFromString(string ProteusString, infon** inf, bool normIt){
+    string entry="<%  " + ProteusString + " \n %>";
+    istrstream InfonIn(entry.c_str());
+    QParser T(InfonIn); T.agnt=this;
+    *inf=T.parse();
+    if ((*inf)==0) {cout<<"Error:"<<T.buf<<"   "<<flush; return 0;}
+    if(normIt) {
+        alts.clear();
+        try{
+          normalize(*inf);
+        } catch (char const* errMsg){cout<<errMsg;}
+    }
+    return *inf;
+}
+
 int agent::StartTerm(infon* varIn, infon** varOut) {
-  infon* tmp;
-  if (varIn==0) return 1;
-  if (ValueIsConcat(varIn)){
-    if ((*varOut=varIn->value.listHead)==0) return 2;
-    do {
-      switch(InfsType(varIn)){
-        case tUnknown: *varOut=0; return -1;
-        case tNum: case tString: return 0;
-        case tList: if(StartTerm(*varOut, &tmp)==0) {
-          *varOut=tmp;
-          return 0;
-          }
-        }
-      if (getNextTerm(varOut)) return 4;
-    } while(1);
+  infon *tmp;
+  if(varIn==0) return 1;
+  if(InfsType(varIn)!=tList) return 3;
+  if((*varOut=varIn->value.listHead)==0) return 4;
+  if(ValueIsConcat(*varOut) || ((InfsType(*varOut)==tList) && !(VsFlag(varIn)&fEmbedSeq))){
+      if(StartTerm(*varOut, &tmp)==0) *varOut=tmp;
   }
-  if (InfsType(varIn) != tList) {return 3;}
-  else {*varOut=varIn->value.listHead; if (*varOut==0) return 4;}
+
   return 0;
 }
 
@@ -147,31 +154,29 @@ int agent::LastTerm(infon* varIn, infon** varOut) {
 int agent::getNextTerm(infon** p) {
   infon *parent, *Gparent=0, *GGparent=0;
   if(InfIsBottom(*p)) {
-    parent=(InfIsFirst(*p))?(*p)->top:(*p)->top->top;
+    parent=getTop(*p);
     if (InfIsLast(*p)){
       if(parent==0){(*p)=(*p)->next; return 1;}
-      if(parent->top) Gparent=(InfIsFirst(parent))?parent->top:parent->top->top;
-      if(Gparent && ValueIsConcat(Gparent)) {
-        if(Gparent->top) GGparent=(InfIsFirst(Gparent))?Gparent->top:Gparent->top->top;
-        do {
-          if(getNextTerm(&parent)) return 4;
-// TODO: the next line fixes one problem but causes another: nested list-concats.
-// test it with:  (   ({} {"X", "Y"} ({} {9,8} {7,6}) {5} ) {1} {{}} {2, 3, 4} )
-          if(GGparent && ValueIsConcat(GGparent)) {*p=parent; return 0;}
-          switch(InfsType(parent)){
+      Gparent=getTop(parent);
+      if(ValueIsConcat(parent) || (VsFlag(Gparent)&fEmbedSeq)){
+        if(getNextTerm(&parent)) return 4;
+        switch(InfsType(parent)){  // test it with:  (   ({} {"X", "Y"} ({} {9,8} {7,6}) {5} ) {1} {{}} {2, 3, 4} )
             case tUnknown: (*p)=0; return -1;
             case tNum: case tString: throw("Item in list concat is not a list.");
             case tList: if(!StartTerm(parent, p)) return 0;
             }
-        } while (1);
       }
       return 2;
-    } else {infon* slug=new infon; slug->wFlag|=nsBottomNotLast; append(slug, parent); (*p)=slug;} /*Bottom but not end, make slug*/
+    } else {infon* slug=new infon; slug->wFlag|=nsBottomNotLast; append(slug, parent); (*p)=slug;} /*Bottom but not last, make slug*/
   }else {
     (*p)=(*p)->next;
     if ((*p)==0) {return 3;}
+    parent=getTop((*p));
+    if(ValueIsConcat(*p) || ((InfsType(*p)==tList) && ValueIsConcat(parent) && !(VsFlag(parent)&fEmbedSeq))){
+        if((*p)->value.listHead==0) return getNextTerm(p);
+        if(!StartTerm(*p, p)) return 0;
+    }
     if (InfIsLast(*p)){     // If isLast && Parent is spec1-of-get-last, get parent, apply any idents
-        parent=getTop((*p));
         if(parent->wFlag&mIsHeadOfGetLast) {
             parent=parent->top2;
             infNode *j=parent->wrkList, *k;  // Merge Identity Lists
@@ -917,7 +922,7 @@ int agent::fetch_NodesNormalForm(QitemPtr cn){
 
 infon* agent::normalize(infon* i, infon* firstID){
     infon *p, *n, *parent;
-cout<<printInfon(entry)<<"\n";
+//cout<<printInfon(entry)<<"\n";
     if (i==0) return 0;
     QitemPtr Qi(new Qitem(i,firstID,(firstID)?1:0,0));
     infQ ItmQ; ItmQ.push(Qi);

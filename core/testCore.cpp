@@ -62,71 +62,65 @@ CAPTURE( expression )
 
 */
 
-#define ST_TEST(IN, OUT) REQUIRE( a.loadInfonFromString(IN, &in, 0) != 0 ); REQUIRE( a.StartTerm(in, &out) == 0 ); s=printInfon(out); CAPTURE(s); CHECK(s == OUT);
+
+#define ST_TEST(IN, OUT) REQUIRE( a.loadInfonFromString(IN, &in, 0) != 0 ); REQUIRE( a.StartTerm(in, &out) == 0 ); s=a.printInfon(out); CAPTURE(s); CHECK(s == OUT);
 TEST_CASE( "agent/StartTerm", "Test agent::StartTerm()" ) {
     agent a; infon *in, *out; string s;
     ST_TEST("{3 4 5}", "*1+3");
     ST_TEST("{(3, 4) 5 6}", "*1+3");
     ST_TEST("{((3, 4) 5) 6}", "*1+3");
-    ST_TEST("{() 3 4 5}", "*1+3");
+    ST_TEST("{({3, 4} {5, 6}) 7}", "*1+3");
+    ST_TEST("{({3, 4}, {5, 6}) 7}", "{*1+3 *1+4 }");
+    ST_TEST("({2 3 4} {5 6 7} 8 9)", "*1+2");
 }
 
-#define PARSE(MSG, IN, OUT) INFO(MSG); REQUIRE( a.loadInfonFromString(IN, &in, 0) != 0 ); s=printInfon(in); CAPTURE(s); CHECK(s == OUT);
-TEST_CASE( "parser", "Test a variety of parsing/printing items" ) {
-    agent a; infon *in; string s;
-    PARSE("parse a number",       "*2589+654321", "*2589+654321");
-    PARSE("parse a hex number",   "0xabcd1234", "*1+2882343476");
-    PARSE("parse a binary number","0b11001010101010101010101000001111", "*1+3400182287");
-    PARSE("parse a large number", "12345678900987654321123456789009876543211234567890", "*1+12345678900987654321123456789009876543211234567890");
-    PARSE("Parse a string",       "+\"HELLO\"", "\"HELLO\"");
-    PARSE("parse a list",         "+{123, 456, \"Hello there!\", {789, 321}}", "{*1+123 *1+456 \"Hello there!\" {*1+789 *1+321 } }");
-}
 
-#define NORM(MSG, IN, OUT) INFO(MSG); REQUIRE( a.loadInfonFromString(IN, &in, 1) != 0 ); s=printInfon(in); CAPTURE(s); CHECK(s == OUT);
+#define PARSETEST(NAME, MSG, IN, OUT) TEST_CASE(NAME, MSG){agent a; infon *in; string s;  INFO(MSG); REQUIRE( a.loadInfonFromString(IN, &in, 0) != 0 ); s=a.printInfon(in); CAPTURE(s); CHECK(s == OUT);}
 
-TEST_CASE( "merge/typedInt", "Test merging integers" ) {
-    agent a; infon *in; string s;
-    NORM("typed int merge 1", "*16+10 = *16+10", "*16+10");
-    NORM("typed int merge 2", "*16+_ = *16+9", "*16+9");
-    NORM("typed int merge 3", "_ = *16+10", "*16+10");
-    NORM("typed int merge 4", "*_+_ = *16+9", "*16+9");
-    NORM("typed int merge 5", "*_+8 = *16+8", "*16+8");
-    NORM("typed int merge 6", "*16+10 = *16+_", "*16+10");
-    NORM("typed int merge 7", "*16+_ = *_+9", "*16+9");
-   //            Add tests with zero size / value, value larger than size, later: negative, fractional, expression.
-   //            Add Rainy day tests: Mis-matched types, mis-matched sizes, mis-matched values
-}
+PARSETEST("parse/num",     "parse a number",       "*2589+654321", "*2589+654321");
+PARSETEST("parse/hexnum",  "parse a hex number",   "0xabcd1234", "*1+2882343476");
+PARSETEST("parse/binnum",  "parse a binary number","0b11001010101010101010101000001111", "*1+3400182287");
+PARSETEST("parse/largenum","parse a large number", "12345678900987654321123456789009876543211234567890", "*1+12345678900987654321123456789009876543211234567890");
+PARSETEST("parse/string",  "Parse a string",       "+\"HELLO\"", "\"HELLO\"");
+PARSETEST("parse/list",    "parse a list",         "+{123, 456, \"Hello there!\", {789, 321}}", "{*1+123 *1+456 \"Hello there!\" {*1+789 *1+321 } }");
 
-TEST_CASE( "merge/typedString", "Test merging strings" ) {
-    agent a; infon *in; string s;
-    NORM("typed str merge 1", "*5+\"Hello\" = *5+\"Hello\"", "\"Hello\"");
-    NORM("typed str merge 2", "*5+$ = \"Hello\"", "\"Hello\"");
-    NORM("typed str merge 3", "$ = \"Hello\"", "\"Hello\"");
-    NORM("typed str merge 4", "*_+$ = \"Hello\"", "\"Hello\"");
-    NORM("typed str merge 5", "\"Hello\" = *5+$", "\"Hello\"");
-   //            Add tests with zero size / value, value larger than size, later: negative, fractional, expression.
-   //            Add Rainy day tests: Mis-matched types, mis-matched sizes, mis-matched values
-}
 
-TEST_CASE( "merge/typedList", "Test merging lists" ) {
-    agent a; infon *in; string s;
-    NORM("typed list merge 1", "*4+{3 _ $ *3+{...}} = *4+{3 4 \"hi\" {5 6 7}}", "{*1+3 *1+4 \"hi\" {*1+5 *1+6 *1+7 } }");
-    NORM("typed list merge 2", "*3+{...} = {1 2 3}", "{*1+1 *1+2 *1+3 }");
-    NORM("typed list merge 3", "{} = {}", "{}");
-    NORM("typed list merge 4", "*_+{...} = {2 3 4}", "{*1+2 *1+3 *1+4 }");
-    NORM("typed list merge 5", "{...} = {2 3 4 ...}", "{*1+2 *1+3 *1+4 ...}");
-   //            Add tests with zero size / value, value larger than size, later: negative, fractional, expression.
-   //            Add Rainy day tests: Mis-matched types, mis-matched sizes, mis-matched values
-}
+#define NORMTEST(NAME, MSG, IN, OUT) TEST_CASE(NAME, MSG){agent a; infon *in; string s; REQUIRE( a.loadInfonFromString(IN, &in, 1) != 0 ); s=a.printInfon(in); CAPTURE(s); CHECK(s == OUT);}
+
+NORMTEST("merge/num/typed1", "typed int merge 1", "*16+10 = *16+10", "*16+10");
+NORMTEST("merge/num/typed2", "typed int merge 2", "*16+_ = *16+9", "*16+9");
+NORMTEST("merge/num/typed3", "typed int merge 3", "_ = *16+10", "*16+10");
+NORMTEST("merge/num/typed4", "typed int merge 4", "*_+_ = *16+9", "*16+9");
+NORMTEST("merge/num/typed5", "typed int merge 5", "*_+8 = *16+8", "*16+8");
+NORMTEST("merge/num/typed6", "typed int merge 6", "*16+10 = *16+_", "*16+10");
+NORMTEST("merge/num/typed7", "typed int merge 7", "*16+_ = *_+9", "*16+9");
+//            Add tests with zero size / value, value larger than size, later: negative, fractional, expression.
+//            Add Rainy day tests: Mis-matched types, mis-matched sizes, mis-matched values
+
+NORMTEST("merge/str/typed1", "typed str merge 1", "*5+\"Hello\" = *5+\"Hello\"", "\"Hello\"");
+NORMTEST("merge/str/typed2", "typed str merge 2", "*5+$ = \"Hello\"", "\"Hello\"");
+NORMTEST("merge/str/typed3", "typed str merge 3", "$ = \"Hello\"", "\"Hello\"");
+NORMTEST("merge/str/typed4", "typed str merge 4", "*_+$ = \"Hello\"", "\"Hello\"");
+NORMTEST("merge/str/typed5", "typed str merge 5", "\"Hello\" = *5+$", "\"Hello\"");
+//            Add tests with zero size / value, value larger than size, later: negative, fractional, expression.
+//            Add Rainy day tests: Mis-matched types, mis-matched sizes, mis-matched values
+
+NORMTEST("merge/list/typed1", "typed list merge 1", "*4+{3 _ $ *3+{...}} = *4+{3 4 \"hi\" {5 6 7}}", "{*1+3 *1+4 \"hi\" {*1+5 *1+6 *1+7 } }");
+NORMTEST("merge/list/typed2", "typed list merge 2", "*3+{...} = {1 2 3}", "{*1+1 *1+2 *1+3 }");
+NORMTEST("merge/list/typed3", "typed list merge 3", "{} = {}", "{}");
+NORMTEST("merge/list/typed4", "typed list merge 4", "*_+{...} = {2 3 4}", "{*1+2 *1+3 *1+4 }");
+NORMTEST("merge/list/typed5", "typed list merge 5", "{...} = {2 3 4 ...}", "{*1+2 *1+3 *1+4 ...}");
+//            Add tests with zero size / value, value larger than size, later: negative, fractional, expression.
+//            Add Rainy day tests: Mis-matched types, mis-matched sizes, mis-matched values
 
 ////////// TODO: TESTS OF SIMPLE UN-TYPED MERGE: "=="
 
-#define NORMTEST(NAME, MSG, IN, OUT) TEST_CASE(NAME, MSG){agent a; infon *in; string s; REQUIRE( a.loadInfonFromString(IN, &in, 1) != 0 ); s=printInfon(in); CAPTURE(s); CHECK(s == OUT);}
+///////////////////////////////////////////////////////////
 
 NORMTEST("strCat1", "Test string concatenation", "('Hello' ' THere!' (' How' ' are' (' you' ' Doing') '?'))", "\"Hello THere! How are you Doing?\"");
 NORMTEST("parse3n4", "Parse: 3 char then 4 char strings", "+{*3+$ *4+$} == 'CatDogs'", "{\"Cat\" \"Dogs\" }");
 NORMTEST("anonFunc1", "test anon functions", "[_,456,789,] <: +123", "*1+789");
-//NORMTEST("anonFunc2", "Try a bigger function", "[+_ ({555, 444, [_] := %\\\\\\},)] <: +7000", "{*1+555 *1+444 *1+7000 }");
+NORMTEST("anonFunc2", "Try a bigger function", "[+_ ({555, 444, [_] := %\\\\\\},)] <: +7000", "{*1+555 *1+444 *1+7000 }");
 NORMTEST("revrseFuncSyntax", "Try reverse func syntax", "7000:>[_ ({555, 444, [_] := %\\\\\\})]", "{*1+555 *1+444 *1+7000 }");
 NORMTEST("catHatDogPig", "Parse 4 three char strings", "*4 +{*3+$|...} == +'catHatDogPig'", "{\"cat\" \"Hat\" \"Dog\" \"Pig\" }");
 NORMTEST("nestedRefs", "test nested references", "{1 2 {'hi' 'there'} 4 [$ $] := [_ _ {...}] :== %\\ 6}", "{*1+1 *1+2 {\"hi\" \"there\" } *1+4 \"there\" *1+6 }");
@@ -134,8 +128,6 @@ NORMTEST("add", "Addition", "+(+3+7)", "*1+10");
 NORMTEST("addRefd", "Addition with references", "{{4, 6, ([_] := %\\\\ [_, _] := %\\\\ )}}", "{{*1+4 *1+6 *1+10 } }"); // TODO: shouldn't need external {} here.
 NORMTEST("addRevRefs", "Addition with reverse references", "{{4, 6, (%\\\\:[_] %\\\\:[_, _] )}}", "{{*1+4 *1+6 *1+10 } }"); // TODO: shouldn't need external {} here.
 NORMTEST("TwoArgFunc", "A two argument function", "[+{_, _} +{[+_]:=%\\\\ [+_ +_]:=%\\\\  [+_]:=%\\\\} ]<:+{9,4}", "{*1+9 *1+4 *1+9 }");
-
-
 
 //TEST2("define and use a tag", "&color=#{*_+_ *_+_ *_+_}  &size=#*_+_", "<{}>");
 //TEST2("nested empty tags", "&frame = {?|...}  &portal = {frame|...}", "<{}>");
@@ -152,14 +144,14 @@ NORMTEST("parse2ItmsGet1st", "Two item parse, get first option", "{[...] :== {'A
 //   # Add the above test but with a list in the comprehension yeild.
 NORMTEST("simpleParse2", "Simple Parsing 2", "{*3+$|...}=='CatHatBatDog' ", "{\"Cat\" \"Hat\" \"Bat\" \"Dog\" }");
 NORMTEST("innerParse1", "Inner parsing 1", "{ {*3+$}|...}='CatHatBatDog' ", "{{\"Cat\" } {\"Hat\" } {\"Bat\" } {\"Dog\" } }");
-//NORMTEST("ParseConcat", "Parse a concatenated string", "[*4+$ *10+$] :== ('DO' 'gsTin' 'tinabulation')", "\"Tintinabul\"");  // FAILS until better concat support
+// /*FAILS*/ NORMTEST("ParseConcat", "Parse a concatenated string", "[*4+$ *10+$] :== ('DO' 'gsTin' 'tinabulation')", "\"Tintinabul\"");  // FAILS until better concat support
 NORMTEST("fromHereIdx1", "fromHere indexing string 1", "{111, '222' %^:[_, _, $] 444, '555', 666, {'hi'}}", "{*1+111 \"222\" \"555\" *1+444 \"555\" *1+666 {\"hi\" } }");
 NORMTEST("fromHereIdx2", "fromHere indexing string 2", "{111, 222, %^:*3+[...] 444, 555, 666, {'hi'}}", "{*1+111 *1+222 *1+555 *1+444 *1+555 *1+666 {\"hi\" } }");
 NORMTEST("fromHereIdxNeg", "fromHere indexing negative", "{111, 222, %^:/3+[...] 444, 555, 666, 777}", "{*1+111 *1+222 *1+777 *1+444 *1+555 *1+666 *1+777 }");
 NORMTEST("simpleAssoc", "Test lists with simple associations", "{ {5, 7, 3, 8} {%\\\\:[_]~ | ...}}", "{{*1+5 *1+7 *1+3 *1+8 } {*1+5 *1+7 *1+3 *1+8 } }");
-//NORMTEST("internalAssoc", "Test internal associations", "{ {5, 7, 3, 8} ({0} {+(%\\\\\\:[_]~ %\\\\:[_]~) | ...})}", "{{*1+5 *1+7 *1+3 *1+8 } ({*1+0 } {*1+5 *1+12 *1+15 *1+23 } ) }");  // FAIL: Fails when small ListBufCutOff is used.
+/*FAILS*/ NORMTEST("internalAssoc", "Test internal associations", "{ {5, 7, 3, 8} ({0} {+(%\\\\\\:[_]~ %\\\\:[_]~) | ...})}", "{{*1+5 *1+7 *1+3 *1+8 } ({*1+0 } {*1+5 *1+12 *1+15 *1+23 } ) }");  // FAIL: Fails when small ListBufCutOff is used.
 //NORMTEST("SeqFuncPass", "Test sequential func argument passing", "{{ {5, 7, 3, 8} {addOne<:(%\\\\\\:[_]~) | ...}}}", "{{{*1+5 *1+7 *1+3 *1+8 } {*1+6 *1+8 *1+4 *1+9 } } }");
-NORMTEST("Select2ndItem", "Select 2nd item from list", "*2+[...] := {8 7 6 5 4 3}", "*1+7");
+//NORMTEST("Select2ndItem", "Select 2nd item from list", "*2+[...] := {8 7 6 5 4 3}", "*1+7");
 //TEST2("Select item by concept tag: 'third item of ...'", "&thirdItem=*3+[...]", "<{}>");
 NORMTEST("simpleFilter", "Test simple filtering", "{[_ _]|...} ::= {8 7 6 5 4 3}", "{*1+7 *1+5 *1+3 }");
 //TEST2("filtering with a concept-tag", "&everyOther={*2+[...]|...}", "<{}>");

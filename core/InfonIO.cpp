@@ -21,8 +21,8 @@
 using namespace icu;
 
 #define Indent {for (int x=0;x<indent;++x) s+=" ";}
-string printPure (pureInfon* i, UInt wSize, infon* CI){
-    string s, tmp; UInt f=i->flags;
+string agent::printPure (pureInfon* i, UInt wSize, infon* CI){
+    string s, tmp; UInt f=i->flags; infon *p;
     if (((f&(fIncomplete+mFormat))==(fIncomplete+fUnknown)) && ((f&mType)!=tNum)) s+="?";
     UInt type=f&mType; bool doAsList=false;
     if (type==tNum){
@@ -37,18 +37,28 @@ string printPure (pureInfon* i, UInt wSize, infon* CI){
     }
     if(type==tList || doAsList){
         s+=(FormatIsConcat(f) || (f&fEmbedSeq))?"(":"{";
-        for(infon* p=i->listHead;p;) {
-           // if(p==i->listHead && f&fLoop && ((infon*)i)->spec2){printInfon(((infon*)i)->spec2,CI); s+=" | ";} // TODO: when overhauling printing, use this.
-            if(InfIsTentative(p)) {s+="..."; break;}
-            else {s+=printInfon(p, CI); s+=' ';}
-            if (InfIsBottom(p)) p=0; else p=p->next;
+        if(1 /*or mode == NormForm*/){
+        //    if(wSize>0){
+                for(int result=StartPureTerm(i, &p); result==0; result=getNextTerm(&p)){
+                    if(InfIsTentative(p)) {s+="..."; break;}
+                    else {s+=printInfon(p, CI); s+=' ';}
+                }
+         //   }
+
+        } else{ // print lists to show structure
+            for(infon* p=i->listHead;p;) {
+               // if(p==i->listHead && f&fLoop && ((infon*)i)->spec2){printInfon(((infon*)i)->spec2,CI); s+=" | ";} // TODO: when overhauling printing, use this.
+                if(InfIsTentative(p)) {s+="..."; break;}
+                else {s+=printInfon(p, CI); s+=' ';}
+                if (InfIsBottom(p)) p=0; p=p->next;
+            }
         }
         s+=(FormatIsConcat(f) || (f&fEmbedSeq))?")":"}";
     }
     return s;
 }
 
-string printInfon(infon* i, infon* CI){
+string agent::printInfon(infon* i, infon* CI){
     string s; //Indent;
     if(i==0) {s+="null"; return s;}
     if(i==CI) s+="<font color=green>";
@@ -60,8 +70,7 @@ string printInfon(infon* i, infon* CI){
     if (mode==iTagUse) {
         s+=i->type->norm; s+=" ";
     } else if(InfIsNormed(i) || mode==iNone /* || VsFlag(i)&notParent */){
-        if (SizeIsUnknown(i)) {s+=printPure(&i->value, i->wSize, CI); if(InfsType(i) != tList) s+=",";}
-        else if (ValueIsUnknown(i)) {s+=printPure(&i->size, i->wSize, CI); s+=";";}
+        if (SizeIsUnknown(i)) {s+=printPure(&i->value, i->wSize, CI);}
         else{
             if(InfsType(i)==tNum) {s+=(SsFlag(i)&fInvert)?"/":"*"; s+=printPure(&i->size, 0,CI);}
             if(InfsType(i)==tNum) s+=(VsFlag(i)&fInvert)?"-":"+";
@@ -351,7 +360,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
             if(seperator){ // In (...) ensure items are seperated by either ',' or ' ', not a mixture.
                 if(seperator=='?') {
                     seperator=sepIsBoundry;
-                    if(seperator==','){SetBits(*flags, fEmbedSeq+mFormat+mType,(fEmbedSeq+fLiteral+tList));}
+                    if(seperator==','){SetBits(*flags, fEmbedSeq+mFormat+mType,(fEmbedSeq+fConcat+tList));}
                 }else {if(seperator != sepIsBoundry && nTok!=rchr) throw "All seperators in (...) must be the same; either ',' or nothing.";}
             }
         }

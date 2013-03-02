@@ -203,6 +203,7 @@ typedef map<infon*, infon*> PtrMap;
 
 struct agent {
     agent(infon* World=0, bool (*isHF)(string)=0, int (*eval)(infon*, agent*)=0){world=World; isHardFunc=isHF; autoEval=eval;};
+    int StartPureTerm(pureInfon* varIn, infon** varOut);
     int StartTerm(infon* varIn, infon** varOut);
     int LastTerm(infon* varIn, infon** varOut);
     int getNextTerm(infon** p);
@@ -225,6 +226,8 @@ struct agent {
     void deepCopy(infon* from, infon* to, PtrMap* ptrs=0, int flags=0);
     int loadInfon(const char* filename, infon** inf, bool normIt=true);
     infon* loadInfonFromString(string ProteusString, infon** inf, bool normIt=false);
+    string printInfon(infon* i, infon* CI=0);
+    string printPure (pureInfon* i, UInt wSize, infon* CI=0);
 
     int fetch_NodesNormalForm(QitemPtr cn);
     void pushNextInfon(infon* CI, QitemPtr cn, infQ &ItmQ);
@@ -241,8 +244,8 @@ struct agent {
 };
 
 // From InfonIO.cpp
-string printInfon(infon* i, infon* CI=0);
-string printPure (pureInfon* i, UInt wSize, infon* CI=0);
+//string printInfon(infon* i, infon* CI=0);
+//string printPure (pureInfon* i, UInt wSize, infon* CI=0);
 void numberFromString(char* buf, pureInfon* pInf, int base=10);
 const int bufmax=1024*32;
 struct QParser{

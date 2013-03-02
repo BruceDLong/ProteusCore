@@ -131,50 +131,60 @@ infon* agent::loadInfonFromString(string ProteusString, infon** inf, bool normIt
     return *inf;
 }
 
-int agent::StartTerm(infon* varIn, infon** varOut) {
-  infon *tmp;
-  if(varIn==0) return 1;
-  if(InfsType(varIn)!=tList) return 3;
-  if((*varOut=varIn->value.listHead)==0) return 4;
-  if(ValueIsConcat(*varOut) || ((InfsType(*varOut)==tList) && !(VsFlag(varIn)&fEmbedSeq))){
-      if(StartTerm(*varOut, &tmp)==0) *varOut=tmp;
-  }
+int agent::StartPureTerm(pureInfon* varIn, infon** varOut){
+    infon *tmp; int result;
+    if((tmp=varIn->listHead)==0) {return 3;}
+    if(!InfIsFirst(tmp)) {return 4;}
+    while(ValueIsConcat(tmp) || ((InfsType(tmp)==tList) && ((varIn->flags&(fEmbedSeq+fConcat+tList))==(fConcat+tList)))){
+        result=StartTerm(tmp, &tmp);
+        if(result>0) {return result;}
+        if(result==-1){
+            result=getNextTerm(&tmp);
+            if(result!=0) {return result;}
+        } else break;
+    }
+    *varOut=tmp;
+    return 0;
+}
 
-  return 0;
+int agent::StartTerm(infon* varIn, infon** varOut) {
+// Return 0 on success, -1 on End-Of-List, or a positive error code.
+    if(varIn==0) return 1;
+    if(InfsType(varIn)!=tList) return 2;
+    if((varIn->size.flags&(tNum+fLiteral))==(tNum+fLiteral) && varIn->size.dataHead->get_num()==0) return -1; //EOL
+    return StartPureTerm(&varIn->value, varOut);
 }
 
 int agent::LastTerm(infon* varIn, infon** varOut) {
-  if (varIn==0) return 1;
-  if (ValueIsConcat(varIn)) {varIn=varIn->value.listHead->prev;}
-  else if(InfsType(varIn) != tList)  return 2;
-  else {*varOut=varIn->value.listHead->prev; if (*varOut==0) return 3;}
-  return 0;
+    if (varIn==0) return 1;
+    if (ValueIsConcat(varIn)) {varIn=varIn->value.listHead->prev;}
+    else if(InfsType(varIn) != tList)  return 2;
+    else {*varOut=varIn->value.listHead->prev; if (*varOut==0) return 3;}
+    return 0;
 }
 
 int agent::getNextTerm(infon** p) {
-  infon *parent, *Gparent=0, *GGparent=0;
+// Return 0 on success, -1 on End-Of-List, or a positive error code.
+  infon *parent, *Gparent=0; int result;
   if(InfIsBottom(*p)) {
     parent=getTop(*p);
     if (InfIsLast(*p)){
       if(parent==0){(*p)=(*p)->next; return 1;}
       Gparent=getTop(parent);
-      if(ValueIsConcat(parent) || (VsFlag(Gparent)&fEmbedSeq)){
-        if(getNextTerm(&parent)) return 4;
-        switch(InfsType(parent)){  // test it with:  (   ({} {"X", "Y"} ({} {9,8} {7,6}) {5} ) {1} {{}} {2, 3, 4} )
-            case tUnknown: (*p)=0; return -1;
-            case tNum: case tString: throw("Item in list concat is not a list.");
-            case tList: if(!StartTerm(parent, p)) return 0;
-            }
+      if(ValueIsConcat(parent) || (Gparent && (InfsType(parent)==tList) && ((VsFlag(Gparent)&(fEmbedSeq+fConcat+tList))==(fConcat+tList)))){
+        if((result=getNextTerm(&parent))!=0) return result;
+        (*p)=parent; return 0;
       }
-      return 2;
-    } else {infon* slug=new infon; slug->wFlag|=nsBottomNotLast; append(slug, parent); (*p)=slug;} /*Bottom but not last, make slug*/
-  }else {
+      return -1;
+    } else {cout<<"WARN: Bottom-but-not-Last\n"; return -1;} //infon* slug=new infon; slug->wFlag|=nsBottomNotLast; append(slug, parent); (*p)=slug;} /*Bottom but not last, make slug*/
+  } else {
     (*p)=(*p)->next;
     if ((*p)==0) {return 3;}
     parent=getTop((*p));
-    if(ValueIsConcat(*p) || ((InfsType(*p)==tList) && ValueIsConcat(parent) && !(VsFlag(parent)&fEmbedSeq))){
-        if((*p)->value.listHead==0) return getNextTerm(p);
-        if(!StartTerm(*p, p)) return 0;
+    if(ValueIsConcat(*p) || (parent && (InfsType(*p)==tList) && ((VsFlag(parent)&(fEmbedSeq+fConcat+tList))==(fConcat+tList)))){
+        //if((*p)->value.listHead==0) return getNextTerm(p);
+        infon* tmp=*p;
+        if((result=StartTerm(tmp, p))!=0) {return result;}
     }
     if (InfIsLast(*p)){     // If isLast && Parent is spec1-of-get-last, get parent, apply any idents
         if(parent->wFlag&mIsHeadOfGetLast) {
@@ -257,7 +267,7 @@ infon* agent::append(infon* i, infon* list){ // appends an item to the end of a 
     } while(p!=last && InfIsVirtTent(p));
     if(!(q && InfIsVirtTent(q))) return 0;
     if(InfIsVirtual(q)) processVirtual(q);
-    copyTo(i, q); if(InfsType(q)==tList && q->size.listHead) q->value.listHead->top=q;
+    copyTo(i, q); if(InfsType(q)==tList && q->value.listHead) q->value.listHead->top=q;
     q->spec1=i->spec1; q->spec2=i->spec2; q->wrkList=i->wrkList;
     ResetVirtTent(q);
     if(q->type && q->type->norm!="") (*list->index)[q->type->norm]=q;
@@ -444,7 +454,7 @@ int agent::getFollower(infon** lval, infon* i){
         i=getTop(i); ++levels;
         if(i) goto gnsTop;
         else {*lval=0; return levels;}
-    }
+    }if(InfIsBottom(i)) throw "Bottom found but not last when getting follower.";
     *lval=i; getNextTerm(lval);
     if(InfIsVirtual(*lval)) processVirtual(*lval);
     return levels;

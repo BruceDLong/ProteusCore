@@ -90,7 +90,7 @@ infon* infon::findTag(WordS& word){
 
 void infon::subscribeTo(infon* content, UInt flags){
     content->subscriptions.push_back(this);
-    cout<<"ADDED SUBSCRIPTION: from:"<<printInfon(this)<<" ("<<this<<") "<<"   to:"<<printInfon(content)<<" ("<<content<<") "<<"\n";
+    //cout<<"ADDED SUBSCRIPTION: from:"<<printInfon(this)<<" ("<<this<<") "<<"   to:"<<printInfon(content)<<" ("<<content<<") "<<"\n";
 //    subscriptions.push_back(content, flags)
 //    if(content is muted){}
 }
@@ -108,7 +108,7 @@ void infon::fulfillSubscriptions(agent* a){
     cout<<"FULFILLING:\n";
     while(!subscriptions.empty()){
         infon* subscriber=subscriptions.front();
-    cout<<"    "<<printInfon(subscriber)<<"\n";
+//    cout<<"    "<<printInfon(subscriber)<<"\n";
         insertID(&subscriber->wrkList, this, MergeIdent);
         a->normalize(subscriber);
         subscriptions.pop_front();
@@ -123,7 +123,7 @@ void infon::updateIndex(){
     for(infon* p=value.listHead;p;) {
         if(!InfIsTentative(p) && p->type && p->type->norm!="" && !(p->wFlag&asNot)){
             (*index)[p->type->norm]=p;
-            cout<<"INDEXED "<<printInfon(p)<<" in "<<index.get()<<"\n";  //TODO: optimization: Likely there are more indexings than needed.
+ //           cout<<"INDEXED "<<printInfon(p)<<" in "<<index.get()<<"\n";  //TODO: optimization: Likely there are more indexings than needed.
         }
         if (InfIsBottom(p)) p=0; else p=p->next;
     }

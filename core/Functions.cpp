@@ -196,19 +196,19 @@ int AutoEval(infon* CI, agent* a){
     } else if (funcName=="infontotext"){
         infon* inf1;
         getInfonArg(CI, &inf1, a);
-        string s=printInfon(inf1);
+        string s=a->printInfon(inf1);
         setString(CI, s);
     } else if (funcName=="textinfon"){
         infon* inf1;
         getInfonArg(CI, &inf1, a);
-        string s=printPure(&inf1->value, 0, 0);
+        string s=a->printPure(&inf1->value, 0, 0);
         setString(CI, s);
     } else if (funcName=="textline"){
         infon* inf1, *i; string s="";
         getInfonArg(CI, &inf1, a);
         for (EOT=a->StartTerm(inf1->value.listHead, &i); !EOT; EOT=a->getNextTerm(&i)){
             if (InfsType(i) == tString) s.append(i->value.toString(i->getSize().get_ui()));
-            else if (InfsType(i) == tNum) s+=printPure(&i->value, 0, 0);
+            else if (InfsType(i) == tNum) s+=a->printPure(&i->value, 0, 0);
         }
         setString(CI, s);
     } else if (funcName=="addone"){

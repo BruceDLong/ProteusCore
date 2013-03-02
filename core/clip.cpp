@@ -80,7 +80,7 @@ int main(int argc, char **argv){
             if(!Xlater) {cout<<"Translater for this locale wasn't found.\n"; continue;}
             WordSMap *wordLib=Xlater->wordLibrary;
             for(WordSMap::iterator tagPtr=wordLib->begin(); tagPtr!=wordLib->end(); tagPtr++){
-                cout<<tagPtr->second->locale<< ":" << tagPtr->second->norm << "\t= " <<printInfon(tagPtr->second->definition)<<"\n";
+                cout<<tagPtr->second->locale<< ":" << tagPtr->second->norm << "\t= " <<a.printInfon(tagPtr->second->definition)<<"\n";
             }
             continue;
         } else if (entry.substr(0,7)=="locale=") {
@@ -107,7 +107,7 @@ int main(int argc, char **argv){
             } else continue;
         } catch (char const* errMsg){cout<<errMsg<<"\n";}
 
-        if (Entry) cout<<"\n"<<printInfon(Entry)<<"\n\n";
+        if (Entry) cout<<"\n"<<a.printInfon(Entry)<<"\n\n";
         else {cout<<"\nError: "<<q.buf<<"\n\n";}
     }
     shutdownProteusEngine();

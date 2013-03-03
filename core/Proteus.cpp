@@ -131,18 +131,18 @@ infon* agent::loadInfonFromString(string ProteusString, infon** inf, bool normIt
     return *inf;
 }
 
-int agent::StartPureTerm(pureInfon* varIn, infon** varOut){
+int agent::StartPureTerm(pureInfon* varIn, infon** varOut){ cout<<"==>"<<varIn->flags;
     infon *tmp; int result;
-    if((tmp=varIn->listHead)==0) {return 3;}
+    if((tmp=varIn->listHead)==0) {cout<<"ZERO\n";return 3;}
     if(!InfIsFirst(tmp)) {return 4;}
     while(ValueIsConcat(tmp) || ((InfsType(tmp)==tList) && ((varIn->flags&(fEmbedSeq+fConcat+tList))==(fConcat+tList)))){
-        result=StartTerm(tmp, &tmp);
+        result=StartTerm(tmp, &tmp); cout<<" r:"<<result<<"\n";
         if(result>0) {return result;}
         if(result==-1){
             result=getNextTerm(&tmp);
             if(result!=0) {return result;}
         } else break;
-    }
+    } cout<<"<<\n";
     *varOut=tmp;
     return 0;
 }
@@ -170,10 +170,10 @@ int agent::getNextTerm(infon** p) {
     parent=getTop(*p);
     if (InfIsLast(*p)){
       if(parent==0){(*p)=(*p)->next; return 1;}
-      Gparent=getTop(parent);
-      if(ValueIsConcat(parent) || (Gparent && (InfsType(parent)==tList) && ((VsFlag(Gparent)&(fEmbedSeq+fConcat+tList))==(fConcat+tList)))){
+      Gparent=getTop(parent);//cout<<"item:"<<(*p)->value.dataHead->get_num()<<"parent->VsFlag"<<VsFlag(parent)<<"  Gparent="<<VsFlag(Gparent)<<"\n";
+      if(ValueIsConcat(parent) || (Gparent && (InfsType(parent)==tList) && ((VsFlag(Gparent)&(fEmbedSeq+fConcat+tList))==(fConcat+tList)))){ cout<<"In A\n";
         if((result=getNextTerm(&parent))!=0) return result;
-        (*p)=parent; return 0;
+cout<<"In B\n";        (*p)=parent; return 0;
       }
       return -1;
     } else {cout<<"WARN: Bottom-but-not-Last\n"; return -1;} //infon* slug=new infon; slug->wFlag|=nsBottomNotLast; append(slug, parent); (*p)=slug;} /*Bottom but not last, make slug*/
@@ -182,7 +182,6 @@ int agent::getNextTerm(infon** p) {
     if ((*p)==0) {return 3;}
     parent=getTop((*p));
     if(ValueIsConcat(*p) || (parent && (InfsType(*p)==tList) && ((VsFlag(parent)&(fEmbedSeq+fConcat+tList))==(fConcat+tList)))){
-        //if((*p)->value.listHead==0) return getNextTerm(p);
         infon* tmp=*p;
         if((result=StartTerm(tmp, p))!=0) {return result;}
     }
@@ -404,7 +403,7 @@ char isPosLorEorGtoSize(UInt pos, infon* item){
     else return 'G';  // Greater
 }
 
-void agent::processVirtual(infon* v){
+void agent::processVirtual(infon* v){cout<<"In PV\n";
     infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT=0;
     char posArea=isPosLorEorGtoSize(v->pos, parent);
     if(posArea=='G'){cout << "EXTRA ITEM ALERT!\n"; closeListAtItem(v); return;}
@@ -442,19 +441,11 @@ int agent::getFollower(infon** lval, infon* i){
     int levels=0;
     if(!i) return 0;
     gnsTop: if(i->next==0) {*lval=0; return levels;}
- /*  infon* size;
-     if(InfIsVirtual(i->next) && i->spec2 && i->spec2->prev==(infon*)2){
-        i->wFlag|=(isLast+isBottom);
-        size=i->next->size-1;
-        i->next->next->prev=i; i->next=i->next->next;// TODO when working on mem mngr: i->next is dangling
-        i=getTop(i); i->size=size; VsFlag(i) &= ~fLoop; ++levels;
-        goto gnsTop;
-    }*/
     if(InfIsLast(i) && i->prev){
         i=getTop(i); ++levels;
         if(i) goto gnsTop;
         else {*lval=0; return levels;}
-    }if(InfIsBottom(i)) throw "Bottom found but not last when getting follower.";
+    }//else if(InfIsBottom(i)) throw "Bottom found but not last when getting follower.";
     *lval=i; getNextTerm(lval);
     if(InfIsVirtual(*lval)) processVirtual(*lval);
     return levels;

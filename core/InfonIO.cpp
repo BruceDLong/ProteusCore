@@ -58,7 +58,7 @@ string agent::printPure (pureInfon* i, UInt wSize, infon* CI){
     return s;
 }
 
-string agent::printInfon(infon* i, infon* CI){
+string agent::printInfon(infon* i, infon* CI){ cout<<"PRINT INFON...\n";
     string s; //Indent;
     if(i==0) {s+="null"; return s;}
     if(i==CI) s+="<font color=green>";
@@ -358,9 +358,9 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
 
             char sepIsBoundry=(nxtTok(","))?',':' ';
             if(seperator){ // In (...) ensure items are seperated by either ',' or ' ', not a mixture.
-                if(seperator=='?') {
+                if(seperator=='?' || (*flags&fLoop)) {
                     seperator=sepIsBoundry;
-                    if(seperator==','){SetBits(*flags, fEmbedSeq+mFormat+mType,(fEmbedSeq+fConcat+tList));}
+                    if(seperator==',' || (*flags&fLoop)){SetBits(*flags, fEmbedSeq+mFormat+mType,(fEmbedSeq+fConcat+tList));}
                 }else {if(seperator != sepIsBoundry && nTok!=rchr) throw "All seperators in (...) must be the same; either ',' or nothing.";}
             }
         }
@@ -443,7 +443,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
         }
     }
     infon* i=new infon(wFlag, &iSize,&iVal,0,s1,s2,0); i->wSize=size; i->type=tags;
-    if(ValueIsConcat(i) && (*i->size.dataHead)==1){infon* ret=i->value.listHead; delete(i); i=ret; i->top=i->next=i->prev=0;} // BUT we lose some flags (desc, ...)
+    if(ValueIsConcat(i) && ((*i->size.dataHead)==1) && !InfIsLoop(i)){infon* ret=i->value.listHead; delete(i); i=ret; i->wFlag&=~mListPos; i->top=i->next=i->prev=0;} // BUT we lose some flags (desc, ...)
     else {
         if (i->size.listHead) i->size.listHead->top=i;
         if (i->value.listHead){i->value.listHead->top=i; i->updateIndex();}

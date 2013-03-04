@@ -135,7 +135,7 @@ int agent::StartPureTerm(pureInfon* varIn, infon** varOut){ cout<<"==>"<<varIn->
     infon *tmp; int result;
     if((tmp=varIn->listHead)==0) {cout<<"ZERO\n";return 3;}
     if(!InfIsFirst(tmp)) {return 4;}
-    while(ValueIsConcat(tmp) || ((InfsType(tmp)==tList) && ((varIn->flags&(fEmbedSeq+fConcat+tList))==(fConcat+tList)))){
+    while(ValueIsConcat(tmp) || ((InfsType(tmp)==tList) && ((varIn->flags&(fEmbedSeq+fConcat+mType))==(fConcat+tList)))){
         result=StartTerm(tmp, &tmp); cout<<" r:"<<result<<"\n";
         if(result>0) {return result;}
         if(result==-1){
@@ -152,6 +152,7 @@ int agent::StartTerm(infon* varIn, infon** varOut) {
     if(varIn==0) return 1;
     if(InfsType(varIn)!=tList) return 2;
     if((varIn->size.flags&(tNum+fLiteral))==(tNum+fLiteral) && varIn->size.dataHead->get_num()==0) return -1; //EOL
+    InitList(varIn);
     return StartPureTerm(&varIn->value, varOut);
 }
 
@@ -171,7 +172,7 @@ int agent::getNextTerm(infon** p) {
     if (InfIsLast(*p)){
       if(parent==0){(*p)=(*p)->next; return 1;}
       Gparent=getTop(parent);//cout<<"item:"<<(*p)->value.dataHead->get_num()<<"parent->VsFlag"<<VsFlag(parent)<<"  Gparent="<<VsFlag(Gparent)<<"\n";
-      if(ValueIsConcat(parent) || (Gparent && (InfsType(parent)==tList) && ((VsFlag(Gparent)&(fEmbedSeq+fConcat+tList))==(fConcat+tList)))){ cout<<"In A\n";
+      if(ValueIsConcat(parent) || (Gparent && (InfsType(parent)==tList) && ((VsFlag(Gparent)&(fEmbedSeq+fConcat+mType))==(fConcat+tList)))){ cout<<"In A\n";
         if((result=getNextTerm(&parent))!=0) return result;
 cout<<"In B\n";        (*p)=parent; return 0;
       }
@@ -181,7 +182,7 @@ cout<<"In B\n";        (*p)=parent; return 0;
     (*p)=(*p)->next;
     if ((*p)==0) {return 3;}
     parent=getTop((*p));
-    if(ValueIsConcat(*p) || (parent && (InfsType(*p)==tList) && ((VsFlag(parent)&(fEmbedSeq+fConcat+tList))==(fConcat+tList)))){
+    if(ValueIsConcat(*p) || (parent && (InfsType(*p)==tList) && ((VsFlag(parent)&(fEmbedSeq+fConcat+mType))==(fConcat+tList)))){
         infon* tmp=*p;
         if((result=StartTerm(tmp, p))!=0) {return result;}
     }
@@ -403,7 +404,7 @@ char isPosLorEorGtoSize(UInt pos, infon* item){
     else return 'G';  // Greater
 }
 
-void agent::processVirtual(infon* v){cout<<"In PV\n";
+void agent::processVirtual(infon* v){
     infon *args=v->spec1, *spec=v->spec2, *parent=getTop(v); int EOT=0;
     char posArea=isPosLorEorGtoSize(v->pos, parent);
     if(posArea=='G'){cout << "EXTRA ITEM ALERT!\n"; closeListAtItem(v); return;}
@@ -568,7 +569,7 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
                 }
                 if(CIFindMode==iToPathH) {  // If no '^', move to first item in list.
                     if(!InfIsTop(newID)) {newID=newID->top; }
-                    if (newID==0) cout<<"Zero TOP in "<< printInfon(CI)<<'\n';
+                    if (newID==0) {cout<<"Zero TOP in "<< printInfon(CI)<<'\n'; exit(1);}
                     else if(!InfIsFirst(newID)) {newID=0; cout<<"Top but not First in "<< printInfon(CI)<<'\n';}
                 }
                 if(newID) {CI->wFlag|=mAsProxie; CI->value.proxie=newID; newID->wFlag|=isNormed; CI->wFlag&=~mFindMode; newID=0;}

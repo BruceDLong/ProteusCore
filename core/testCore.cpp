@@ -149,7 +149,7 @@ NORMTEST("fromHereIdx1", "fromHere indexing string 1", "{111, '222' %^:[_, _, $]
 NORMTEST("fromHereIdx2", "fromHere indexing string 2", "{111, 222, %^:*3+[...] 444, 555, 666, {'hi'}}", "{*1+111 *1+222 *1+555 *1+444 *1+555 *1+666 {\"hi\" } }");
 NORMTEST("fromHereIdxNeg", "fromHere indexing negative", "{111, 222, %^:/3+[...] 444, 555, 666, 777}", "{*1+111 *1+222 *1+777 *1+444 *1+555 *1+666 *1+777 }");
 NORMTEST("simpleAssoc", "Test lists with simple associations", "{ {5, 7, 3, 8} {%\\\\:[_]~ | ...}}", "{{*1+5 *1+7 *1+3 *1+8 } {*1+5 *1+7 *1+3 *1+8 } }");
-/*FAILS*/ NORMTEST("internalAssoc", "Test internal associations", "{ {5, 7, 3, 8} ({0} {+(%\\\\\\:[_]~ %\\\\:[_]~) | ...})}", "{{*1+5 *1+7 *1+3 *1+8 } ({*1+0 } {*1+5 *1+12 *1+15 *1+23 } ) }");  // FAIL: Fails when small ListBufCutOff is used.
+/*FAILS*/ NORMTEST("internalAssoc", "Test internal associations", "[ {5, 7, 3, 8} {2 (+(%\\\:[_]~ %\\:[_]~) | ...)}]", "{*1+2 *1+7 *1+14 *1+17 *1+25 }");  // FAIL: Fails when small ListBufCutOff is used.
 //NORMTEST("SeqFuncPass", "Test sequential func argument passing", "{{ {5, 7, 3, 8} {addOne<:(%\\\\:[_]~) | ...}}}", "{{{*1+5 *1+7 *1+3 *1+8 } {*1+6 *1+8 *1+4 *1+9 } } }");
 //NORMTEST("Select2ndItem", "Select 2nd item from list", "*2+[...] := {8 7 6 5 4 3}", "*1+7");
 //TEST2("Select item by concept tag: 'third item of ...'", "&thirdItem=*3+[...]", "<{}>");

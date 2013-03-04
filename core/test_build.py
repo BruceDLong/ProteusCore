@@ -79,7 +79,7 @@ def test_engine():
     #('1', "fromHere indexing negative", "{111, 222, %^:/3+[...] 444, 555, 666, 777}", '{*1+111 *1+222 *1+777 *1+444 *1+555 *1+666 *1+777 }'),
 
     #('1', "Test lists with simple associations", r'{ {5, 7, 3, 8} {%\\:[_]~ | ...}}', r'{{*1+5 *1+7 *1+3 *1+8 } {*1+5 *1+7 *1+3 *1+8 } }'),
-    ('1', "Test internal associations", r'{ {5, 7, 3, 8} ({0} {+(%\\\:[_]~ %\\:[_]~) | ...})}', r'{{*1+5 *1+7 *1+3 *1+8 } ({*1+0 } {*1+5 *1+12 *1+15 *1+23 } ) }'), # FAIL: Fails when small ListBufCutOff is used.
+    ('1', "Test internal associations", r'[ {5, 7, 3, 8} {2 (+(%\\\:[_]~ %\\:[_]~) | ...)}]', r'{*1+2 *1+7 *1+14 *1+17 *1+25 }'), # FAIL: Fails when small ListBufCutOff is used.
     ('1', "Test sequential func argument passing", r'{ {5, 7, 3, 8} {addOne<:(%\\:[_]~) | ...}}', '{{*1+5 *1+7 *1+3 *1+8 } {*1+6 *1+8 *1+4 *1+9 } }'),
 
     ('1', "Select 2nd item from list", r'*2+[...] := {8 7 6 5 4 3}', '*1+7'),

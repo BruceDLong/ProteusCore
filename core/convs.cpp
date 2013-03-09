@@ -63,7 +63,7 @@ bool infon::getStng(string* str) {
     return try2CatStr(str, &value, getSize().get_ui());
 }
 
-void infon::join(infon* rVal){
+bool infon::join(infon* rVal){
 /* NOTES:
  * Joins two infons. Should use real arithmetic and work with strings
  * Can this replace try2CatStr above?
@@ -71,7 +71,7 @@ void infon::join(infon* rVal){
  * "/1+[_]"  goes in reverse but:
  * "*(-1)+[_]" turns around and goes forward.
 */
-
+    if(!(InfIsLiteralNum(this) && InfIsLiteralNum(rVal))) return false;
     BigInt val;
     if((rVal)->value.flags & fInvert) {val=-(*rVal->value.dataHead);} else {val=(*rVal->value.dataHead);}
     if(SizeIsInverted(rVal)){
@@ -81,6 +81,7 @@ void infon::join(infon* rVal){
         *size.dataHead *= *rVal->size.dataHead;
         value=(*this->value.dataHead * *size.dataHead)+val;
     }
+    return true;
 }
 
 infon* infon::findTag(WordS& word){

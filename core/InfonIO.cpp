@@ -58,7 +58,7 @@ string agent::printPure (pureInfon* i, UInt wSize, infon* CI){
     return s;
 }
 
-string agent::printInfon(infon* i, infon* CI){ cout<<"PRINT INFON...\n";
+string agent::printInfon(infon* i, infon* CI){
     string s; //Indent;
     if(i==0) {s+="null"; return s;}
     if(i==CI) s+="<font color=green>";

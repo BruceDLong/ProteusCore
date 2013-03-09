@@ -159,7 +159,7 @@ struct infon {
     bool getInt(BigInt* num);
     bool getReal(double* d);
     bool getStng(string* str);
-    void join(infon* rVal);
+    bool join(infon* rVal);
     infon* findTag(WordS& tag);
     void subscribeTo(infon* content, UInt flags=0);
     void unsubscribe(UInt flags);
@@ -241,6 +241,7 @@ struct agent {
         int getFollower(infon** lval, infon* i);
         void AddSizeAlternate(infon* Lval, infon* Rval, infon* Pred, UInt Size, infon* Last, UInt Flags);
         void addIDs(infon* Lvals, infon* Rvals, UInt flags, int asAlt);
+        void migrateGetLastIdents(infon *i);
 };
 
 // From InfonIO.cpp

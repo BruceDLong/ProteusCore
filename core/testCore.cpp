@@ -120,11 +120,12 @@ NORMTEST("merge/list/typed5", "typed list merge 5", "{...} = {2 3 4 ...}", "{*1+
 NORMTEST("strCat1", "Test string concatenation", "('Hello' ' THere!' (' How' ' are' (' you' ' Doing') '?'))", "\"Hello THere! How are you Doing?\"");
 NORMTEST("parse3n4", "Parse: 3 char then 4 char strings", "+{*3+$ *4+$} == 'CatDogs'", "{\"Cat\" \"Dogs\" }");
 NORMTEST("anonFunc1", "test anon functions", "[_,456,789,] <: +123", "*1+789");
-NORMTEST("anonFunc2", "Try a bigger function", "[+_ ({555, 444, [_] := %\\\\\\},)] <: +7000", "{*1+555 *1+444 *1+7000 }");
-NORMTEST("revrseFuncSyntax", "Try reverse func syntax", "7000:>[_ ({555, 444, [_] := %\\\\\\})]", "{*1+555 *1+444 *1+7000 }");
+NORMTEST("anonFunc2", "Try a bigger function", "[+_ ({555, 444, [_] := %\\\\},)] <: +7000", "{*1+555 *1+444 *1+7000 }");
+NORMTEST("revrseFuncSyntax", "Try reverse func syntax", "7000:>[_ ({555, 444, [_] := %\\\\})]", "{*1+555 *1+444 *1+7000 }");
 NORMTEST("catHatDogPig", "Parse 4 three char strings", "*4 +{*3+$|...} == +'catHatDogPig'", "{\"cat\" \"Hat\" \"Dog\" \"Pig\" }");
 NORMTEST("nestedRefs", "test nested references", "{1 2 {'hi' 'there'} 4 [$ $] := [_ _ {...}] :== %\\ 6}", "{*1+1 *1+2 {\"hi\" \"there\" } *1+4 \"there\" *1+6 }");
 NORMTEST("add", "Addition", "+(+3+7)", "*1+10");
+NORMTEST("nestedAdd", "Nested Addition", "{ 2 (3 ( 4 5)) 6}", "{*1+2 *1+12 *1+6 }");
 NORMTEST("addRefd", "Addition with references", "{{4, 6, ([_] := %\\\\ [_, _] := %\\\\ )}}", "{{*1+4 *1+6 *1+10 } }"); // TODO: shouldn't need external {} here.
 NORMTEST("addRevRefs", "Addition with reverse references", "{{4, 6, (%\\\\:[_] %\\\\:[_, _] )}}", "{{*1+4 *1+6 *1+10 } }"); // TODO: shouldn't need external {} here.
 NORMTEST("TwoArgFunc", "A two argument function", "[+{_, _} +{[+_]:=%\\\\ [+_ +_]:=%\\\\  [+_]:=%\\\\} ]<:+{9,4}", "{*1+9 *1+4 *1+9 }");
@@ -149,7 +150,7 @@ NORMTEST("fromHereIdx1", "fromHere indexing string 1", "{111, '222' %^:[_, _, $]
 NORMTEST("fromHereIdx2", "fromHere indexing string 2", "{111, 222, %^:*3+[...] 444, 555, 666, {'hi'}}", "{*1+111 *1+222 *1+555 *1+444 *1+555 *1+666 {\"hi\" } }");
 NORMTEST("fromHereIdxNeg", "fromHere indexing negative", "{111, 222, %^:/3+[...] 444, 555, 666, 777}", "{*1+111 *1+222 *1+777 *1+444 *1+555 *1+666 *1+777 }");
 NORMTEST("simpleAssoc", "Test lists with simple associations", "{ {5, 7, 3, 8} {%\\\\:[_]~ | ...}}", "{{*1+5 *1+7 *1+3 *1+8 } {*1+5 *1+7 *1+3 *1+8 } }");
-/*FAILS*/ NORMTEST("internalAssoc", "Test internal associations", "[ {5, 7, 3, 8} {2 (+(%\\\:[_]~ %\\:[_]~) | ...)}]", "{*1+2 *1+7 *1+14 *1+17 *1+25 }");  // FAIL: Fails when small ListBufCutOff is used.
+/*FAILS*/ NORMTEST("internalAssoc", "Test internal associations", "[ {5, 7, 3, 8} {2 (+(%\\\\\\:[_]~ %\\\\:[_]~) | ...)}]", "{*1+2 *1+7 *1+14 *1+17 *1+25 }");  // FAIL: Fails when small ListBufCutOff is used.
 //NORMTEST("SeqFuncPass", "Test sequential func argument passing", "{{ {5, 7, 3, 8} {addOne<:(%\\\\:[_]~) | ...}}}", "{{{*1+5 *1+7 *1+3 *1+8 } {*1+6 *1+8 *1+4 *1+9 } } }");
 //NORMTEST("Select2ndItem", "Select 2nd item from list", "*2+[...] := {8 7 6 5 4 3}", "*1+7");
 //TEST2("Select item by concept tag: 'third item of ...'", "&thirdItem=*3+[...]", "<{}>");

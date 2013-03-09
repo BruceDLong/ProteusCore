@@ -131,18 +131,18 @@ infon* agent::loadInfonFromString(string ProteusString, infon** inf, bool normIt
     return *inf;
 }
 
-int agent::StartPureTerm(pureInfon* varIn, infon** varOut){ cout<<"==>"<<varIn->flags;
+int agent::StartPureTerm(pureInfon* varIn, infon** varOut){
     infon *tmp; int result;
     if((tmp=varIn->listHead)==0) {cout<<"ZERO\n";return 3;}
     if(!InfIsFirst(tmp)) {return 4;}
-    while(ValueIsConcat(tmp) || ((InfsType(tmp)==tList) && ((varIn->flags&(fEmbedSeq+fConcat+mType))==(fConcat+tList)))){
+    while((InfsType(tmp)==tList) && (ValueIsConcat(tmp) || ((varIn->flags&(fEmbedSeq+fConcat+mType))==(fConcat+tList)))){
         result=StartTerm(tmp, &tmp); cout<<" r:"<<result<<"\n";
         if(result>0) {return result;}
         if(result==-1){
             result=getNextTerm(&tmp);
             if(result!=0) {return result;}
         } else break;
-    } cout<<"<<\n";
+    }
     *varOut=tmp;
     return 0;
 }
@@ -172,9 +172,9 @@ int agent::getNextTerm(infon** p) {
     if (InfIsLast(*p)){
       if(parent==0){(*p)=(*p)->next; return 1;}
       Gparent=getTop(parent);//cout<<"item:"<<(*p)->value.dataHead->get_num()<<"parent->VsFlag"<<VsFlag(parent)<<"  Gparent="<<VsFlag(Gparent)<<"\n";
-      if(ValueIsConcat(parent) || (Gparent && (InfsType(parent)==tList) && ((VsFlag(Gparent)&(fEmbedSeq+fConcat+mType))==(fConcat+tList)))){ cout<<"In A\n";
+      if((InfsType(parent)==tList) && (ValueIsConcat(parent) || (Gparent && ((VsFlag(Gparent)&(fEmbedSeq+fConcat+mType))==(fConcat+tList))))){
         if((result=getNextTerm(&parent))!=0) return result;
-cout<<"In B\n";        (*p)=parent; return 0;
+        (*p)=parent; return 0;
       }
       return -1;
     } else {cout<<"WARN: Bottom-but-not-Last\n"; return -1;} //infon* slug=new infon; slug->wFlag|=nsBottomNotLast; append(slug, parent); (*p)=slug;} /*Bottom but not last, make slug*/
@@ -182,22 +182,11 @@ cout<<"In B\n";        (*p)=parent; return 0;
     (*p)=(*p)->next;
     if ((*p)==0) {return 3;}
     parent=getTop((*p));
-    if(ValueIsConcat(*p) || (parent && (InfsType(*p)==tList) && ((VsFlag(parent)&(fEmbedSeq+fConcat+mType))==(fConcat+tList)))){
+    if((InfsType(*p)==tList) && (ValueIsConcat(*p) || (parent && ((VsFlag(parent)&(fEmbedSeq+fConcat+mType))==(fConcat+tList))))){
         infon* tmp=*p;
         if((result=StartTerm(tmp, p))!=0) {return result;}
     }
-    if (InfIsLast(*p)){     // If isLast && Parent is spec1-of-get-last, get parent, apply any idents
-        if(parent->wFlag&mIsHeadOfGetLast) {
-            parent=parent->top2;
-            infNode *j=parent->wrkList, *k;  // Merge Identity Lists
-            if(j) do {
-                k=new infNode; k->item=new infon; k->idFlags=j->idFlags;
-                deepCopy (j->item, k->item);
-                appendID(&(*p)->wrkList, k);
-                j=j->next;
-            } while (j!=parent->wrkList);
-        }
-    }
+    migrateGetLastIdents(*p);
   }
   return 0;
 }
@@ -438,6 +427,22 @@ void agent::InitList(infon* item) {
     }
 }
 
+void agent::migrateGetLastIdents(infon *i){
+    infon* parent=getTop((i));
+    if (InfIsLast(i)){     // If isLast && Parent is spec1-of-get-last, get parent, apply any idents
+        if(parent->wFlag&mIsHeadOfGetLast) {
+            parent=parent->top2;
+            infNode *j=parent->wrkList, *k;  // Merge Identity Lists
+            if(j) do {
+                k=new infNode; k->item=new infon; k->idFlags=j->idFlags;
+                deepCopy (j->item, k->item);
+                appendID(&(i)->wrkList, k);
+                j=j->next;
+            } while (j!=parent->wrkList);
+        }
+    }
+}
+
 int agent::getFollower(infon** lval, infon* i){
     int levels=0;
     if(!i) return 0;
@@ -447,7 +452,8 @@ int agent::getFollower(infon** lval, infon* i){
         if(i) goto gnsTop;
         else {*lval=0; return levels;}
     }//else if(InfIsBottom(i)) throw "Bottom found but not last when getting follower.";
-    *lval=i; getNextTerm(lval);
+    *lval=i->next;
+    migrateGetLastIdents(*lval);
     if(InfIsVirtual(*lval)) processVirtual(*lval);
     return levels;
 }
@@ -570,7 +576,7 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
                 if(CIFindMode==iToPathH) {  // If no '^', move to first item in list.
                     if(!InfIsTop(newID)) {newID=newID->top; }
                     if (newID==0) {cout<<"Zero TOP in "<< printInfon(CI)<<'\n'; exit(1);}
-                    else if(!InfIsFirst(newID)) {newID=0; cout<<"Top but not First in "<< printInfon(CI)<<'\n';}
+                 //   else if(!InfIsFirst(newID)) {newID=0; cout<<"Top but not First in "<< printInfon(CI)<<'\n';}
                 }
                 if(newID) {CI->wFlag|=mAsProxie; CI->value.proxie=newID; newID->wFlag|=isNormed; CI->wFlag&=~mFindMode; newID=0;}
                 cn->doShortNorm=true;
@@ -765,7 +771,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                         }
                         // MERGE VALUES
                         if(ValueIsKnown(item)){
-                            if ((infTypes== tNum+4*tNum) || (infTypes== tString+4*tString )){
+                            if ((infTypes== tNum+4*tNum) || (infTypes== tString+4*tString )){if (ValueIsConcat(item)) cout << "NUM CONCAT\n";
                                 if(!cpySize && SizeIsKnown(item) && SizeIsKnown(ci) && infonSizeCmp(ci,item)>0) {reject=rNullable; break;}
                                 if(ValueIsUnknown(ci)) {cpyValue=true;}
                                 else if (((cpySize)?infValueCmp(item, ci):infValueCmp(ci, item))!=0) {reject=rInvertable; break;}
@@ -923,7 +929,6 @@ int agent::fetch_NodesNormalForm(QitemPtr cn){
 }
 
 infon* agent::normalize(infon* i, infon* firstID){
-    infon *p, *n, *parent;
 //cout<<printInfon(entry)<<"\n";
     if (i==0) return 0;
     QitemPtr Qi(new Qitem(i,firstID,(firstID)?1:0,0));
@@ -933,7 +938,8 @@ infon* agent::normalize(infon* i, infon* firstID){
         fetch_NodesNormalForm(cn);
         pushNextInfon(CI, cn, ItmQ);
         // Below: handle numeric concats. e.g.: (3 4 5)
-        if((CI != i) && (parent=getTop(CI)) && (InfsType(parent)==tNum) && (InfsFormat(parent)==fConcat) && !InfIsTop(CI) && (InfsType(CI)==tNum) && InfIsLiteralNum(CI->prev) ){
+        infon *p, *n, *parent;
+        while((CI != i) && (parent=getTop(CI)) && (InfsType(parent)==tNum) && (InfsFormat(parent)==fConcat) && !InfIsTop(CI) && (InfsType(CI)==tNum) && InfIsLiteralNum(CI->prev) ){
             if(InfIsLiteralNum(CI)){// Combine with previous...
                 p=CI->prev; n=CI->next;
                 p->next=n; n->prev=p; if(n->pred==CI) n->pred=p;
@@ -943,7 +949,8 @@ infon* agent::normalize(infon* i, infon* firstID){
                     SetValueFormat(parent, fLiteral);
                     parent->value=p->value; parent->size=p->size;
                 }
-            } else {} // subscribe
+            } else {} // TODO: subscribe
+            CI=parent;
         }
     }
     return 0;

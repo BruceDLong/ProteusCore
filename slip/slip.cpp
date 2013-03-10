@@ -488,7 +488,7 @@ void DestroyTurbulancePortal(InfonPortal *portal){
 
 int secondsToRun=1200; // time until the program exits automatically. 0 = don't exit.
 void EXIT(char* errmsg){ERRl(errmsg << "\n"); exit(1);}
-void cleanup(void){SDL_Quit(); shutdownProteusEngine();}   //TODO: Add items to cleanup routine
+void cleanup(void){SDL_Quit(); shutdownProteusCore();}   //TODO: Add items to cleanup routine
 
 enum userActions {TURB_UPDATE_SURFACE=1, TURB_ADD_SCREEN, TURB_DEL_SCREEN, TURB_ADD_WINDOW, TURB_DEL_WINDOW};
 

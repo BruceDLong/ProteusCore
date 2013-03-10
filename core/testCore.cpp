@@ -62,6 +62,54 @@ CAPTURE( expression )
 
 */
 
+#include <strstream>
+#include <iostream>
+#include <fstream>
+
+using namespace std;
+
+#include <string>
+string entryStr;
+infon *topInfon, *Entry;
+int AutoEval(infon* CI, agent* a);
+bool IsHardFunc(string tag);
+
+void RunCore(){
+    char* resourceDir="../resources";
+    char* dbName="proteusData.db";
+    if(initializeProteusCore(resourceDir, dbName)) throw "Could not initialize the Proteus Engine";
+
+    // Load World
+    agent a(0, IsHardFunc, AutoEval);
+    a.locale.createCanonical(locale("").name().c_str());
+    if(a.loadInfon("world.pr", &a.world, true)) exit(1);
+    topInfon=a.world;  // use topInfon in the ddd debugger to view World
+
+    if(sizeof(int)!=4) cout<<"WARNING! int size is "<<sizeof(int)<<" bytes.\n\n";
+    while(!cin.eof()){
+
+entryStr="<% { " + entryStr + " \n} %>";
+        istrstream fin(entryStr.c_str());
+        QParser q(fin); q.agnt=&a;
+        Entry=q.parse(); // cout <<"Parsed.\n";
+        if (Entry) try{
+
+            infon* outerList=Entry;  // This functionality would be better implemented by streamed parsing of world.
+            Entry=Entry->value.listHead; outerList->value.listHead=0; delete outerList;
+
+            if(Entry){
+                Entry->top=0; Entry->next=Entry->prev=0;
+                //a.normalize(Entry); // cout << "Normalizd\n";
+                Entry=a.append(Entry, a.world);
+            } else continue;
+        } catch (char const* errMsg){cout<<errMsg<<"\n";}
+
+        if (Entry) cout<<"\n"<<a.printInfon(Entry)<<"\n\n";
+        else {cout<<"\nError: "<<q.buf<<"\n\n";}
+    }
+    shutdownProteusCore();
+}
+
 
 #define ST_TEST(IN, OUT) REQUIRE( a.loadInfonFromString(IN, &in, 0) != 0 ); REQUIRE( a.StartTerm(in, &out) == 0 ); s=a.printInfon(out); CAPTURE(s); CHECK(s == OUT);
 TEST_CASE( "agent/StartTerm", "Test agent::StartTerm()" ) {

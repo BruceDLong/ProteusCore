@@ -110,6 +110,6 @@ int main(int argc, char **argv){
         if (Entry) cout<<"\n"<<a.printInfon(Entry)<<"\n\n";
         else {cout<<"\nError: "<<q.buf<<"\n\n";}
     }
-    shutdownProteusEngine();
+    shutdownProteusCore();
     return 0;
 }

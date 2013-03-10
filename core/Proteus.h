@@ -101,7 +101,7 @@ xlater* fetchXlater(icu::Locale *locale);
 typedef map<string, xlater*> LanguageExtentions;
 extern LanguageExtentions langExtentions;
 extern int initializeProteusCore(char* resourceDir, char* dbName);
-extern void shutdownProteusEngine();
+extern void shutdownProteusCore();
 extern int calcScopeScore(string wrdS, string trialS);
 
 ///////////////////  INFON RELATED ITEMS  ///////////////////

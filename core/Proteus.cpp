@@ -64,7 +64,7 @@ int initializeProteusCore(char* resourceDir, char* dbName){     // Use this to l
     return 0;
 }
 
-void shutdownProteusEngine(){
+void shutdownProteusCore(){
     sqlite3_close(coreDatabase);
 }
 

@@ -19,19 +19,34 @@ NOTE: This script (./CMakeLists.txt) needs some love. There are 3 or 4 places wh
 
 
 
-BUILDING amd RUNNING clip -- The Proteus engine and CLI for Proteus
+BUILDING amd RUNNING clip -- A CLI for The Proteus Core
 #######################################################
+
+Proteus requires a C++11 compiler such as gcc 4.7+. At last check, the CLANG compiler did not work.
 
 cd ./ProteusCore/core
 cmake .
 make
+
+The first time you will need to generate the concept database:
+
+cd ../lang
+./generateDB
+
+RUN THE CLI:
+
 ./clip
+
 
 TESTING THE BUILD:
 
-    To test the build see the file ./core/README_TO_TEST_BUILDS.
+make && ctest --timeout 4 -j6 --output-on-failure
 
+OR:
 
+./M
+
+To add tests or see the names for specific tests see testCore.cpp and CMakeTests.txt.
 
 BUILDING slip -- The Slipstream engine (GUI)
 ############################################

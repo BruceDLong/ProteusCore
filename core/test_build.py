@@ -57,9 +57,9 @@ def test_engine():
    #('1', 'Addition with reverse references', r'{4, 6, (%\\:[_] %\\:[_, _] )}', '{*1+4 *1+6 *1+10 }'),
    #('1', 'A two argument function', r'[+{_, _} +{[+_]:=%\\ [+_ +_]:=%\\  [+_]:=%\\} ]<:+{9,4}', '{*1+9 *1+4 *1+9 }'),
 
-   ('2', 'define and use a tag', '&color=#{*_+_ *_+_ *_+_}  &size=#*_+_', '<{}>', 'color', '#{_ _ _ }'),
-   ('2', "nested empty tags", r'&frame = {?|...}  &portal = {frame|...}', '<{}>', 'portal=*4+{frame|...}', '{{...} {...} {...} {...} }'),
-   ('2', 'Two argument function defined with a tag', r'&func={+{_, _} +{%\\:[_] %\\:[_, _]  %\\:[_]}}  ', '<{}>', 'func<: +{9,4}', '{*1+9 *1+4 *1+9 }'),
+   #('2', 'define and use a tag', '&color=#{*_+_ *_+_ *_+_}  &size=#*_+_', '<{}>', 'color', '#{_ _ _ }'),
+   #('2', "nested empty tags", r'&frame = {?|...}  &portal = {frame|...}', '<{}>', 'portal=*4+{frame|...}', '{{...} {...} {...} {...} }'),
+   #('2', 'Two argument function defined with a tag', r'&func={+{_, _} +{%\\:[_] %\\:[_, _]  %\\:[_]}}  ', '<{}>', 'func<: +{9,4}', '{*1+9 *1+4 *1+9 }'),
    #('1', 'Simple parsing 1', r'{*_ +{"A"|...} "AARON"} ==  "AAAARON" // This is a comment', '{{"A" "A" } "AARON" }'),
    #('1', 'Parse & select option 2', r'[...]="ARONdacks" :== {"AARON" "ARON"} ', '"ARON"'),
    #('1', 'Parse & select option 1', r'[...]="AARONdacks" :== {"AARON" "ARON"} ', '"AARON"'),
@@ -80,22 +80,22 @@ def test_engine():
 
     #('1', "Test lists with simple associations", r'{ {5, 7, 3, 8} {%\\:[_]~ | ...}}', r'{{*1+5 *1+7 *1+3 *1+8 } {*1+5 *1+7 *1+3 *1+8 } }'),
     ('1', "Test internal associations", r'[ {5, 7, 3, 8} {2 (+(%\\\:[_]~ %\\:[_]~) | ...)}]', r'{*1+2 *1+7 *1+14 *1+17 *1+25 }'), # FAIL: Fails when small ListBufCutOff is used.
-    ('1', "Test sequential func argument passing", r'{ {5, 7, 3, 8} {addOne<:(%\\:[_]~) | ...}}', '{{*1+5 *1+7 *1+3 *1+8 } {*1+6 *1+8 *1+4 *1+9 } }'),
+    #('1', "Test sequential func argument passing", r'{ {5, 7, 3, 8} {addOne<:(%\\:[_]~) | ...}}', '{{*1+5 *1+7 *1+3 *1+8 } {*1+6 *1+8 *1+4 *1+9 } }'),
 
-    ('1', "Select 2nd item from list", r'*2+[...] := {8 7 6 5 4 3}', '*1+7'),
-    ('2', "Select item by concept tag: 'third item of ...'", r'&thirdItem=*3+[...]', '<{}>', 'thirdItem := {8 7 6 5 4 3}', '*1+6'),
+    #('1', "Select 2nd item from list", r'*2+[...] := {8 7 6 5 4 3}', '*1+7'),
+    #('2', "Select item by concept tag: 'third item of ...'", r'&thirdItem=*3+[...]', '<{}>', 'thirdItem := {8 7 6 5 4 3}', '*1+6'),
 
     #('1', "Test simple filtering", r'{[_ _]|...} ::= {8 7 6 5 4 3}', '{*1+7 *1+5 *1+3 }'),
-    ('2', "filtering with a concept-tag", r'&everyOther={*2+[...]|...}', '<{}>', 'everyOther ::= {8 7 6 5 4 3}', '{*1+7 *1+5 *1+3 }'),
+    #('2', "filtering with a concept-tag", r'&everyOther={*2+[...]|...}', '<{}>', 'everyOther ::= {8 7 6 5 4 3}', '{*1+7 *1+5 *1+3 }'),
     ('1', 'Filtering with a list', "{[? ?]|...} ::= {111, '222', '333', 444, {'hi'}, {'a', 'b', 'c'}}", '{"222" *1+444 {"a" "b" "c" } }'), #FAIL: {"222" *1+444 0; "b" 0; }
 
     #('1', "Test internal find-&-write", r'{4 5 _ 7} =: [_ _ 6]', '{*1+4 *1+5 *1+6 *1+7 }'),
     #('1', "Test external find-&-write", r'{4 5 _ 7} =: ([???]=6)', '{*1+4 *1+5 *1+6 *1+7 }'),
-    ('2', "Test tagged find-&-write", r'&setToSix=([???]=6)', '{; }', r'{4 5 _ 7} =: setToSix', '{*1+4 *1+5 *1+6 *1+7 }'),
-    ('2', "Test chained find-by-type", "&partX=44 \n &partZ=88 \n &obj={partX, partZ}", '', "obj \n %W:<obj>:<partZ>", '88'),
-    ('2', "Test chained write-by-type", "&partX=_  &partZ=_  &obj={partX, partZ}", '', "obj \n %W:<obj>:(<partZ>=77) \n %W:<obj>", '{_ 77 }'),
-    ('2', "Test set-by-type", r'&partX=44  &partZ=_  &obj={partX, partZ==(%\\^:<partX>)}', '', "obj \n {%W:<obj>}", '{{*1+44 44 } }'),
-    ('2', "Test write&set-by-type", r'&partX=_  &partZ=_  &obj={partX, partZ==(%\\^:<partX>)}', '', "obj \n %W:<obj>:(<partX>==123) \n {%W:<obj>}", '{{123 123 } }')
+    #('2', "Test tagged find-&-write", r'&setToSix=([???]=6)', '{; }', r'{4 5 _ 7} =: setToSix', '{*1+4 *1+5 *1+6 *1+7 }'),
+    #('2', "Test chained find-by-type", "&partX=44 \n &partZ=88 \n &obj={partX, partZ}", '', "obj \n %W:<obj>:<partZ>", '88'),
+    #('2', "Test chained write-by-type", "&partX=_  &partZ=_  &obj={partX, partZ}", '', "obj \n %W:<obj>:(<partZ>=77) \n %W:<obj>", '{_ 77 }'),
+    #('2', "Test set-by-type", r'&partX=44  &partZ=_  &obj={partX, partZ==(%\\^:<partX>)}', '', "obj \n {%W:<obj>}", '{{*1+44 44 } }'),
+    #('2', "Test write&set-by-type", r'&partX=_  &partZ=_  &obj={partX, partZ==(%\\^:<partX>)}', '', "obj \n %W:<obj>:(<partX>==123) \n {%W:<obj>}", '{{123 123 } }')
 
     # TEST: Find (big red bike)
     # TEST: Find (very red bike)

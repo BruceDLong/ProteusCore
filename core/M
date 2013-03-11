@@ -1,1 +1,1 @@
-cmake . && make && nosetests --processes=8 test_build.py
+make && ctest --timeout 4 -j6 --output-on-failure

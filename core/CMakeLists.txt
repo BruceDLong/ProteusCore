@@ -30,9 +30,4 @@ target_link_libraries(testCore ${PROTEUS_LIBS})
 
 ##############################################3
 ## Tests
-ENABLE_TESTING()
-#define a macro to simplify adding tests, then use it
-#macro (do_test arg result)
-#  add_test (TutorialComp${arg} test ${arg})
-#  set_tests_properties (TutorialComp${arg} PROPERTIES PASS_REGULAR_EXPRESSION ${result})
-#endmacro (do_test)
+INCLUDE(CMakeTests.txt)

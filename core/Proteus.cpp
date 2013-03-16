@@ -83,7 +83,9 @@ int calcScopeScore(string wrdS, string trialS){
 
 infon* infon::isntLast(){ // 0=this is the last one. >0 = pointer to predecessor of the next one.
     if (!InfIsLast(this)) return this;
-    infon* parent=getTop(this); infon* gParent=getTop(parent);
+    infon* parent=getTop(this);
+    if(SizeIsLiteral(parent)){}
+    infon* gParent=getTop(parent);
     if(gParent && ValueIsConcat(gParent))
         return parent->isntLast();
     return 0;
@@ -151,8 +153,8 @@ int agent::StartTerm(infon* varIn, infon** varOut) {
 // Return 0 on success, -1 on End-Of-List, or a positive error code.
     if(varIn==0) return 1;
     if(InfsType(varIn)!=tList) return 2;
-    if((varIn->size.flags&(tNum+fLiteral))==(tNum+fLiteral) && varIn->size.dataHead->get_num()==0) return -1; //EOL
-    InitList(varIn);
+    if(((varIn->size.flags&(tNum+fLiteral))==(tNum+fLiteral) && varIn->size.dataHead->get_num()==0)||!varIn->value.listHead) return -1; //EOL
+//    InitList(varIn);
     return StartPureTerm(&varIn->value, varOut);
 }
 
@@ -184,9 +186,10 @@ int agent::getNextTerm(infon** p) {
     parent=getTop((*p));
     if((InfsType(*p)==tList) && (ValueIsConcat(*p) || (parent && ((VsFlag(parent)&(fEmbedSeq+fConcat+mType))==(fConcat+tList))))){
         infon* tmp=*p;
-        if((result=StartTerm(tmp, p))!=0) {return result;}
+        if((result=StartTerm(tmp, p))>0) {return result;}
+        else if(result==-1){if((result=getNextTerm(p))!=0) return result;}
     }
-    migrateGetLastIdents(*p);
+   // migrateGetLastIdents(*p);
   }
   return 0;
 }
@@ -246,8 +249,8 @@ infon* agent::gListNxt(infon** ItmPtr){
 }
 infon* entry;
 ///////////// Routines for copying, appending, etc.
-infon* agent::append(infon* i, infon* list){ // appends an item to the end of a tentative list
-    entry=i;
+infon* agent::append(infon** i, infon* list){ // appends an item to the end of a tentative list
+    entry=*i;
     if(! (list && list->value.listHead && list->value.listHead->prev)) return 0;
     infon *last=list->value.listHead->prev;
     infon *p=last, *q;
@@ -256,10 +259,13 @@ infon* agent::append(infon* i, infon* list){ // appends an item to the end of a 
     } while(p!=last && InfIsVirtTent(p));
     if(!(q && InfIsVirtTent(q))) return 0;
     if(InfIsVirtual(q)) processVirtual(q);
-    copyTo(i, q); if(InfsType(q)==tList && q->value.listHead) q->value.listHead->top=q;
-    q->spec1=i->spec1; q->spec2=i->spec2; q->wrkList=i->wrkList;
+    copyTo(*i, q);
+    if(q->value.listHead) q->value.listHead->top=q;
+    if(q->size.listHead ) q->size.listHead->top=q;
+    q->spec1=(*i)->spec1; q->spec2=(*i)->spec2; q->wrkList=(*i)->wrkList;
     ResetVirtTent(q);
     if(q->type && q->type->norm!="") (*list->index)[q->type->norm]=q;
+    *i=q;
     normalize(q);
     return q;
 }
@@ -348,8 +354,9 @@ void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags){
     infNode *p=from->wrkList, *q;  // Merge Identity Lists
     if(p) do {
         q=new infNode; q->idFlags=p->idFlags;
-        if((p->item->wFlag&mFindMode)<iAssocNxt && (p->item->wFlag&mFindMode)>iNone) {q->item=new infon; q->idFlags=p->idFlags; deepCopy(p->item,q->item,ptrs,flags);}
-        else {q->item=p->item;}
+        if(1||(p->item->wFlag&mFindMode)<iAssocNxt && (p->item->wFlag&mFindMode)>iNone) {
+            q->item=new infon; q->idFlags=p->idFlags; deepCopy(p->item,q->item,ptrs,flags);
+        } else {q->item=p->item;}
         prependID(&to->wrkList, q);
         p=p->next;
     } while (p!=from->wrkList);
@@ -610,7 +617,6 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
 
                     QitemPtr Qi(new Qitem(infToSearch));
                     fetch_NodesNormalForm(Qi);
-              //      normalize(infToSearch);
                     if (infToSearch->wFlag&mAsProxie) {infToSearch=infToSearch->value.proxie;}
                     else if(wrkNode->idFlags&c1Right){
                         if(infToSearch->spec1){infToSearch=infToSearch->spec1;} else throw "Right side was not a reference ";
@@ -722,7 +728,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             break;
         case MergeIdent:
             wrkNode->idFlags|=SetComplete; IDfol=0;
-            if(!InfIsNormed(item) && ((item->wFlag&mFindMode)!=iNone || (item->wrkList && !InfIsNormed(item)))) { // Norm item. esp %W, %//^
+            if(!InfIsNormed(item) && ((item->wFlag&mFindMode)!=iNone || (item->wrkList))) { // Norm item. esp %W, %//^
                 if(item->top==0) {item->top=ci->top;}
                 QitemPtr Qi(new Qitem(item));
                 fetch_NodesNormalForm(Qi); item->wFlag|=isNormed;
@@ -806,7 +812,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
 
                 break;
                 case tString+4*tList:
-                case tNum+4*tList: InitList(item); cout<<"GOING INTO:"<<printInfon(item->value.listHead)<<"\n";  addIDs(ci,item->value.listHead,looseType, asAlt); linkCIFol=false; result=DoNext;break; // this should probably be insertID not addIDs. Check it out.
+                case tNum+4*tList: InitList(item); addIDs(ci,item->value.listHead,looseType, asAlt); linkCIFol=false; result=DoNext;break; // this should probably be insertID not addIDs. Check it out.
 
                 case tList+4*tUnknown:
                 case tList+4*tString:
@@ -820,16 +826,18 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                 else { reject=rNullable; linkCIFol=false;}
             } else if (!reject){ // Not inverted acceptance
                 if (cpySize)  ci->size=item->size;
-                if (cpyValue) ci->value=item->value; //  do we ever need to also copy wFlags and type fields?
+                if (cpyValue) {ci->value=item->value; if(item->top==0 && ci->value.listHead) ci->value.listHead->top=ci;} //  do we ever need to also copy wFlags and type fields?
                 if (resetCIsTentative) ResetTent(ci);
             }
-            if(linkCIFol && CIfol){
+            if(linkCIFol && CIfol){ // Here is where we connect any remainder-of-item or item's follower to CI's follower.
                 if(infonSizeCmp(ci,item)==0 || (infTypes!= tString+4*tString)){
                     level=((IDfol)?0:getFollower(&IDfol, item));
                     if(IDfol){if(level==0) addIDs(CIfol, IDfol, looseType, asAlt); else reject=rReject;}
                     else  if( (infTypes!= tList+4*tList)) {// temporary hack but it works ok.
-                        if ((tmp=ci->isntLast()) && InfIsTentative(tmp->next)) {reject=rNullable;}
-                        if((tmp=getMasterList(ci) )){closeListAtItem(tmp); if(!reject) reject=rReject; }
+                        // If there is no IDFol, perhaps ci is the last item in its list.
+                            if ((tmp=ci->isntLast()) && InfIsTentative(tmp->next)) {reject=rNullable;}
+                            if(!tmp || !SizeIsKnown(getTop(tmp)))
+                                if ((tmp=getMasterList(ci) )){closeListAtItem(tmp); if(!reject) reject=rReject; }
                     }
                 } else if((infTypes== tString+4*tString) && infonSizeCmp(ci,item)<0){
                     BigInt cSize=ci->getSize();
@@ -881,27 +889,6 @@ void agent::pushNextInfon(infon* CI, QitemPtr cn, infQ &ItmQ){
     }
 }
 
-infon* agent::Normalize(infon* i, infon* firstID){
-    infon *CI;
-    if (i==0) return 0;
-    infQ ItmQ; ItmQ.push(QitemPtr(new Qitem(i,firstID,(firstID)?1:0,0)));
-    while (!ItmQ.empty()){
-        QitemPtr cn=ItmQ.front(); ItmQ.pop(); CI=cn->item; cn->doShortNorm=0;
-        //// PARSE: if empty and stream is attached,
-        if(CI->wFlag&nsBottomNotLast) return 0;
-        prepWorkList(CI, &*cn);
-        if (cn->doShortNorm) return 0;
-        if((CI->wFlag&mFindMode)==0 && cn->IDStatus==2)
-            {cn->IDStatus=0; insertID(&CI->wrkList,cn->firstID,0);}
-        if(InfsType(CI)==tList){InitList(CI);}
-        cn->nxtLvl=getFollower(&cn->CIfol, CI);
-        if(InfAsDesc(CI) && !cn->override) cn->whatNext=DoNext;
-        else cn->whatNext=doWorkList(CI, cn->CIfol);
-        pushNextInfon(CI, cn, ItmQ);
-    }
-    return (InfIsNormed(i))?i:0;
-};
-
 int agent::fetch_NodesNormalForm(QitemPtr cn){
         int result=0; cn->CI=cn->item;
         if(cn->item->wFlag&nsBottomNotLast) return 0;
@@ -944,8 +931,9 @@ infon* agent::normalize(infon* i, infon* firstID){
                 p=CI->prev; n=CI->next;
                 p->next=n; n->prev=p; if(n->pred==CI) n->pred=p;
                 p->join(CI);
-                if(CI->wFlag&(isLast+isBottom)) p->wFlag|=(CI->wFlag&(isLast+isBottom));
+                p->wFlag|=(CI->wFlag&(isLast+isBottom));
                 if(InfIsFirst(p) && p->next==p) {// Remove one layer
+                cout<<"HERE! "<<printInfon(parent)<<" p:"<<p<<"  parent:"<<parent<<"\n";
                     SetValueFormat(parent, fLiteral);
                     parent->value=p->value; parent->size=p->size;
                 }

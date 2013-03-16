@@ -38,12 +38,12 @@ string agent::printPure (pureInfon* i, UInt wSize, infon* CI){
     if(type==tList || doAsList){
         s+=(FormatIsConcat(f) || (f&fEmbedSeq))?"(":"{";
         if(1 /*or mode == NormForm*/){
-        //    if(wSize>0){
+            if(i->listHead){
                 for(int result=StartPureTerm(i, &p); result==0; result=getNextTerm(&p)){
                     if(InfIsTentative(p)) {s+="..."; break;}
                     else {s+=printInfon(p, CI); s+=' ';}
                 }
-         //   }
+            }
 
         } else{ // print lists to show structure
             for(infon* p=i->listHead;p;) {

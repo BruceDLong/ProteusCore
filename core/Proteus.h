@@ -53,6 +53,7 @@ enum wMisc {noAlts=0, hasAlts=0x10000000, noMoreAlts=0x20000000, isTentative=0x4
 #define SizeIsUnknown(inf)    ((((inf)->size.flags & mFormat))==fUnknown)
 #define SizeIsKnown(inf)      ((((inf)->size.flags & mFormat))!=fUnknown)
 #define SizeIsConcat(inf)     ((((inf)->size.flags & mFormat))==fConcat)
+#define SizeIsLiteral(inf)     ((((inf)->size.flags & mFormat))==fLiteral)
 #define ValueIsUnknown(inf)   (((inf)->value.flags & mFormat)==fUnknown)
 #define ValueIsKnown(inf)     (((inf)->value.flags & mFormat)!=fUnknown)
 #define ValueIsConcat(inf)    (((inf)->value.flags & mFormat)==fConcat)
@@ -213,12 +214,11 @@ struct agent {
     double gRealNxt(infon** ItmPtr);
     char* gStrNxt(infon** ItmPtr, char*txtBuff);
     infon* gListNxt(infon** ItmPtr);
-    infon* append(infon* i, infon* list);
+    infon* append(infon** i, infon* list);
     int checkTypeMatch(WordSPtr LType, WordSPtr RType);
     int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
     void prepWorkList(infon* CI, Qitem *cn);
     infon* normalize(infon* i, infon* firstID=0);
-   infon* Normalize(infon* i, infon* firstID=0);
     infon *world, context;
     icu::Locale locale;
     void* utilField; // Field for application specific use.

@@ -28,6 +28,9 @@ TEST_CASE( "agent/StartTerm", "Test agent::StartTerm()" ) {
 }
 
 #define PARSETEST(NAME, MSG, IN, OUT) TEST_CASE(NAME, MSG){agent a; infon *in; string s;  INFO(MSG); REQUIRE( a.loadInfonFromString(IN, &in, 0) != 0 ); s=a.printInfon(in); CAPTURE(s); CHECK(s == OUT);}
+#define NORMTEST(NAME, MSG, IN, OUT) TEST_CASE(NAME, MSG){agent a; infon *in; string s; REQUIRE( a.loadInfonFromString(IN, &in, 1) != 0 ); s=a.printInfon(in); CAPTURE(s); CHECK(s == OUT);}
+#define NORMTEST2(NAME, MSG, IN1, IN2, OUT) TEST_CASE(NAME, MSG){agent *a=0; string s; string in=IN1; CAPTURE(in);s=normToWorld(&a, in);s=normToWorld(&a, IN2); REQUIRE(s == OUT); shutdownProteusCore(); delete a;}
+#define MULTITEST(NAME, MSG, SPEC) TEST_CASE(NAME, MSG){agent *a=0; string s; multiNorm(&a, SPEC); shutdownProteusCore();}
 
 PARSETEST("parse/num",     "parse a number",       "*2589+654321", "*2589+654321");
 PARSETEST("parse/hexnum",  "parse a hex number",   "0xabcd1234", "*1+2882343476");
@@ -36,10 +39,6 @@ PARSETEST("parse/largenum","parse a large number", "1234567890098765432112345678
 PARSETEST("parse/string",  "Parse a string",       R"(+"HELLO")", R"("HELLO")");
 PARSETEST("parse/list",    "parse a list",         R"(+{123, 456, "Hello there!", {789, 321}})", R"({*1+123 *1+456 "Hello there!" {*1+789 *1+321 } })");
 
-
-#define NORMTEST(NAME, MSG, IN, OUT) TEST_CASE(NAME, MSG){agent a; infon *in; string s; REQUIRE( a.loadInfonFromString(IN, &in, 1) != 0 ); s=a.printInfon(in); CAPTURE(s); CHECK(s == OUT);}
-#define NORMTEST2(NAME, MSG, IN1, IN2, OUT) TEST_CASE(NAME, MSG){agent *a=0; string s; string in=IN1; CAPTURE(in);s=normToWorld(&a, in);s=normToWorld(&a, IN2); REQUIRE(s == OUT); shutdownProteusCore(); delete a;}
-#define MULTITEST(NAME, MSG, SPEC) TEST_CASE(NAME, MSG){agent *a=0; string s; multiNorm(&a, SPEC); shutdownProteusCore();}
 
 NORMTEST("merge/num/typed1", "typed int merge 1", "*16+10 = *16+10", "*16+10");
 NORMTEST("merge/num/typed2", "typed int merge 2", "*16+_ = *16+9", "*16+9");
@@ -71,7 +70,15 @@ NORMTEST("merge/list/typed5", "typed list merge 5", "{...} = {2 3 4 ...}", "{*1+
 
 ///////////////////////////////////////////////////////////
 
-NORMTEST("strCat1", "Test string concatenation", R"(('Hello' ' THere!' (' How' ' are' (' you' ' Doing') '?')))", R"("Hello THere! How are you Doing?")");
+NORMTEST("concat/strCat", "Test string concatenation", R"(('Hello' ' THere!' (' How' ' are' (' you' ' Doing') '?')))", R"("Hello THere! How are you Doing?")");
+/*FAIL*/ NORMTEST("concat/parseSrc", "Parse a concatenated string", "[*4+$ *10+$] :== ('DO' 'gsTin' 'tinabulation')", R"("Tintinabul")");  // FAILS until better concat support
+NORMTEST("concat/numCat", "Test nested integer concatenation", "((*5+2 *6+3 (*7+4 *8+5 (*9+6 *10+7) 8)))", "*151200+5829248888");
+/*FAIL*/ NORMTEST("concat/listCat", "Test nested list concatenation", "(({2 3} {} {3} ({4 5} ({} {6 7}) {8} {})))", "(*1+2 *1+3 *1+3 *1+4 *1+5 *1+6 *1+7 *1+8)"); // See issues on github
+NORMTEST("concat/EmbedSeq", "Test Embedded Seq concatenation", "{2 3 (4,5,6) 7 8}", "{*1+2 *1+3 *1+4 *1+5 *1+6 *1+7 *1+8 }");
+/*TODO*/ NORMTEST("concat/toNum", "Convert strings and lists to numbers", "", "");
+/*TODO*/ NORMTEST("concat/toStr", "Convert numbers and lists to strings", "", "");
+/*TODO*/ NORMTEST("concat/sizeTst","Test calculation of the size of concats", "", "");
+
 NORMTEST("parse3n4", "Parse: 3 char then 4 char strings", R"(+{*3+$ *4+$} == 'CatDogs')", R"({"Cat" "Dogs" })");
 NORMTEST("anonFunc1", "test anon functions", R"([_,456,789,] <: +123)", "*1+789");
 NORMTEST("anonFunc2", "Try a bigger function", R"([+_ ({555, 444, [_] := %\\},)] <: +7000)", "{*1+555 *1+444 *1+7000 }");
@@ -99,18 +106,17 @@ NORMTEST("parse2ItmsGet1st", "Two item parse, get first option", "{[...] :== {'A
 //   # Add the above test but with a list in the comprehension yeild.
 NORMTEST("simpleParse2", "Simple Parsing 2", "{*3+$|...}=='CatHatBatDog' ", R"({"Cat" "Hat" "Bat" "Dog" })");
 NORMTEST("innerParse1", "Inner parsing 1", "{ {*3+$}|...}='CatHatBatDog' ", R"({{"Cat" } {"Hat" } {"Bat" } {"Dog" } })");
- /*FAILS*/ NORMTEST("ParseConcat", "Parse a concatenated string", "[*4+$ *10+$] :== ('DO' 'gsTin' 'tinabulation')", R"("Tintinabul")");  // FAILS until better concat support
 NORMTEST("fromHereIdx1", "fromHere indexing string 1", "{111, '222' %^:[_, _, $] 444, '555', 666, {'hi'}}", R"({*1+111 "222" "555" *1+444 "555" *1+666 {"hi" } })");
 NORMTEST("fromHereIdx2", "fromHere indexing string 2", "{111, 222, %^:*3+[...] 444, 555, 666, {'hi'}}", R"({*1+111 *1+222 *1+555 *1+444 *1+555 *1+666 {"hi" } })");
 NORMTEST("fromHereIdxNeg", "fromHere indexing negative", "{111, 222, %^:/3+[...] 444, 555, 666, 777}", "{*1+111 *1+222 *1+777 *1+444 *1+555 *1+666 *1+777 }");
 NORMTEST("simpleAssoc", "Test lists with simple associations", R"({ {5, 7, 3, 8} {%\\:[_]~ | ...}})", "{{*1+5 *1+7 *1+3 *1+8 } {*1+5 *1+7 *1+3 *1+8 } }");
-/*FAILS*/ NORMTEST("internalAssoc", "Test internal associations", R"([ {5, 7, 3, 8} {2 (+(%\\\:[_]~ %\\:[_]~) | ...)}])", "{*1+2 *1+7 *1+14 *1+17 *1+25 }");  // FAIL: Fails when small ListBufCutOff is used.
+/*FAIL*/ NORMTEST("internalAssoc", "Test internal associations", R"([ {5, 7, 3, 8} {2 (+(%\\\:[_]~ %\\:[_]~) | ...)}])", "{*1+2 *1+7 *1+14 *1+17 *1+25 }");  // FAIL: Fails when small ListBufCutOff is used.
 MULTITEST("seqFuncPass", "Test sequential func argument passing", R"({{ {5, 7, 3, 8} {addOne<:(%\\:[_]~) | ...}}} //:{{{*1+5 *1+7 *1+3 *1+8 } {*1+6 *1+8 *1+4 *1+9 } } })");
 NORMTEST("select2ndItem", "Select 2nd item from list", "*2+[...] := {8 7 6 5 4 3}", "*1+7");
 NORMTEST2("tags/selByTag", "Select item by concept tag: 'third item of ...'", "&thirdItem=*3+[...]", "thirdItem := {8 7 6 5 4 3}", "*1+6");
 NORMTEST("simpleFilter", "Test simple filtering", "{[_ _]|...} ::= {8 7 6 5 4 3}", "{*1+7 *1+5 *1+3 }");
 NORMTEST2("tags/FilterByTag","filtering with a concept-tag", "&everyOther={*2+[...]|...}", "everyOther ::= {8 7 6 5 4 3}", "{*1+7 *1+5 *1+3 }");
-NORMTEST("filterList", "Filtering with a list", "{[? ?]|...} ::= {111, '222', '333', 444, {'hi'}, {'a', 'b', 'c'}}", R"({"222" *1+444 {"a" "b" "c" } })");  //FAIL: {"222" *1+444 0; "b" 0; }
+/*FAIL*/ NORMTEST("filterList", "Filtering with a list", "{[? ?]|...} ::= {111, '222', '333', 444, {'hi'}, {'a', 'b', 'c'}}", R"({"222" *1+444 {"a" "b" "c" } })");  //FAIL: {"222" *1+444 0; "b" 0; }
 NORMTEST("internalWrite", "Test internal find-&-write", "{4 5 _ 7} =: [_ _ 6]", "{*1+4 *1+5 *1+6 *1+7 }");
 NORMTEST("externalWrite", "Test external find-&-write", "{4 5 _ 7} =: ([???]=6)", "{*1+4 *1+5 *1+6 *1+7 }");
 NORMTEST2("tags/find-n-write","Test tagged find-&-write", "&setToSix=([???]=6)", "{4 5 _ 7} =: setToSix", "{*1+4 *1+5 *1+6 *1+7 }");
@@ -118,6 +124,20 @@ MULTITEST("byType/findChain","Test chained find-by-type", "&partX=44 \n &partZ=8
 MULTITEST("byType/writeChain","Test chained write-by-type", "&partX=_  &partZ=_  &obj={partX, partZ} \n obj \n %W:<obj>:(<partZ>=77) \n %W:<obj> //:{_ 77 }");
 MULTITEST("byType/set","Test set-by-type", "&partX=44 \n &partZ=_ \n &obj={partX, partZ==(%\\\\^:<partX>)} \n obj \n {%W:<obj>} //:{{*1+44 44 } }");
 MULTITEST("byType/write-n-set","Test write&set-by-type", "&partX=_ \n  &partZ=_ \n &obj={partX, partZ==(%\\\\^:<partX>)} \n obj \n %W:<obj>:(<partX>==123) \n {%W:<obj>} //:{{123 123 } }");
+
+//MULTITEST("causes/simpleParts", "Two synchronized parts", "&wheelPosA=_ \n &wheelPosB=_ \n &bike={wheelPosA, wheelPosB==(%\\^:<wheelPosA>)} \n bike     //:{_ _ } \n %W:<bike>:<wheelPosA> = 90  //:90 \n %W:<bike>:<wheelPosA>       //:90 \n %W:<bike>   //:{90 90  }");
+
+/*
+&wheelPosA=_
+&wheelPosB=_
+&bike={wheelPosA, wheelPosB==(%\\^:<wheelPosA>)}
+bike     //:{_ _ }
+%W:<bike>:<wheelPosA> = 90  //:90
+%W:<bike>:<wheelPosA>       //:90
+%W:<bike>   //:{90 90 }
+
+
+)");*/
 /*
     # TEST: Find (big red bike)
     # TEST: Find (very red bike)
@@ -169,7 +189,7 @@ string normToWorld(agent** a, string entryStr){
         Entry=Entry->value.listHead; outerList->value.listHead=0; delete outerList;
         if(Entry){
             Entry->top=0; Entry->next=Entry->prev=0;
-            Entry=(*a)->append(Entry, (*a)->world);
+            Entry=(*a)->append(&Entry, (*a)->world);
         } else ret= "NULL ENTRY";
     } catch (char const* errMsg){ret= errMsg;}
 

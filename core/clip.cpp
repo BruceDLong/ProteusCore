@@ -101,9 +101,9 @@ int main(int argc, char **argv){
             Entry=Entry->value.listHead; outerList->value.listHead=0; delete outerList;
 
             if(Entry){
-                Entry->top=0; Entry->next=Entry->prev=0;
+                Entry->top=0; Entry->next=Entry->prev=0; cout<<"ENTRY-a:"<<Entry<<"  ";
                 //a.normalize(Entry); // cout << "Normalizd\n";
-                Entry=a.append(Entry, a.world);
+                Entry=a.append(&Entry, a.world);  cout<<"ENTRY-b:"<<Entry<<"\n";
             } else continue;
         } catch (char const* errMsg){cout<<errMsg<<"\n";}
 

@@ -72,8 +72,12 @@ catchTest(  byType/findChain)
 catchTest(  byType/writeChain)
 catchTest(  byType/set)
 catchTest(  byType/write-n-set)
+catchTest(  repeat/withIdent)
+catchTest(  repeat/innerIdent)
 
-
+catchTest(causes/simpleParts)
+catchTest(causes/simpleParts2)
+catchTest(time/constVelocity)
 
 #define a macro to simplify adding tests, then use it
 #macro (do_test arg result)

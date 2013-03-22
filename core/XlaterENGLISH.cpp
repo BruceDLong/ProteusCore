@@ -739,7 +739,7 @@ void Burser::submitWord(WordSPtr word){
         } else {
             string term=stateItm->nextTerm();
             if (term[0]!='$' && term[0]!='%') { // For terminals (Scan)
-                if (word && word->norm == term) { cout<<"MATCH:"<<term<<"\n";
+                if (word && word->norm == term) {// cout<<"MATCH:"<<term<<"\n";
                     pushArcToChart(chart[i+1], ArcPtr(
                         new bArc(i, stateItm->rule, stateItm->dotPos+1, i+1)
                         ));
@@ -922,7 +922,7 @@ void XlaterENGLISH::findDefinitions(WordS& words){
         //tmp    cout<<"TRIAL: '"<<trial<<"'\n";
             while(trial.substr(0,keyLen) == wordKey){
                 stopSearch=false;
-                if(trial[keyLen]=='%'){cout<<"\tMATCH: "<<trial<<"  "<<trialItr->second->flags2<<"\n";
+                if(trial[keyLen]=='%'){//cout<<"\tMATCH: "<<trial<<"  "<<trialItr->second->flags2<<"\n";
                     uint newScopeScore=calcScopeScore(scopeID, trial.substr(keyLen+1));
                     if(newScopeScore > scopeScore) {
                         (*crntWrd)->altDefs.clear();  //tmp cout<<"CLEAR-X! "<<*crntWrd<<"\n";

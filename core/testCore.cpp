@@ -125,9 +125,11 @@ MULTITEST("byType/writeChain","Test chained write-by-type", "&partX=_  &partZ=_ 
 MULTITEST("byType/set","Test set-by-type", "&partX=44 \n &partZ=_ \n &obj={partX, partZ==(%\\\\^:<partX>)} \n obj \n {%W:<obj>} //:{{*1+44 44 } }");
 MULTITEST("byType/write-n-set","Test write&set-by-type", "&partX=_ \n  &partZ=_ \n &obj={partX, partZ==(%\\\\^:<partX>)} \n obj \n %W:<obj>:(<partX>==123) \n {%W:<obj>} //:{{123 123 } }");
 
-//MULTITEST("causes/simpleParts", "Two synchronized parts", "&wheelPosA=_ \n &wheelPosB=_ \n &bike={wheelPosA, wheelPosB==(%\\^:<wheelPosA>)} \n bike     //:{_ _ } \n %W:<bike>:<wheelPosA> = 90  //:90 \n %W:<bike>:<wheelPosA>       //:90 \n %W:<bike>   //:{90 90  }");
+NORMTEST2("repeat/withIdent","Test repetition with an itent", "&varx=_", "*5+{varx=2|...}", "{*1+2 *1+2 *1+2 *1+2 *1+2 }");
+NORMTEST2("repeat/innerIdent","Test repetition with inner itent", "&varx=_", "*3+{{varx=2}|...}", "{{*1+2 } {*1+2 } {*1+2 } }");
 
-/*
+string causes_SP=R"(
+
 &wheelPosA=_
 &wheelPosB=_
 &bike={wheelPosA, wheelPosB==(%\\^:<wheelPosA>)}
@@ -136,8 +138,33 @@ bike     //:{_ _ }
 %W:<bike>:<wheelPosA>       //:90
 %W:<bike>   //:{90 90 }
 
+)";
+MULTITEST("causes/simpleParts", "Two synchronized parts", causes_SP);
 
-)");*/
+string causes_SP2=R"(
+
+&wheelPosA=_
+&wheelPosB=_
+&bike={wheelPosA, wheelPosB==(%\\^:<wheelPosA> 5)}
+bike     //:{_ _ }
+%W:<bike>:<wheelPosA> = 90  //:90
+%W:<bike>:<wheelPosA>       //:90
+%W:<bike>   //:{90 95 }
+
+)";
+MULTITEST("causes/simpleParts2", "Two synchronized parts with offset", causes_SP2);
+
+
+string time_constVelocity=R"(
+
+&velocity=_
+&tobject={ velocity {2 *4+(+(%\\\:[_] %\\:[_]~) | ...)}}
+tobject={\<velocity>=3}   //:{*1+3 {*1+2 *1+5 *1+8 *1+11 *1+14 } }
+*3+{tobject={\<velocity>=3} |...}  //:{{*1+3 {*1+2 *1+5 *1+8 *1+11 *1+14 } } {*1+3 {*1+2 *1+5 *1+8 *1+11 *1+14 } } {*1+3 {*1+2 *1+5 *1+8 *1+11 *1+14 } } }
+
+)";
+MULTITEST("time/constVelocity", "Two synchronized parts with offset", time_constVelocity);
+
 /*
     # TEST: Find (big red bike)
     # TEST: Find (very red bike)

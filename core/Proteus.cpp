@@ -835,9 +835,11 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                     if(IDfol){if(level==0) addIDs(CIfol, IDfol, looseType, asAlt); else reject=rReject;}
                     else  if( (infTypes!= tList+4*tList)) {// temporary hack but it works ok.
                         // If there is no IDFol, perhaps ci is the last item in its list.
-                            if ((tmp=ci->isntLast()) && InfIsTentative(tmp->next)) {reject=rNullable;}
-                            if(!tmp || !SizeIsKnown(getTop(tmp)))
-                                if ((tmp=getMasterList(ci) )){closeListAtItem(tmp); if(!reject) reject=rReject; }
+                        if ((tmp=ci->isntLast()) && InfIsTentative(tmp->next)) {reject=rNullable;}
+if(tmp) cout<<"tmp1:"<<tmp<<" ("<<printInfon(tmp)<<"> tmp->next:"<<tmp->next<<"\n";
+cout<<"ITEM:"<<printInfon(item)<<" item->top:"<<item->top<<"\n";
+                        if(!tmp || !SizeIsKnown(getTop(tmp)))
+                            if ((tmp=getMasterList(ci) )){ cout<<"tmp2:"<<tmp<<" ("<<printInfon(tmp)<<" tmp->next:"<<tmp->next<<"\n";closeListAtItem(tmp); if(!reject) reject=rReject; }
                     }
                 } else if((infTypes== tString+4*tString) && infonSizeCmp(ci,item)<0){
                     BigInt cSize=ci->getSize();
@@ -933,7 +935,6 @@ infon* agent::normalize(infon* i, infon* firstID){
                 p->join(CI);
                 p->wFlag|=(CI->wFlag&(isLast+isBottom));
                 if(InfIsFirst(p) && p->next==p) {// Remove one layer
-                cout<<"HERE! "<<printInfon(parent)<<" p:"<<p<<"  parent:"<<parent<<"\n";
                     SetValueFormat(parent, fLiteral);
                     parent->value=p->value; parent->size=p->size;
                 }

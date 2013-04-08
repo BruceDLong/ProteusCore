@@ -91,6 +91,7 @@ enum wMisc {noAlts=0, hasAlts=0x10000000, noMoreAlts=0x20000000, isTentative=0x4
 #define ResetTent(inf)         (inf)->wFlag &= ~isTentative
 #define ResetVirtTent(inf)     (inf)->wFlag &= ~(isVirtual+isTentative)
 
+extern bool isGivenNumber(infon *i);
 extern bool iscsymOrUni (char nTok);
 extern bool isTagStart(char nTok);
 extern bool tagIsBad(string tag, const char* locale);
@@ -101,6 +102,7 @@ extern sqlite3 *coreDatabase;
 xlater* fetchXlater(icu::Locale *locale);
 typedef map<string, xlater*> LanguageExtentions;
 extern LanguageExtentions langExtentions;
+extern void resetLanguageData();
 extern int initializeProteusCore(char* resourceDir, char* dbName);
 extern void shutdownProteusCore();
 extern int calcScopeScore(string wrdS, string trialS);
@@ -111,7 +113,7 @@ typedef ptrdiff_t UInt;
 typedef mpz_class BigInt;
 typedef mpq_class BigFrac;
 
-struct infNode {infon* item; infon* slot; UInt idFlags; infNode* next; infNode(infon* itm=0, UInt f=0):item(itm),slot(0),idFlags(f){};};
+struct infNode {infon *item, *slot, *master; UInt idFlags; infNode* next; infNode(infon* itm=0, UInt f=0, infon* mstr=0):item(itm),slot(0),master(mstr),idFlags(f){};};
 enum {WorkType=0xf, MergeIdent=0, ProcessAlternatives=1, InitSearchList=2, SetComplete=3, NodeDoneFlag=8, NoMatch=16,isRawFlag=32, skipFollower=64, mLooseType=128};
 enum colonFlags {c1Left=0x100, c2Left=0x200, c1Right=0x400, c2Right=0x800};
 
@@ -239,8 +241,8 @@ struct agent {
         infon* copyList(infon* from, int flags);
         void processVirtual(infon* v);
         int getFollower(infon** lval, infon* i);
-        void AddSizeAlternate(infon* Lval, infon* Rval, infon* Pred, UInt Size, infon* Last, UInt Flags);
-        void addIDs(infon* Lvals, infon* Rvals, UInt flags, int asAlt);
+        void AddSizeAlternate(infon* Lval, infon* Rval, infon* Pred, UInt Size, infon* Last, UInt Flags, infon* master);
+        void addIDs(infon* Lvals, infon* Rvals, UInt flags, int asAlt, infon* master);
         void migrateGetLastIdents(infon *i);
 };
 
@@ -285,8 +287,8 @@ extern bool try2CatStr(string* s, pureInfon* i, UInt wSize);
 #define getHead(item) ((InfIsTop(item)||(item)->top==0)? (item) : (item)->top)
 #define prependID(list, node){infNode *IDp=(*list); if(IDp){(node)->next=IDp->next; IDp->next=node;} else {(*list)=node; (node)->next=node;}}
 #define appendID(list, node) {infNode *IDp=(*list); (*list)=node; if(IDp){(*list)->next=IDp->next; IDp->next=(*list);} else (*list)->next=(*list);}
-#define insertID(list, itm, flag) {appendID(list, new infNode(itm,flag));}
-#define insertIDatTop(list, itm, flag) {prependID(list, new infNode(itm,flag));}
+#define insertID(list, itm, flag, mstr) {appendID(list, new infNode(itm,flag,mstr));}
+#define insertIDatTop(list, itm, flag, mstr) {prependID(list, new infNode(itm,flag,mstr));}
 #define cpType(from, to) {if(to->type==0) to->type=from->type;}
 #define cpFlags(from, to, mask) {(to)->wFlag=(((to)->wFlag& ~(mask))+(((from)->wFlag)&mask)); cpType(from,to);}
 #define copyTo(from, to) {if((from)!=(to)){(to)->size=(from)->size; (to)->value=(from)->value; cpFlags((from),(to),0x00ffffff); (to)->attrs=(from)->attrs; (to)->index=(from)->index;}}

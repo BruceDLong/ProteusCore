@@ -66,7 +66,7 @@ int main(int argc, char **argv){
     agent a(0, IsHardFunc, AutoEval);
     a.locale.createCanonical(locale("").name().c_str());
     cout<<"Locale: "; PrntLocale(a.locale);
-    if(a.loadInfon("world.pr", &a.world, true)) exit(1);
+    if(a.loadInfon("world.pr", &a.world, 0)) exit(1);
     topInfon=a.world;  // use topInfon in the ddd debugger to view World
 
     cout<<"\nThe Proteus CLI. Type some infons or 'quit'\n\n";
@@ -101,9 +101,9 @@ int main(int argc, char **argv){
             Entry=Entry->value.listHead; outerList->value.listHead=0; delete outerList;
 
             if(Entry){
-                Entry->top=0; Entry->next=Entry->prev=0; cout<<"ENTRY-a:"<<Entry<<"  ";
+                Entry->top=0; Entry->next=Entry->prev=0;
                 //a.normalize(Entry); // cout << "Normalizd\n";
-                Entry=a.append(&Entry, a.world);  cout<<"ENTRY-b:"<<Entry<<"\n";
+                Entry=a.append(&Entry, a.world);
             } else continue;
         } catch (char const* errMsg){cout<<errMsg<<"\n";}
 

@@ -1,4 +1,29 @@
-<%
+// Proteus World Model 0.8.
+
+// This model is called "World". It is world, not in the sense of world as a planet,
+// but in the sense of "world-view". Thus we can say things like "Our world may contain
+// more than one universe."  The Universe is inside World. There are many practical reasons
+// to do it this way. It also facilitates more formal discussion of topics like whether this
+// or that deity is inside or outside the universe.
+
+<% {'ONE' 'TWO' {33 44 55} ...} %>
+&phys=_
+
+// Define gigayears, years, months, weeks, days, hours, minutes, seconds, micro/ etc.
+&year = *10+{9 8 7 6 _ _ _ _ _ _}
+&universe = *100+{phys|...}
+universe = *10+{year|...}
+
+
+// Refer to segments by year
+// Orient the year 0
+
+
+...
+}
+%>
+
+
 {'ONE' 'TWO'/*
 &test={_ "Hello"}
 6 5 4 3

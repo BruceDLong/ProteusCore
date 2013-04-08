@@ -493,7 +493,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
         if(toSet==0) throw ":= operator requires [....] on the left side";
         if(toRef==0) throw "=: operator requires [....] on the right side";
         if((toRef->type==0) && !(idFlags&mLooseType)) toRef->type=toSet->type;
-        insertID(&toSet->wrkList, toRef, idFlags);
+        insertID(&toSet->wrkList, toRef, idFlags, toSet);
     }
     if(!(noIDs&2)){  // Load function "calls". In addOne<:5, i->spec2 is the 5.
         if(nxtTok(":>" )) {infon* j=ReadInfon(scopeID, 1); j->wFlag|=sUseAsFirst; j->spec2=i; i=j; chk4HardFunc(i);}

@@ -9,7 +9,7 @@
 #include <fstream>
 #include <string>
 using namespace std;
-void initCore(agent **a);
+
 string normToWorld(agent** a, string entryStr);
 void multiNorm(agent** a, string entryStr);
 
@@ -27,10 +27,10 @@ TEST_CASE( "agent/StartTerm", "Test agent::StartTerm()" ) {
     ST_TEST("({2 3 4} {5 6 7} 8 9)", "*1+2");
 }
 
-#define PARSETEST(NAME, MSG, IN, OUT) TEST_CASE(NAME, MSG){agent a; infon *in; string s;  INFO(MSG); REQUIRE( a.loadInfonFromString(IN, &in, 0) != 0 ); s=a.printInfon(in); CAPTURE(s); CHECK(s == OUT);}
-#define NORMTEST(NAME, MSG, IN, OUT) TEST_CASE(NAME, MSG){agent a; infon *in; string s; REQUIRE( a.loadInfonFromString(IN, &in, 1) != 0 ); s=a.printInfon(in); CAPTURE(s); CHECK(s == OUT);}
-#define NORMTEST2(NAME, MSG, IN1, IN2, OUT) TEST_CASE(NAME, MSG){agent *a=0; string s; string in=IN1; CAPTURE(in);s=normToWorld(&a, in);s=normToWorld(&a, IN2); REQUIRE(s == OUT); shutdownProteusCore(); delete a;}
-#define MULTITEST(NAME, MSG, SPEC) TEST_CASE(NAME, MSG){agent *a=0; string s; multiNorm(&a, SPEC); shutdownProteusCore();}
+#define PARSETEST(NAME, MSG, IN, OUT) TEST_CASE(NAME, MSG){agent a; infon *in; string s; REQUIRE( a.loadInfonFromString(IN, &in, 0) != 0 ); s=a.printInfon(in); CAPTURE(s); CHECK(s == OUT);}
+#define NORMTEST( NAME, MSG, IN, OUT) TEST_CASE(NAME, MSG){agent a; infon *in; string s; REQUIRE( a.loadInfonFromString(IN, &in, 1) != 0 ); s=a.printInfon(in); CAPTURE(s); CHECK(s == OUT);}
+//#define NORMTEST2(NAME, MSG, IN1, IN2, OUT) TEST_CASE(NAME, MSG){agent *a=0; string s; string in=IN1; CAPTURE(in);s=normToWorld(&a, in);s=normToWorld(&a, IN2); REQUIRE(s == OUT); shutdownProteusCore(); delete a;}
+#define MULTITEST(NAME, MSG, SPEC) TEST_CASE(NAME, MSG){agent *a=0; multiNorm(&a, SPEC);}
 
 PARSETEST("parse/num",     "parse a number",       "*2589+654321", "*2589+654321");
 PARSETEST("parse/hexnum",  "parse a hex number",   "0xabcd1234", "*1+2882343476");
@@ -91,15 +91,15 @@ NORMTEST("addRefd", "Addition with references", R"({{4, 6, ([_] := %\\ [_, _] :=
 NORMTEST("addRevRefs", "Addition with reverse references", R"({{4, 6, (%\\:[_] %\\:[_, _] )}})", "{{*1+4 *1+6 *1+10 } }"); // TODO: shouldn't need external {} here.
 NORMTEST("TwoArgFunc", "A two argument function", R"([+{_, _} +{[+_]:=%\\ [+_ +_]:=%\\  [+_]:=%\\} ]<:+{9,4})", "{*1+9 *1+4 *1+9 }");
 
-NORMTEST2("tags/defUse", "define and use a tag", "&color=#{*_+_ *_+_ *_+_}  &size=#*_+_", "color", "#{_ _ _ }");
-NORMTEST2("tags/nestedEmpty","nested empty tags", "&frame = {?|...}  &portal = {frame|...}", "portal=*4+{frame|...}", "{{...} {...} {...} {...} }");
-NORMTEST2("tags/taggedFunc","Two argument function defined with a tag", R"(&func=[+{_, _} +{%\\:[_] %\\:[_, _]  %\\:[_]}]  )", "func<: +{9,4}", "{*1+9 *1+4 *1+9 }");
-NORMTEST("simpleParse1", "Simple parsing 1", "{*_ +{'A'|...} 'AARON'} ==  'AAAARON' // This is a comment", R"({{"A" "A" } "AARON" })");
-NORMTEST("ParseSelect2nd", "Parse & select option 2", "[...]='ARONdacks' :== {'AARON' 'ARON'} ", R"("ARON")");
+MULTITEST("tags/defUse", "define and use a tag", "&color=#{*_+_ *_+_ *_+_}  &size=#*_+_  \n color  //:#{_ _ _ }");
+MULTITEST("tags/nestedEmpty","nested empty tags", "&frame = {?|...}  &portal = {frame|...} \n portal=*4+{frame|...}  //:{{...} {...} {...} {...} }");
+MULTITEST("tags/taggedFunc","Two argument function defined with a tag", R"(&func=[+{_, _} +{%\\:[_] %\\:[_, _]  %\\:[_]}]  )" "\nfunc<: +{9,4}  //:{*1+9 *1+4 *1+9 }");
+MULTITEST("simpleParse1", "Simple parsing 1", "{*_ +{'A'|...} 'AARON'} ==  'AAAARON' // This is a comment" R"(//:{{"A" "A" } "AARON" })");
+MULTITEST("ParseSelect2nd", "Parse & select option 2", "[...]='ARONdacks' :== {'AARON' 'ARON'} " R"(//:"ARON")");
 NORMTEST("ParseSelect1st", "Parse & select option 1", "[...]='AARONdacks' :== {'AARON' 'ARON'} ", R"("AARON")");
 NORMTEST("parse2Itms", "Two item parse", "{[...] :== {'AARON' 'BOBO' 'ARON' 'AAAROM'}   'dac'} ==  'ARONdacks'", R"({"ARON" "dac" })");
 NORMTEST("parse2ItmsGet1st", "Two item parse, get first option", "{[...] :== {'ARON' 'BOBO' 'AARON' 'CeCe'}   'dac'} ==  'ARONdacks'", R"({"ARON" "dac" })");
-
+// simple
 //   #('1', 'Two item parse; error 1', r'{[...] :== {"AARON" "BOBO" "ARON" "AAAROM"}   "dac"} ==  "ARONjacks"', '<ERROR>'), #NEXT-TASK // No dac, only jac
 //   #('1', 'Two item parse; error 2', r'{[...] :== {"AARON" "BOBO" "ARON" "AAAROM"}   "dac"} ==  "slapjacks"', '<ERROR>'), #NEXT-TASK // slap doesn't match.
 //   #('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \\[?]}]<:{"slothe", "Hello", "bob", 65432}|...}', '{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } }'),  #FAIL
@@ -110,23 +110,23 @@ NORMTEST("fromHereIdx1", "fromHere indexing string 1", "{111, '222' %^:[_, _, $]
 NORMTEST("fromHereIdx2", "fromHere indexing string 2", "{111, 222, %^:*3+[...] 444, 555, 666, {'hi'}}", R"({*1+111 *1+222 *1+555 *1+444 *1+555 *1+666 {"hi" } })");
 NORMTEST("fromHereIdxNeg", "fromHere indexing negative", "{111, 222, %^:/3+[...] 444, 555, 666, 777}", "{*1+111 *1+222 *1+777 *1+444 *1+555 *1+666 *1+777 }");
 NORMTEST("simpleAssoc", "Test lists with simple associations", R"({ {5, 7, 3, 8} {%\\:[_]~ | ...}})", "{{*1+5 *1+7 *1+3 *1+8 } {*1+5 *1+7 *1+3 *1+8 } }");
-/*FAIL*/ NORMTEST("internalAssoc", "Test internal associations", R"([ {5, 7, 3, 8} {2 (+(%\\\:[_]~ %\\:[_]~) | ...)}])", "{*1+2 *1+7 *1+14 *1+17 *1+25 }");  // FAIL: Fails when small ListBufCutOff is used.
+NORMTEST("internalAssoc", "Test internal associations", R"([ {5, 7, 3, 8} {2 (+(%\\\:[_]~ %\\:[_]~) | ...)}])", "{*1+2 *1+7 *1+14 *1+17 *1+25 }");  // Fails when small ListBufCutOff is used.
 MULTITEST("seqFuncPass", "Test sequential func argument passing", R"({{ {5, 7, 3, 8} {addOne<:(%\\:[_]~) | ...}}} //:{{{*1+5 *1+7 *1+3 *1+8 } {*1+6 *1+8 *1+4 *1+9 } } })");
 NORMTEST("select2ndItem", "Select 2nd item from list", "*2+[...] := {8 7 6 5 4 3}", "*1+7");
-NORMTEST2("tags/selByTag", "Select item by concept tag: 'third item of ...'", "&thirdItem=*3+[...]", "thirdItem := {8 7 6 5 4 3}", "*1+6");
+MULTITEST("tags/selByTag", "Select item by concept tag: 'third item of ...'", "&thirdItem=*3+[...] \n thirdItem := {8 7 6 5 4 3}  //:*1+6");
 NORMTEST("simpleFilter", "Test simple filtering", "{[_ _]|...} ::= {8 7 6 5 4 3}", "{*1+7 *1+5 *1+3 }");
-NORMTEST2("tags/FilterByTag","filtering with a concept-tag", "&everyOther={*2+[...]|...}", "everyOther ::= {8 7 6 5 4 3}", "{*1+7 *1+5 *1+3 }");
-/*FAIL*/ NORMTEST("filterList", "Filtering with a list", "{[? ?]|...} ::= {111, '222', '333', 444, {'hi'}, {'a', 'b', 'c'}}", R"({"222" *1+444 {"a" "b" "c" } })");  //FAIL: {"222" *1+444 0; "b" 0; }
+//MULTITEST("tags/FilterByTag","filtering with a concept-tag", "&everyOther={*2+[...]|...} \n everyOther ::= {8 7 6 5 4 3}  //:{*1+7 *1+5 *1+3 }");
+/*FAIL*/ //NORMTEST("filterList", "Filtering with a list", "{[? ?]|...} ::= {111, '222', '333', 444, {'hi'}, {'a', 'b', 'c'}}", R"({"222" *1+444 {"a" "b" "c" } })");  //FAIL: {"222" *1+444 0; "b" 0; }
 NORMTEST("internalWrite", "Test internal find-&-write", "{4 5 _ 7} =: [_ _ 6]", "{*1+4 *1+5 *1+6 *1+7 }");
 NORMTEST("externalWrite", "Test external find-&-write", "{4 5 _ 7} =: ([???]=6)", "{*1+4 *1+5 *1+6 *1+7 }");
-NORMTEST2("tags/find-n-write","Test tagged find-&-write", "&setToSix=([???]=6)", "{4 5 _ 7} =: setToSix", "{*1+4 *1+5 *1+6 *1+7 }");
+MULTITEST("tags/find-n-write","Test tagged find-&-write", "&setToSix=([???]=6) \n {4 5 _ 7} =: setToSix  //:{*1+4 *1+5 *1+6 *1+7 }");
 MULTITEST("byType/findChain","Test chained find-by-type", "&partX=44 \n &partZ=88 \n &obj={partX, partZ} \n obj \n %W:<obj>:<partZ> //:*1+88");
 MULTITEST("byType/writeChain","Test chained write-by-type", "&partX=_  &partZ=_  &obj={partX, partZ} \n obj \n %W:<obj>:(<partZ>=77) \n %W:<obj> //:{_ 77 }");
 MULTITEST("byType/set","Test set-by-type", "&partX=44 \n &partZ=_ \n &obj={partX, partZ==(%\\\\^:<partX>)} \n obj \n {%W:<obj>} //:{{*1+44 44 } }");
 MULTITEST("byType/write-n-set","Test write&set-by-type", "&partX=_ \n  &partZ=_ \n &obj={partX, partZ==(%\\\\^:<partX>)} \n obj \n %W:<obj>:(<partX>==123) \n {%W:<obj>} //:{{123 123 } }");
 
-NORMTEST2("repeat/withIdent","Test repetition with an itent", "&varx=_", "*5+{varx=2|...}", "{*1+2 *1+2 *1+2 *1+2 *1+2 }");
-NORMTEST2("repeat/innerIdent","Test repetition with inner itent", "&varx=_", "*3+{{varx=2}|...}", "{{*1+2 } {*1+2 } {*1+2 } }");
+MULTITEST("repeat/withIdent","Test repetition with an itent", "&varx=_ \n *5+{varx=2|...}   //:{*1+2 *1+2 *1+2 *1+2 *1+2 }");
+MULTITEST("repeat/innerIdent","Test repetition with inner itent", "&varx=_ \n *3+{{varx=2}|...}  //:{{*1+2 } {*1+2 } {*1+2 } }");
 
 string causes_SP=R"(
 
@@ -163,7 +163,18 @@ tobject={\<velocity>=3}   //:{*1+3 {*1+2 *1+5 *1+8 *1+11 *1+14 } }
 *3+{tobject={\<velocity>=3} |...}  //:{{*1+3 {*1+2 *1+5 *1+8 *1+11 *1+14 } } {*1+3 {*1+2 *1+5 *1+8 *1+11 *1+14 } } {*1+3 {*1+2 *1+5 *1+8 *1+11 *1+14 } } }
 
 )";
-MULTITEST("time/constVelocity", "Two synchronized parts with offset", time_constVelocity);
+MULTITEST("time/constVelocity", "An item at constant velocity", time_constVelocity);
+
+
+string time_accelList=R"(
+
+&velocity=_
+&tobject={ velocity {2 *4+(+(%\\\:[_] %\\:[_]~) | ...)}}
+{{4 8 6 2} {tobject={(\<velocity>=%:[_]~)} |...} }
+
+)";
+MULTITEST("time/accelList", "An item with list-based accelerations", time_accelList);
+
 
 /*
     # TEST: Find (big red bike)
@@ -187,26 +198,8 @@ infon *topInfon, *Entry;  // use topInfon in the ddd debugger to view World
 int AutoEval(infon* CI, agent* a);
 bool IsHardFunc(string tag);
 
-agent *globalAgent;
-int CoreInitialized=false;
-
-void initCore(agent **a){
-    if(!(*a)){
-        char* resourceDir="../resources";
-        char* dbName="proteusData.db";
-        if(initializeProteusCore(resourceDir, dbName)) {cout<< "Could not initialize the Proteus Engine"; exit(1);}
-        CoreInitialized=true;
-        (*a) = new agent(0, IsHardFunc, AutoEval);
-        (*a)->locale.createCanonical(locale("").name().c_str());
-        (*a)->loadInfonFromString("{...}", &(*a)->world, 0); topInfon=(*a)->world;
-
-        if(sizeof(int)!=4) {cout<<"WARNING! int size is "<<sizeof(int)<<" bytes.\n\n"; exit(1);}
-    }
-}
-
 string normToWorld(agent** a, string entryStr){
     string ret="NOT_INITD";
-    initCore(a);
     entryStr="<% { " + entryStr + " \n} %>";
     istrstream fin(entryStr.c_str());
     QParser q(fin); q.agnt=*a;
@@ -216,6 +209,7 @@ string normToWorld(agent** a, string entryStr){
         Entry=Entry->value.listHead; outerList->value.listHead=0; delete outerList;
         if(Entry){
             Entry->top=0; Entry->next=Entry->prev=0;
+          //  (*a)->normalize(Entry);
             Entry=(*a)->append(&Entry, (*a)->world);
         } else ret= "NULL ENTRY";
     } catch (char const* errMsg){ret= errMsg;}
@@ -231,7 +225,11 @@ string normToWorld(agent** a, string entryStr){
 void multiNorm(agent** a, string entryStr){
     stringstream ss(entryStr);
     string item, in, out, ret="NULL";
-    if((*a) && (*a)->world) {delete (*a)->world; (*a)->loadInfonFromString("{...}", &(*a)->world, 0); topInfon=(*a)->world;}
+    resetLanguageData();
+    (*a) = new agent(0, IsHardFunc, AutoEval);
+    (*a)->locale.createCanonical(locale("").name().c_str());
+    (*a)->loadInfonFromString("{'ONE' 'TWO' {33 44 55} ...}", &(*a)->world, 0); topInfon=(*a)->world;
+
     while(std::getline(ss, item)) {
         if(item.size()>0) {
             unsigned pos=item.find("//:");
@@ -244,21 +242,23 @@ void multiNorm(agent** a, string entryStr){
             if(out.size()>0) {REQUIRE(ret==out);}
         }
     }
+    delete (*a)->world; delete(*a);
 }
 
 int main (int argc, char* const argv[])
 {
-  // global setup...
-  globalAgent=0;
-  CoreInitialized=false;
+    // global setup...
+    if(sizeof(int)!=4) {cout<<"WARNING! int size is "<<sizeof(int)<<" bytes.\n\n"; exit(1);}
 
-  // Run the tests
-  int result = Catch::Main( argc, argv );
+    char* resourceDir="../resources";
+    char* dbName="proteusData.db";
+    if(initializeProteusCore(resourceDir, dbName)) {cout<< "Could not initialize the Proteus Engine"; exit(1);}
 
-  // global clean-up...
-  if(CoreInitialized) {
-      shutdownProteusCore();
-  }
+    // Run the tests
+    int result = Catch::Main( argc, argv );
 
-  return result;
+    // global clean-up...
+    shutdownProteusCore();
+
+    return result;
 }

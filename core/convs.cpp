@@ -14,6 +14,12 @@
 
 using namespace std;
 
+bool isGivenNumber(infon *i){
+    UInt format=InfsFormat(i);
+    if(InfsType(i)!=tNum || format==fUnknown || format==fConcat) return false;
+    return true;
+}
+
 infon::infon(UInt wf, pureInfon* s, pureInfon* v, infNode*ID,infon*s1,infon*s2,infon*n):
         wFlag(wf), wSize(0), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {
     prev=0; top=0; top2=0; type=0; pos=0; attrs=0; index=0;
@@ -66,21 +72,61 @@ bool infon::getStng(string* str) {
 bool infon::join(infon* rVal){
 /* NOTES:
  * Joins two infons. Should use real arithmetic and work with strings
+ * TODO: Make this work with mixed formats.
  * Can this replace try2CatStr above?
  * Consider 'p-adic numbers / analysis' and Quote-Notation
  * "/1+[_]"  goes in reverse but:
  * "*(-1)+[_]" turns around and goes forward.
 */
-    if(!(InfIsLiteralNum(this) && InfIsLiteralNum(rVal))) return false;
-    BigInt val;
-    if((rVal)->value.flags & fInvert) {val=-(*rVal->value.dataHead);} else {val=(*rVal->value.dataHead);}
-    if(SizeIsInverted(rVal)){
-        *size.dataHead /= *rVal->size.dataHead;
-        value=(*value.dataHead / *size.dataHead)+val;
-    } else {
-        *size.dataHead *= *rVal->size.dataHead;
-        value=(*this->value.dataHead * *size.dataHead)+val;
-    }
+    if(!(isGivenNumber(this) && isGivenNumber(rVal))) return false;
+    if(InfsFormat(this)==fFloat && InfsFormat(rVal)==fFloat) { // Decimal + decimal
+        infon* thisInt=this->value.listHead;
+        infon* thisFrac=thisInt->next;
+        infon* rvalInt=rVal->value.listHead;
+        infon* rvalFrac=rvalInt->next;
+        mpz_ptr thisNum=thisFrac->value.dataHead->get_num_mpz_t();
+        mpz_ptr thisDen=thisFrac->value.dataHead->get_den_mpz_t();
+        mpz_ptr rvalNum=rvalFrac->value.dataHead->get_num_mpz_t();
+        mpz_ptr rvalDen=rvalFrac->value.dataHead->get_den_mpz_t();
+
+        *thisInt->size.dataHead  *= *rvalInt->size.dataHead;
+        *thisInt->value.dataHead += *rvalInt->value.dataHead;
+        *thisFrac->size.dataHead *= *rvalFrac->size.dataHead;
+
+        if((rVal)->value.flags & fInvert) { // Subtract
+        }
+
+        if(thisDen < rvalDen){
+            __mpz_struct Q;
+            mpz_divexact(&Q, rvalDen, thisDen);
+            if(SizeIsInverted(rVal)){mpz_div(thisNum, thisNum, &Q);}
+            else mpz_mul(thisNum, thisNum, &Q);
+            if((rVal)->value.flags & fInvert) mpz_sub(thisNum, thisNum, rvalNum);
+            else mpz_add(thisNum, thisNum, rvalNum);
+            thisDen = rvalDen;
+        } else {
+            __mpz_struct Q;
+            mpz_divexact(&Q, thisDen, rvalDen);
+            if(SizeIsInverted(rVal)){mpz_div(&Q, rvalNum, &Q);}
+            else mpz_mul(&Q, rvalNum, &Q);
+            if((rVal)->value.flags & fInvert) mpz_sub(thisNum, thisNum, &Q);
+            else mpz_add(thisNum, thisNum, &Q);
+        }
+        if(thisFrac >= 1){
+            mpz_sub(thisNum, thisNum, thisDen);
+            *thisInt->value.dataHead+=1;
+        }
+    } else if(InfsFormat(this)==fLiteral && InfsFormat(rVal)==fLiteral){ //fLiteral + fLiteral
+        BigFrac val;
+        if((rVal)->value.flags & fInvert) {val=-(*rVal->value.dataHead);} else {val=(*rVal->value.dataHead);}
+        if(SizeIsInverted(rVal)){
+            *size.dataHead /= *rVal->size.dataHead;
+            value=(*value.dataHead / *size.dataHead)+val;
+        } else {
+            *size.dataHead *= *rVal->size.dataHead;
+            value=(*this->value.dataHead * *size.dataHead)+val;
+        }
+    } else throw "Mixed number formats not yet handled";
     return true;
 }
 
@@ -110,7 +156,7 @@ void infon::fulfillSubscriptions(agent* a){
     while(!subscriptions.empty()){
         infon* subscriber=subscriptions.front();
 //    cout<<"    "<<printInfon(subscriber)<<"\n";
-        insertID(&subscriber->wrkList, this, MergeIdent);
+        insertID(&subscriber->wrkList, this, MergeIdent,0); // TODO: this should be a ref to the master infon, not '0'.
         a->normalize(subscriber);
         subscriptions.pop_front();
     }

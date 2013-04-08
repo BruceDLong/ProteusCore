@@ -333,6 +333,7 @@ char letterMap[127]; // Help distinguish vowels, consonants, etc.
 #define isVowel(ch) (letterMap[(uint)(ch)])
 
 bool XlaterENGLISH::unloadLanguageData(){
+    delete wordLibrary;
     return 0;
 }
 
@@ -367,7 +368,7 @@ WordMap apostrophics = {
     // First, list contractions that end in 's so they can be detected.
     {"all's", 1}, {"he's", 1}, {"she's", 1}, {"here's", 1}, {"how's", 1}, {"it's", 1}, {"let's", 1},
     {"when's", 1}, {"where's", 1}, {"which's", 1}, {"what's", 1}, {"who's", 1}, {"that's", 1}, {"there's", 1}, {"this's", 1},
-    {"getting's", 1}, {"I's", 1}, {"O's", 1}, {"0's", 1}, {"A's", 1}, {"S's", 1},   // Also, lowercase letter are pluralized with apostrophies
+    {"getting's", 1}, {"I's", 1}, {"O's", 1}, {"0's", 1}, {"A's", 1}, {"S's", 1},   // Also, lowercase letters are pluralized with apostrophies
     {"everybody's", 2}, {"everyone's", 2}, {"nobody's", 2}, {"noone's", 2}, {"no-one's", 2}, {"nothing's", 2}, {"something's", 2}, {"someone's", 2}, {"somebody's", 2},
 
     {"'00s", 0}, {"'20s", 0}, {"'30s", 0}, {"'40s", 0}, {"'50s", 0}, {"'60s", 0}, {"'70s", 0}, {"'80s", 0}, {"'90s", 0}
@@ -447,6 +448,7 @@ enum rules {rNone, rStart_sent, start_neg, sent_clause, clause_SP, clause_AC, cl
 void Grammar::loadRules(){
     ///////////// Here is the grammar for English
 
+    rules.clear();
     addRule(1, rStart_sent, 1, "$START",        "$sentence");
     addRule(1, start_neg,   1, "$START",        "$negotiator");
     addRule(1, sent_clause, 1, "$sentence",     "$clause");    // Clause must have finite verb

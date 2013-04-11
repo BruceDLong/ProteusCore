@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Proteuscore : Proteus is an open source modeling language" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Proteuscore</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/BruceDLong/ProteusCore">View on GitHub</a>
+
+          <h1 id="project_title">Proteuscore</h1>
+          <h2 id="project_tagline">Proteus is an open source modeling language</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/BruceDLong/ProteusCore/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/BruceDLong/ProteusCore/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p>BUILDING THE TOP LEVEL PROJECT</p>
+
+<p>There are two projects here: the Proteus language engine (core) and the Slipstream program which uses Proteus (slip).</p>
+
+<p>To download or unpack important dependancies into ./deps then install them in ./builds run:</p>
+
+<p>cd ProteusCore
+   export SDL_CONFIG=/builds/libs/SDL/1.3/bin/sdl2-config
+   cmake .
+   make</p>
+
+<p>NOTE: This script (./CMakeLists.txt) needs some love. There are 3 or 4 places where it breaks in practice. Please send back any fixes made.
+        HINT FOR MAC: For error "ld: library not found for -lpng"
+            Solution: "export LIBRARY_PATH=/Developer/SDKs/MacOSX10.7.4.sdk/usr/lib:/usr/X11/lib"</p>
+
+<pre><code>    HINT: error: boost/intrusive_ptr.hpp: No such file or directory
+        Solution: http://www.boost.org/doc/libs/1_47_0/doc/html/quickbook/install.html (on mac: sudo port install boost)
+</code></pre>
+
+<p>BUILDING amd RUNNING clip -- The Proteus engine and CLI for Proteus</p>
+
+<p>cd ./ProteusCore/core
+cmake .
+make
+./clip</p>
+
+<p>TESTING THE BUILD:</p>
+
+<pre><code>To test the build see the file ./core/README_TO_TEST_BUILDS.
+</code></pre>
+
+<p>BUILDING slip -- The Slipstream engine (GUI)</p>
+
+<p>cd slip
+cmake .
+make
+./slip</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Proteuscore maintained by <a href="https://github.com/BruceDLong">BruceDLong</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>

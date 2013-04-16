@@ -374,7 +374,6 @@ void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags){
 }
 
 void closeListAtItem(infon* lastItem){ // remove (no-longer valid) items to the right of lastItem in a list.
-//cout << "CLOSING: " << printInfon(lastItem) << "\n";
     // TODO: Will this work when a list becomes empty?
     infon *itemAfterLast, *nextItem; UInt count=0;
     for(itemAfterLast=lastItem->next; !InfIsTop(itemAfterLast); itemAfterLast=nextItem){
@@ -534,7 +533,6 @@ inline infon* getMasterList(infon* item){
     for(infon* findMaster=item; findMaster; findMaster=findMaster->top){
         if(findMaster->wFlag&mIsHeadOfGetLast) findMaster=findMaster->top2;
         infon* nxtParent=getTop(findMaster);
-       // if(findMaster->next && InfIsTentative(findMaster->next)) return findMaster;
         if(nxtParent && InfIsLoop(nxtParent)) return findMaster;
     }
     return 0;
@@ -685,6 +683,7 @@ cout<<"NEGATIVE INDEX: "<<CI->spec1->getSize().get_ui()<<"\n";
                     ResetTent(masterItem);
                 }
                 if(!newID->isntLast()){
+                    cout<<"LAST:"<<printInfon(CI)<<"\n";
                     closeListAtItem((masterItem)?masterItem : getMasterList(CI));
                 }
             }
@@ -696,10 +695,10 @@ cout<<"NEGATIVE INDEX: "<<CI->spec1->getSize().get_ui()<<"\n";
 
 enum rejectModes {rAccept=0, rReject, rNullable, rInvertable};
 
-int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
+int agent::doWorkList(infon* ci, infon* CIfol, int asAlt, int CIFolLvl){
     // PARSE: if no worknode, and stream is '=='...
     infNode *wrkNode=ci->wrkList; infon *item, *IDfol, *tmp, *theOne=0; Qitem cn;
-    UInt altCount=0, level, tempRes, isIndef=0, result=DoNothing, f, looseType, noNewContent=true;
+    UInt altCount=0, ItemLevel, tempRes, isIndef=0, result=DoNothing, f, looseType, noNewContent=true;
     if(CIfol && !CIfol->pred) CIfol->pred=ci;
     if(wrkNode)do{
         wrkNode=wrkNode->next; item=wrkNode->item;
@@ -731,7 +730,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             wrkNode->idFlags|=NodeDoneFlag;
             cn.doShortNorm=0; cn.override=0;
             prepWorkList(item, &cn);
-            tempRes=doWorkList(item, CIfol,1); if(result<tempRes) result=tempRes;
+            tempRes=doWorkList(item, CIfol,1, CIFolLvl); if(result<tempRes) result=tempRes;
             if (tempRes==BypassDeadEnd) {wrkNode->idFlags|=NoMatch; break;}
             altCount++;  theOne=item;  noNewContent=false;
             break;
@@ -740,8 +739,8 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
             break;
         case MergeIdent:
             wrkNode->idFlags|=SetComplete; IDfol=0;
-            if(!InfIsNormed(item) && ((item->wFlag&mFindMode)!=iNone || (item->wrkList) || ValueIsConcat(item))) { // Norm item. esp %W, %//^
-                if(item->top==0) {item->top=ci->top;}
+            if(!InfIsNormed(item)) { // Norm item. esp %W, %//^
+                if(item->top==0) {item->top=ci->top; item->wFlag|= (ci->wFlag & isTop); cout<<"NEW TOP. NEXT="<<item->next<<"\n";}
                 QitemPtr Qi(new Qitem(item));
                 fetch_NodesNormalForm(Qi); item->wFlag|=isNormed;
                 if(Qi->whatNext!=DoNextBounded) noNewContent=false;
@@ -841,10 +840,10 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt){
                 if (cpyValue) {ci->value=item->value; if(item->top==0 && ci->value.listHead) ci->value.listHead->top=ci;} //  do we ever need to also copy wFlags and type fields?
                 if (resetCIsTentative) ResetTent(ci);
             }
-            if(linkCIFol && CIfol){ cout<<"AT-1\n"; // Here is where we connect any remainder-of-item or item's follower to CI's follower.
+            if(linkCIFol && CIfol && CIFolLvl!=0){ cout<<"AT-1\n"; // Here is where we connect any remainder-of-item or item's follower to CI's follower.
                 if(infonSizeCmp(ci,item)==0 || (infTypes!= tString+4*tString)){ cout<<"At-2\n";
-                    level=((IDfol)?0:getFollower(&IDfol, item));
-                    if(IDfol){if(level==0) addIDs(CIfol, IDfol, looseType, asAlt, wrkNode->master); else {reject=rReject;}}
+                    ItemLevel=((IDfol)?0:getFollower(&IDfol, item));
+                    if(IDfol){if(ItemLevel==0) addIDs(CIfol, IDfol, looseType, asAlt, wrkNode->master); else {reject=rReject;}}
                     else  if( (infTypes!= tList+4*tList)) {cout<<"AT-3\n";// temporary hack but it works ok.
                         // If there is no IDFol, perhaps ci is the last item in its list.
                         if ((tmp=ci->isntLast()) && InfIsTentative(tmp->next)) {cout<<"AT-4\n";reject=rNullable;}
@@ -854,6 +853,8 @@ cout<<"Item's master:"<<printInfon(wrkNode->master)<<"\n";
                         if(!tmp || !SizeIsKnown(getTop(tmp)))
                             if ((tmp=getMasterList(ci) )){ cout<<"tmp2:"<<tmp<<" ("<<printInfon(tmp)<<" tmp->top:"<<tmp->top<<"\n";
                                 if(getTop(tmp)==wrkNode->master)
+                                    // The state "end of item-list" (i.e., there is no IDfol) can signify the end of a loop-list
+                                    //  but only if the item originated as an rvalue of the loop ending (i.e., it's "master")
                                     {cout<<"getTop(tmp):"<<tmp<<"\n"; closeListAtItem(tmp); if(!reject) reject=rReject; }
                             }
                     }
@@ -926,17 +927,13 @@ int agent::fetch_NodesNormalForm(QitemPtr cn){
             if(InfAsDesc(CI) && !cn->override) {cn->whatNext=DoNext;}
             else {
                 if(InfsType(CI)==tList){InitList(CI);}
-        cout<<"LEVL:"<<cn->level<<", nxt:"<<cn->nxtLvl<<"\n";
 
-                if((cn->level==cn->nxtLvl)//&& !(
-              //              ((CI->value.listHead&&(InfsType(CI)==tList))||ValueIsConcat(CI))
-              //              && !InfIsNormed(CI->value.listHead)
-              //          )
-                     //   && !InfIsLoop(prnt)   // where: infon* prnt=getTop(cn->CIfol);  // this fixes simpleFilter but break other things.
-                     // Probably this whole section's functionality should be moved into doWorkList.
-                     // Write a short description of exactly what is happening and why. Then create a comprehensive solution.
-                    ) {cout<<"######## CIfol:"<<printInfon(cn->CIfol)<<"\n"; cn->CIfol=0;}
-                cn->whatNext=doWorkList(CI, cn->CIfol);
+                // Why do these next three lines work? Comprehensively document all the ways to determine EOL
+                //   then ensure that logic is followed here and in doWorkList.
+                int CIFolLvl=(cn->level-cn->nxtLvl);
+                infon* prnt=(cn->CIfol)?getTop(cn->CIfol):0;
+                if(!(prnt && !InfIsLoop(prnt))){CIFolLvl=1;}
+                cn->whatNext=doWorkList(CI, cn->CIfol, 0, CIFolLvl);
             }
            //CI->wFlag|=nsWorkListDone;
         }

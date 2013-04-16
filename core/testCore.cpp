@@ -103,7 +103,7 @@ NORMTEST("parse2ItmsGet1st", "Two item parse, get first option", "{[...] :== {'A
 //   #('1', 'Two item parse; error 1', r'{[...] :== {"AARON" "BOBO" "ARON" "AAAROM"}   "dac"} ==  "ARONjacks"', '<ERROR>'), #NEXT-TASK // No dac, only jac
 //   #('1', 'Two item parse; error 2', r'{[...] :== {"AARON" "BOBO" "ARON" "AAAROM"}   "dac"} ==  "slapjacks"', '<ERROR>'), #NEXT-TASK // slap doesn't match.
 //   #('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \\[?]}]<:{"slothe", "Hello", "bob", 65432}|...}', '{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } }'),  #FAIL
-//   # Add the above test but with a list in the comprehension yeild.
+//   # Add the above test but with a list in the comprehension yield.
 NORMTEST("simpleParse2", "Simple Parsing 2", "{*3+$|...}=='CatHatBatDog' ", R"({"Cat" "Hat" "Bat" "Dog" })");
 NORMTEST("innerParse1", "Inner parsing 1", "{ {*3+$}|...}='CatHatBatDog' ", R"({{"Cat" } {"Hat" } {"Bat" } {"Dog" } })");
 NORMTEST("fromHereIdx1", "fromHere indexing string 1", "{111, '222' %^:[_, _, $] 444, '555', 666, {'hi'}}", R"({*1+111 "222" "555" *1+444 "555" *1+666 {"hi" } })");
@@ -170,7 +170,7 @@ string time_accelList=R"(
 
 &velocity=_
 &tobject={ velocity {2 *4+(+(%\\\:[_] %\\:[_]~) | ...)}}
-{{4 8 6 2} {tobject={(\<velocity>=%:[_]~)} |...} }
+{{4 8 6 2} {tobject={\<velocity>=(%\\\:[_]~)} |...} }
 
 )";
 MULTITEST("time/accelList", "An item with list-based accelerations", time_accelList);

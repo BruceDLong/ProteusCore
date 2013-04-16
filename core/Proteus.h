@@ -168,6 +168,7 @@ struct infon {
     void unsubscribe(UInt flags);
     void fulfillSubscriptions(agent *a);
     void updateIndex();
+    ~infon(){};
 
     UInt wFlag;
     uint64_t pos;
@@ -181,7 +182,6 @@ struct infon {
     attrStorePtr attrs; // Misc attributes: <tag, data-string>
     infonIndexPtr index;  // For faster finds.
     list<infon*> subscriptions;
-    ~infon(){};
 };
 int infValueCmp(infon* A, infon* B);
 int infonSizeCmp(infon* left, infon* right); // -1: L<R,  0: L=R, 1: L>R. Infons must have fLiteral, numeric sizes
@@ -218,7 +218,7 @@ struct agent {
     infon* gListNxt(infon** ItmPtr);
     infon* append(infon** i, infon* list);
     int checkTypeMatch(WordSPtr LType, WordSPtr RType);
-    int doWorkList(infon* ci, infon* CIfol, int asAlt=0);
+    int doWorkList(infon* ci, infon* CIfol, int asAlt=0, int CIFolLvl=1);
     void prepWorkList(infon* CI, Qitem *cn);
     infon* normalize(infon* i, infon* firstID=0);
     infon *world, context;
@@ -283,7 +283,12 @@ extern bool try2CatStr(string* s, pureInfon* i, UInt wSize);
 #define ImAt(loc,parm) {cout<<"####### At:"<<(loc)<<"  "<<(parm)<<"\n";}
 #define isEq(L,R) (L && R && strcmp(L,R)==0)
 
-#define getTop(item) ((InfIsTop(item)||(item)->top==0)? (item)->top : (item)->top->top)
+inline infon* getTop(infon* i){
+    if(InfIsTop(i) || i->top==0) return i->top;
+    return i->top->top;
+}
+
+//#define getTop(item) ((InfIsTop(item) || ((item)->next==0) || (item)->top==0)? (item)->top : (item)->top->top)
 #define getHead(item) ((InfIsTop(item)||(item)->top==0)? (item) : (item)->top)
 #define prependID(list, node){infNode *IDp=(*list); if(IDp){(node)->next=IDp->next; IDp->next=node;} else {(*list)=node; (node)->next=node;}}
 #define appendID(list, node) {infNode *IDp=(*list); (*list)=node; if(IDp){(*list)->next=IDp->next; IDp->next=(*list);} else (*list)->next=(*list);}

@@ -78,7 +78,8 @@ string agent::printInfon(infon* i, infon* CI){
         }
     } else {
         if (!InfIsNormed(i)) {
-            if(mode==iToWorld) s+="%W ";
+            if(mode==iAssocNxt) s+="%~ ";
+            else if(mode==iToWorld) s+="%W ";
             else if(mode==iToCtxt) s+="%C";
             else if(mode==iToArgs) s+="%A ";
             else if(mode==iToVars) s+="%V ";

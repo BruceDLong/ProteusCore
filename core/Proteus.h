@@ -171,7 +171,7 @@ struct infon {
     ~infon(){};
 
     UInt wFlag;
-    uint64_t pos;
+    UInt pos;
     UInt wSize; // get rid if this. disallow strings and lists in "size"
     pureInfon size;        // The *-term; number of states, chars or items
     pureInfon value;       // Summand

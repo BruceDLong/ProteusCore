@@ -78,6 +78,7 @@ catchTest(  repeat/innerIdent)
 catchTest(causes/simpleParts)
 catchTest(causes/simpleParts2)
 catchTest(time/constVelocity)
+catchTest(time/accelList)
 
 #define a macro to simplify adding tests, then use it
 #macro (do_test arg result)

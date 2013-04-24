@@ -102,6 +102,7 @@ NORMTEST("parse2ItmsGet1st", "Two item parse, get first option", "{[...] :== {'A
 // simple
 //   #('1', 'Two item parse; error 1', r'{[...] :== {"AARON" "BOBO" "ARON" "AAAROM"}   "dac"} ==  "ARONjacks"', '<ERROR>'), #NEXT-TASK // No dac, only jac
 //   #('1', 'Two item parse; error 2', r'{[...] :== {"AARON" "BOBO" "ARON" "AAAROM"}   "dac"} ==  "slapjacks"', '<ERROR>'), #NEXT-TASK // slap doesn't match.
+//   # Test more 'failed-to-parse' situations.
 //   #('1', 'int and strings in function comprehensions', r'{[ ? {555, 444, \\[?]}]<:{"slothe", "Hello", "bob", 65432}|...}', '{ | {*1+555 *1+444 "slothe" } {*1+555 *1+444 "Hello" } {*1+555 *1+444 "bob" } {*1+555 *1+444 *1+65432 } }'),  #FAIL
 //   # Add the above test but with a list in the comprehension yield.
 NORMTEST("simpleParse2", "Simple Parsing 2", "{*3+$|...}=='CatHatBatDog' ", R"({"Cat" "Hat" "Bat" "Dog" })");
@@ -125,8 +126,8 @@ MULTITEST("byType/writeChain","Test chained write-by-type", "&partX=_  &partZ=_ 
 MULTITEST("byType/set","Test set-by-type", "&partX=44 \n &partZ=_ \n &obj={partX, partZ==(%\\\\^:<partX>)} \n obj \n {%W:<obj>} //:{{*1+44 44 } }");
 MULTITEST("byType/write-n-set","Test write&set-by-type", "&partX=_ \n  &partZ=_ \n &obj={partX, partZ==(%\\\\^:<partX>)} \n obj \n %W:<obj>:(<partX>==123) \n {%W:<obj>} //:{{123 123 } }");
 
-MULTITEST("repeat/withIdent","Test repetition with an itent", "&varx=_ \n *5+{varx=2|...}   //:{*1+2 *1+2 *1+2 *1+2 *1+2 }");
-MULTITEST("repeat/innerIdent","Test repetition with inner itent", "&varx=_ \n *3+{{varx=2}|...}  //:{{*1+2 } {*1+2 } {*1+2 } }");
+MULTITEST("repeat/withIdent","Test repetition with an ident", "&varx=_ \n *5+{varx=2|...}   //:{*1+2 *1+2 *1+2 *1+2 *1+2 }");
+MULTITEST("repeat/innerIdent","Test repetition with inner ident", "&varx=_ \n *3+{{varx=2}|...}  //:{{*1+2 } {*1+2 } {*1+2 } }");
 
 string causes_SP=R"(
 
@@ -170,7 +171,7 @@ string time_accelList=R"(
 
 &velocity=_
 &tobject={ velocity {2 *4+(+(%\\\:[_] %\\:[_]~) | ...)}}
-{{4 8 6 2} {tobject={\<velocity>=(%\\\:[_]~)} |...} }
+{{4 8 6} {tobject={\<velocity>=(%\\\:[_]~)} |...} }  //:{{*1+4 *1+8 *1+6 } {{*1+4 {*1+2 *1+6 *1+10 *1+14 *1+18 } } {*1+8 {*1+2 *1+10 *1+18 *1+26 *1+34 } } {*1+6 {*1+2 *1+8 *1+14 *1+20 *1+26 } } } }
 
 )";
 MULTITEST("time/accelList", "An item with list-based accelerations", time_accelList);

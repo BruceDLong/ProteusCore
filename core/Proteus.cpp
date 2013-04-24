@@ -376,6 +376,10 @@ void agent::deepCopy(infon* from, infon* to, PtrMap* ptrs, int flags){
 void closeListAtItem(infon* lastItem){ // remove (no-longer valid) items to the right of lastItem in a list.
     // TODO: Will this work when a list becomes empty?
     infon *itemAfterLast, *nextItem; UInt count=0;
+    if(lastItem->next==0){
+        if(lastItem->pos!=0) lastItem=(infon*)lastItem->pos;
+        else {cout<<"Item not in a list but being closed. It's a bug. Please report it.\n"; exit(1);}
+    }
     for(itemAfterLast=lastItem->next; !InfIsTop(itemAfterLast); itemAfterLast=nextItem){
         nextItem=itemAfterLast->next;
         recover(itemAfterLast);
@@ -844,19 +848,21 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt, int CIFolLvl){
                 if(infonSizeCmp(ci,item)==0 || (infTypes!= tString+4*tString)){ cout<<"At-2\n";
                     ItemLevel=((IDfol)?0:getFollower(&IDfol, item));
                     if(IDfol){if(ItemLevel==0) addIDs(CIfol, IDfol, looseType, asAlt, wrkNode->master); else {reject=rReject;}}
-                    else  if( (infTypes!= tList+4*tList)) {cout<<"AT-3\n";// temporary hack but it works ok.
-                        // If there is no IDFol, perhaps ci is the last item in its list.
-                        if ((tmp=ci->isntLast()) && InfIsTentative(tmp->next)) {cout<<"AT-4\n";reject=rNullable;}
-if(tmp) cout<<"tmp1:"<<tmp<<" ("<<printInfon(tmp)<<"> tmp->next:"<<tmp->next<<"\n";
-cout<<"ITEM:"<<printInfon(item)<<" item->top:"<<item->top<<" ci:"<<printInfon(ci)<<"\n";
-cout<<"Item's master:"<<printInfon(wrkNode->master)<<"\n";
-                        if(!tmp || !SizeIsKnown(getTop(tmp)))
-                            if ((tmp=getMasterList(ci) )){ cout<<"tmp2:"<<tmp<<" ("<<printInfon(tmp)<<" tmp->top:"<<tmp->top<<"\n";
-                                if(getTop(tmp)==wrkNode->master)
-                                    // The state "end of item-list" (i.e., there is no IDfol) can signify the end of a loop-list
-                                    //  but only if the item originated as an rvalue of the loop ending (i.e., it's "master")
-                                    {cout<<"getTop(tmp):"<<tmp<<"\n"; closeListAtItem(tmp); if(!reject) reject=rReject; }
-                            }
+                    else {
+                        if( (infTypes!= tList+4*tList)) {cout<<"AT-3\n";// temporary hack but it works ok.
+                            // If there is no IDfol, perhaps ci is the last item in its list.
+                            if ((tmp=ci->isntLast()) && InfIsTentative(tmp->next)) {cout<<"AT-4\n";reject=rNullable;}
+    if(tmp) cout<<"tmp1:"<<tmp<<" ("<<printInfon(tmp)<<"> tmp->next:"<<tmp->next<<"\n";
+    cout<<"ITEM:"<<printInfon(item)<<" item->top:"<<item->top<<" ci:"<<printInfon(ci)<<"\n";
+    cout<<"Item's master:"<<printInfon(wrkNode->master)<<"\n";
+                            if(!tmp || !SizeIsKnown(getTop(tmp)))
+                                if ((tmp=getMasterList(ci) )){ cout<<"tmp2:"<<tmp<<" ("<<printInfon(tmp)<<" tmp->top:"<<tmp->top<<"\n";
+                                    if(getTop(tmp)==wrkNode->master)
+                                        // The state "end of item-list" (i.e., there is no IDfol) can signify the end of a loop-list
+                                        //  but only if the item originated as an rvalue of the loop ending (i.e., it's "master")
+                                        {cout<<"getTop(tmp):"<<tmp<<"\n"; closeListAtItem(tmp); if(!reject) reject=rReject; }
+                                }
+                        }
                     }
                 } else if((infTypes== tString+4*tString) && infonSizeCmp(ci,item)<0){ cout<<"EXTRA String\n";
                     BigInt cSize=ci->getSize();
@@ -866,6 +872,7 @@ cout<<"Item's master:"<<printInfon(wrkNode->master)<<"\n";
                     addIDs(CIfol, tmp, looseType, asAlt, wrkNode->master);
                 }
             }
+            if(item->next==0 && ci->next!=0) item->pos=(UInt)ci; // Special use of pos. When item isn't in a list but can signal EOL for ci. So we must know ci's address.
             if (reject){ cout<<"REJECT "<<CIfol<<"\n";
                 result=BypassDeadEnd;
                 if(reject >= rNullable){

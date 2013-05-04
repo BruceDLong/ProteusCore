@@ -177,6 +177,28 @@ string time_accelList=R"(
 MULTITEST("time/accelList", "An item with list-based accelerations", time_accelList);
 
 
+string tictactoe=R"(
+
+&tictactoe={
+    &tictactoe square={"", "X", "O"}:*_+[...]
+    &tictactoe row   = *3+{square|...}
+    &tictactoe board = *3+{row |...}
+    // Squares start as "" then end with X or O.
+    &tictactoe turn function = [XXXXX]
+    &tictactoe start board == *9+{""|...}
+
+    *2+{player|...}
+    // players alternate turns
+    // games ends when there are 3 in a row or all squares are used
+    // winner is X or O or game is a tie.
+    {tictactoe start board, ([tictactoe turn function]|...) }
+}
+
+tictactoe={\<players> = {Bruce Long, Xander Page} \<moves>={...} }
+
+)";
+MULTITEST("tictactoe", "A simple game", tictactoe);
+
 /*
     # TEST: Find (big red bike)
     # TEST: Find (very red bike)

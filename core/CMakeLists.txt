@@ -14,12 +14,12 @@ set(UNICODE_LIBS icuio icui18n icutu icuuc icudata icule iculx icutest dl)
 set(PROTEUS_LIBS readline gmpxx gmp sqlite3 ${UNICODE_LIBS})
 
 include_directories( #../builds/libs/GMP_BigInts/gmp-5.0.4/include/
-                    ../builds/libs/unicode/release-49-1-1/include/
+                    ../builds/libs/unicode/release-51-1/include/
                     ../../dev/boost_1_51_0/
                     #../builds/libs/Readline/readline-6.2/include/
                     )
 link_directories(#../builds/libs/GMP_BigInts/gmp-5.0.4/lib/
-                 ../builds/libs/unicode/release-49-1-1/lib/
+                 ../builds/libs/unicode/release-51-1/lib/
                 # ../builds/libs/Readline/readline-6.2/lib/
                  )
 

@@ -754,6 +754,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt, int CIFolLvl){
                     else throw "Tag wasn't a reference ";
                 }
             }
+            if(wrkNode->idFlags&OverrideIdent){SetBits(ci->size.flags, (mType), tUnknown);} // also, clear everything else necessary
             UInt CIsType=InfsType(ci), ItemsType=InfsType(item);
             if(CIsType==tUnknown && !invertAcceptance) {
                 VsFlag(ci)|=(InfsType(item)+fUnknown); SetSizeType(ci, tNum); ci->wFlag|=sizeIndef;

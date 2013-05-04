@@ -464,6 +464,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
         infon *R, *toSet=0, *toRef=0; int idFlags=0;
         cTok=nxtTokN(2,"::",":");
         eTok=nxtTokN(2,"==","=");
+        if(peek()=='!'){stream.get(); idFlags|=OverrideIdent;}
         if(isEq(cTok,":") && (eTok==0)){  // X:Y is about the same as Y := X.
             if(peek()=='>') {streamPut(1); break;}  // Oops, this is a function :> Parse it below.
             if(noIDs&8){streamPut(1); break;}

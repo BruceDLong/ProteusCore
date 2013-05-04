@@ -666,7 +666,7 @@ void StreamEvents(){
             case SDL_MOUSEBUTTONUP:     break;
             case SDL_MOUSEWHEEL:        break;
 
-            case SDL_INPUTMOTION:       break;
+ /*           case SDL_INPUTMOTION:       break;
             case SDL_INPUTBUTTONDOWN:   break;
             case SDL_INPUTBUTTONUP:     break;
             case SDL_INPUTWHEEL:        break;
@@ -677,7 +677,7 @@ void StreamEvents(){
             case SDL_FINGERUP:          break;
             case SDL_FINGERMOTION:      break;
             case SDL_TOUCHBUTTONDOWN:   break;
-            case SDL_TOUCHBUTTONUP:     break;
+            case SDL_TOUCHBUTTONUP:     break; */
             case SDL_MULTIGESTURE:      break;
             case SDL_DOLLARGESTURE:     break;
             case SDL_DOLLARRECORD:      break;
@@ -729,7 +729,7 @@ void StreamEvents(){
 
 int main(int argc, char *argv[]){
     MSGl("\n\n         * * * * * Starting Proteus and The Slipstream * * * * *\n");
-    //MSGl("SDL Revision" << SDL_GetRevisionNumber()<<",  "<<"\n");
+    MSGl("SDL Revision" << SDL_GetRevisionNumber()<<",  "<<"\n");
     InitializePortalSystem(argc, argv);
     StreamEvents();
     return (0);

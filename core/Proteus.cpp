@@ -898,21 +898,21 @@ ci->updateIndex(); // TODO: This should be optimized into merge of values.
 
 void agent::pushNextInfon(infon* CI, QitemPtr cn, infQ &ItmQ){
     switch (cn->whatNext) {
-    case DoNextBounded: cout<<"BOUNDED\n";
+    case DoNextBounded:
         if(++cn->bufCnt>=ListBuffCutoff){
             cn->nxtLvl=getFollower(&cn->CIfol,getTop(CI))+1;
             for(int c=0;c<cn->nxtLvl; c++) {cn->bufCnt=cn->parent->bufCnt; cn->parent=cn->parent->parent;}
             pushCIsFollower;
             break;
         }
-    case DoNext: cout<<"DONEXT\n";
+    case DoNext:
         if(cn->whatNext==DoNext) cn->bufCnt=0;
         if(!(InfAsDesc(CI)&&!cn->override)&&((CI->value.listHead&&(InfsType(CI)==tList))||ValueIsConcat(CI)) && !InfIsNormed(CI->value.listHead)){
             ItmQ.push(QitemPtr(new Qitem(CI->value.listHead,cn->firstID,((cn->IDStatus==1) & !ValueIsConcat(CI))?2:cn->IDStatus,cn->level+1,0,cn))); // Push CI->value
         }else if (cn->CIfol){cout<<printInfon(cn->CIfol)<<"\n"; pushCIsFollower;}
         break;
-    case BypassDeadEnd:  cout<<"DEADEND:"<<printInfon(CI)<<"\n";{cn->nxtLvl=getFollower(&cn->CIfol,getTop(CI))+1; pushCIsFollower;} break;
-    case DoNothing: cout<<"NOTHING\n"; break;
+    case BypassDeadEnd:  {cn->nxtLvl=getFollower(&cn->CIfol,getTop(CI))+1; pushCIsFollower;} break;
+    case DoNothing: break;
     }
 }
 

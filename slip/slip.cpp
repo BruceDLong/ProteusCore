@@ -236,6 +236,19 @@ enum dTools{rectangle=1, curvedRect, circle, lineTo, lineRel, moveTo, moveRel, c
 typedef map<string, cairo_surface_t*> picCache_t;
 picCache_t picCache;
 
+#include "newsWidgets.cpp"
+
+void DrawTimeLines(InfonPortal* portal, DisplayItem* item){
+    cairo_t *cr = portal->cr;
+
+    //cairo_set_source_rgba(cr, 0.8,1,0.2, 1);
+    //cairo_rectangle (cr, 10,10,200,100);
+    //cairo_fill(cr);
+    //cairo_move_to(cr,0,0);
+newsViewer->dirty=1;
+    item->draw(cr);
+}
+
 void DrawProteusDescription(InfonPortal* portal, infon* ProteusDesc, int indent=0){
     cairo_surface_t* surface=portal->cairoSurf;
     if (surface==0 || ProteusDesc==0 || ProteusDesc->getSize()==0) ERRl("Description Flag Raised."<<ProteusDesc); // Missing description.
@@ -586,7 +599,7 @@ exit(2);
 
 void StreamEvents(){
     Uint32 frames=0, then=SDL_GetTicks(), now=0, limit = secondsToRun*1000;
-    SDL_Thread *simulationThread = SDL_CreateThread(SimThread, "Proteus", NULL);
+    SDL_Thread *simulationThread =0;// SDL_CreateThread(SimThread, "Proteus", NULL);
     SDL_Event ev;
     InfonViewPort *portalView=0; SDL_Window *window=0;
     while (secondsToRun && (SDL_GetTicks() < (then+limit)) && !doneYet){
@@ -701,7 +714,8 @@ void StreamEvents(){
             if(portal->viewsNeedRefactoring && !portal->isLocked) RefactorPortal(portal);
 
             portal->cr = cairo_create(portal->cairoSurf); cairo_set_antialias(portal->cr,CAIRO_ANTIALIAS_GRAY);
-            DrawProteusDescription(portal, portal->crntFrame);
+            //DrawProteusDescription(portal, portal->crntFrame);
+            DrawTimeLines(portal, newsViewer);
             cairo_destroy(portal->cr);
             int viewW, viewH;
             for(InfonViewPort *portView=portal->viewPorts; portView; portView=portView->next){ // For each view...
@@ -731,6 +745,9 @@ int main(int argc, char *argv[]){
     MSGl("\n\n         * * * * * Starting Proteus and The Slipstream * * * * *\n");
     MSGl("SDL Revision" << SDL_GetRevisionNumber()<<",  "<<"\n");
     InitializePortalSystem(argc, argv);
+// initialize scroll viewer: construct; set x,y,w,d,title, modes; register for events.
+    newsViewer=new NewsViewer(0,0,0,600,300); newsViewer->dirty=1; newsViewer->visible=1;
     StreamEvents();
+    delete newsViewer;
     return (0);
 }

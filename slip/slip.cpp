@@ -11,7 +11,7 @@ const char* resourceDir="../resources";
 #define MAX_PORTALS 24
 
 #include <time.h>
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #include <SDL2/SDL_thread.h>
 #include <SDL2/SDL_image.h>
 
@@ -563,9 +563,9 @@ void InitializePortalSystem(int argc, char** argv){
         }
         i += consumed;
     }
-    if (SDL_VideoInit(NULL) < 0) {MSGl("Couldn't initialize Video Driver: "<<SDL_GetError()); exit(2);}
-    if (SDL_AudioInit(NULL) < 0) {MSGl("Couldn't initialize Audio Driver: "<<SDL_GetError()); exit(2);}
- //   if (SDL_TimerInit() < 0) {MSGl("Couldn't initialize Timer Driver: "<<SDL_GetError()); exit(2);}
+
+    if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_TIMER) != 0)
+        {MSGl("Couldn't initialize SDL: "<<SDL_GetError()); exit(2);}
     //MAYBE: if (DebugMode) PrintConfiguration from common.c Set debugmode via command-line argument
 
  //UNDO:   SDL_EnableKeyRepeat(300, 130);
@@ -674,23 +674,15 @@ void StreamEvents(){
             case SDL_TEXTEDITING:       break;
             case SDL_TEXTINPUT:         break;
 
-            case SDL_MOUSEMOTION:       break;
-            case SDL_MOUSEBUTTONDOWN:   break;
-            case SDL_MOUSEBUTTONUP:     break;
-            case SDL_MOUSEWHEEL:        break;
+            case SDL_MOUSEMOTION:
+            case SDL_MOUSEBUTTONDOWN:
+            case SDL_MOUSEBUTTONUP:
+            case SDL_MOUSEWHEEL:
+            case SDL_FINGERDOWN:
+            case SDL_FINGERUP:
+            case SDL_FINGERMOTION:
+                newsViewer->handleEvent(ev);
 
- /*           case SDL_INPUTMOTION:       break;
-            case SDL_INPUTBUTTONDOWN:   break;
-            case SDL_INPUTBUTTONUP:     break;
-            case SDL_INPUTWHEEL:        break;
-            case SDL_INPUTPROXIMITYIN:  break;
-            case SDL_INPUTPROXIMITYOUT: break;
-
-            case SDL_FINGERDOWN:        break;
-            case SDL_FINGERUP:          break;
-            case SDL_FINGERMOTION:      break;
-            case SDL_TOUCHBUTTONDOWN:   break;
-            case SDL_TOUCHBUTTONUP:     break; */
             case SDL_MULTIGESTURE:      break;
             case SDL_DOLLARGESTURE:     break;
             case SDL_DOLLARRECORD:      break;
@@ -745,7 +737,6 @@ int main(int argc, char *argv[]){
     MSGl("\n\n         * * * * * Starting Proteus and The Slipstream * * * * *\n");
     MSGl("SDL Revision" << SDL_GetRevisionNumber()<<",  "<<"\n");
     InitializePortalSystem(argc, argv);
-// initialize scroll viewer: construct; set x,y,w,d,title, modes; register for events.
     newsViewer=new NewsViewer(0,0,0,600,300); newsViewer->dirty=1; newsViewer->visible=1;
     StreamEvents();
     delete newsViewer;

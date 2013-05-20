@@ -10,13 +10,14 @@ set(UNICODE_LIBS icuio icui18n icutu icuuc icudata icule iculx icutest dl)
 set(PANGO_INCLUDE_DIRS /usr/include/pango-1.0/ /usr/include/cairo /usr/include/glib-2.0/ /usr/lib/i386-linux-gnu/glib-2.0/include /usr/include/pixman-1 /usr/include/freetype2 /usr/include/libpng12)
 
 include_directories(  ../builds/libs/SDL/1.3/include/ ../builds/libs/SDL/1.3/include/SDL2/ ../builds/libs/SDL_image/include/
-                ../builds/libs/GMP_BigInts/gmp-5.0.4/include/ ../builds/libs/unicode/release-51-1/include/
+                #../builds/libs/GMP_BigInts/gmp-5.0.4/include/
+                ../builds/libs/unicode/release-51-1/include/
                 /usr/include/pango-1.0/  /usr/include/cairo /usr/include/glib-2.0/ /usr/lib/i386-linux-gnu/glib-2.0/include
                 /usr/include/pixman-1 /usr/include/freetype2 /usr/include/libpng12
                 ../../dev/boost_1_51_0/ )
 
 link_directories(/lib/i386-linux-gnu/ /usr/lib/i386-linux-gnu/
-                 ../builds/libs/GMP_BigInts/gmp-5.0.4/lib/
+                 #../builds/libs/GMP_BigInts/gmp-5.0.4/lib/
                  ../builds/libs/unicode/release-51-1/lib/
                  ../builds/libs/SDL_image/lib/ ../builds/libs/SDL/1.3/lib
    )

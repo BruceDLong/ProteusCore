@@ -1,0 +1,32 @@
+--- deps/GMP_BigInts/src/gmp-5.0.4/cxx/ismpf.cc
++++ deps/GMP_BigInts/src/gmp-5.0.4/cxx/ismpf.cc
+@@ -45,12 +45,12 @@
+   bool ok = false;
+ 
+   // C decimal point, as expected by mpf_set_str
+-  const char *lconv_point = localeconv()->decimal_point;
++  const char *lconv_point = ".";
+ 
+   // C++ decimal point
+ #if HAVE_STD__LOCALE
+   const locale& loc = i.getloc();
+-  char point_char = use_facet< numpunct<char> >(loc).decimal_point();
++  char point_char = '.';
+ #else
+   const char *point = lconv_point;
+   char point_char = *point;
+--- deps/GMP_BigInts/src/gmp-5.0.4/cxx/osmpf.cc
++++ deps/GMP_BigInts/src/gmp-5.0.4/cxx/osmpf.cc
+@@ -44,10 +44,10 @@
+ 
+ #if HAVE_STD__LOCALE
+   char  point[2];
+-  point[0] = use_facet< numpunct<char> >(o.getloc()).decimal_point();
++  point[0] = '.';
+   point[1] = '\0';
+ #else
+-  const char *point = localeconv()->decimal_point;
++  const char *point = ".";
+ #endif
+ 
+   GMP_ASPRINTF_T_INIT (d, &result);

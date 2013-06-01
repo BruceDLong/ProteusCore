@@ -56,17 +56,16 @@ int AutoEval(infon* CI, agent* a);
 bool IsHardFunc(string tag);
 
 int main(int argc, char **argv){
-    char* resourceDir="../resources";
-    char* dbName="proteusData.db";
-    if(initializeProteusCore(resourceDir, dbName)) throw "Could not initialize the Proteus Engine";
+    string resourceDir="../../../resources";
+    string dbName="proteusData.db";
+	if(initializeProteusCore(resourceDir, dbName)) {cout<< "Could not initialize the Proteus Engine\n\n"; exit(1);}
     initReadline();
     signal(SIGSEGV, reportFault);
 
     // Load World
     agent a(0, IsHardFunc, AutoEval);
-    a.locale.createCanonical(locale("").name().c_str());
-    cout<<"Locale: "; PrntLocale(a.locale);
-    if(a.loadInfon("world.pr", &a.world, 0)) exit(1);
+    cout<<"Locale: "<<localeString(&a.locale)<<"\n";
+    if(a.loadInfon(resourceDir+"/world.pr", &a.world, 0)) exit(1);
     topInfon=a.world;  // use topInfon in the ddd debugger to view World
 
     cout<<"\nThe Proteus CLI. Type some infons or 'quit'\n\n";
@@ -75,7 +74,7 @@ int main(int argc, char **argv){
         string entry= readln("Proteus: ");
         if (entry=="quit") break;
         if (entry=="dict") {
-            cout<<"Locale: "; PrntLocale(a.locale);
+            cout<<"Locale: "<<localeString(&a.locale)<<"\n";
             xlater* Xlater = fetchXlater(&a.locale);
             if(!Xlater) {cout<<"Translater for this locale wasn't found.\n"; continue;}
             WordSMap *wordLib=Xlater->wordLibrary;
@@ -84,9 +83,8 @@ int main(int argc, char **argv){
             }
             continue;
         } else if (entry.substr(0,7)=="locale=") {
-            icu::UnicodeString str,lang,country;
-            a.locale=icu::Locale::createCanonical(entry.substr(7).c_str());
-            cout<<"Locale: "; PrntLocale(a.locale);
+            a.setLocale(entry.substr(7));
+            cout<<"Locale: "<<localeString(&a.locale)<<"\n";
             continue;
         } if (entry=="") continue;
         //char ch='x', pr; do {pr=ch; ch=getCH(); entry+=ch;} while (!(pr=='%' && ch=='>'));

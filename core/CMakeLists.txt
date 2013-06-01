@@ -6,40 +6,45 @@ OPTION(BUILD_WITH_COVERAGE "Build with coverage analysis support" OFF)
 
 set(LANG_MODULES XlaterENGLISH.cpp)
 
-add_definitions( -std=gnu++11 -Wno-deprecated -Wno-write-strings -fpermissive -g -Wall -O0 -fprofile-arcs -ftest-coverage)
-SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-arcs -ftest-coverage -lgcov")
+add_definitions( -std=gnu++11 -Wno-deprecated -Wno-write-strings -fpermissive -g -Wall -O0 -fPIC)
+SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ")
 
 set(PROTEUS_SRCS Proteus.cpp convs.cpp InfonIO.cpp Functions.cpp wordLibrary.cpp ${LANG_MODULES})
 set(UNICODE_LIBS icuio icui18n icutu icuuc icudata icule iculx icutest dl)
-set(PROTEUS_LIBS readline gmpxx gmp sqlite3 ${UNICODE_LIBS})
+set(PROTEUS_LIBS gmpxx gmp dl pthread sqlite3 ${UNICODE_LIBS})
+set(CLIP_LIBS ncurses readline)
 
-include_directories(# ../builds/libs/GMP_BigInts/gmp-5.0.4/include/
-                    ../builds/libs/unicode/release-51-1/include/
-                    ../deps/boost/
-                    ../builds/libs/sqlite3/sqlite-autoconf-3071602/include/
-                    #../builds/libs/Readline/readline-6.2/include/
+set(HomeDir ${CMAKE_CURRENT_BINARY_DIR})
 
+
+include_directories( ${HomeDir}/../builds/libs/GMP_BigInts/${GMP_Version}/include/
+                     ${HomeDir}/../builds/libs/unicode/release-51-1/include/
+                     ${Slipstream_SOURCE_DIR}/deps/archive/
+                     ${HomeDir}/../builds/libs/sqlite3/sqlite-autoconf-3071602/include/
+                     ${HomeDir}/../builds/libs/Readline/readline-6.2/include/
                     )
-link_directories(#../builds/libs/GMP_BigInts/gmp-5.0.4/lib/
-                 ../builds/libs/unicode/release-51-1/lib/
-                # ../builds/libs/Readline/readline-6.2/lib/
-                 ../builds/libs/sqlite3/sqlite-autoconf-3071602/lib/
+                    
+link_directories(${HomeDir}/../builds/libs/GMP_BigInts/${GMP_Version}/lib/
+                 ${HomeDir}/../builds/libs/unicode/release-51-1/lib/
+                 ${HomeDir}/../builds/libs/Readline/readline-6.2/lib/
+                 ${HomeDir}/../builds/libs/sqlite3/sqlite-autoconf-3071602/lib/
                  )
 
-#add_library(Proteus SHARED ${PROTEUS_SRCS})
-add_executable(clip clip.cpp ${PROTEUS_SRCS})
-target_link_libraries(clip ${PROTEUS_LIBS})
-#set_target_properties(clip PROPERTIES COMPILE_FLAGS "-m38" LINK_FLAGS "-m39")
+add_library(Proteus SHARED ${PROTEUS_SRCS})
+target_link_libraries(Proteus Proteus)
 
-add_executable(testCore testCore.cpp ${PROTEUS_SRCS})
-target_link_libraries(testCore ${PROTEUS_LIBS})
+add_executable(clip clip.cpp)
+target_link_libraries(clip Proteus  ${PROTEUS_LIBS} ${CLIP_LIBS})
 
+add_executable(testCore testCore.cpp)
+target_link_libraries(testCore Proteus ${PROTEUS_LIBS})
 
+if(0)
 ##############################################
 ## INCLUDE TESTS, COVERAGE, PACKAGING
 IF(UNIX)
-  SET(MEMORYCHECK_COMMAND "/usr/bin/valgrind")
-  SET(COVERAGE_COMMAND "/usr/bin/gcov")
+ # SET(MEMORYCHECK_COMMAND "/usr/bin/valgrind")
+ # SET(COVERAGE_COMMAND "/usr/bin/gcov")
 ENDIF()
 
 INCLUDE(CTest)
@@ -48,7 +53,7 @@ IF(BUILD_WITH_COVERAGE)
     IF (CMAKE_COMPILER_IS_GNUCC)
         SET(CMAKE_C_FLAGS "-g -O0 -Wall -fprofile-arcs -ftest-coverage")
         SET(CMAKE_CXX_FLAGS "-g -O0 -Wall -fprofile-arcs -ftest-coverage")
-        SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-arcs -ftest-coverage -lgcov")
+#        SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-arcs -ftest-coverage -lgcov")
 
     ENDIF()
 ENDIF(BUILD_WITH_COVERAGE)
@@ -70,3 +75,4 @@ ADD_CUSTOM_TARGET(lcov
 ADD_DEPENDENCIES(lcov clip)
 
 INCLUDE(CMakeTests.txt)
+endif(0)

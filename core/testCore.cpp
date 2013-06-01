@@ -273,7 +273,7 @@ int main (int argc, char* const argv[])
     // global setup...
     if(sizeof(int)!=4) {cout<<"WARNING! int size is "<<sizeof(int)<<" bytes.\n\n"; exit(1);}
 
-    char* resourceDir="../resources";
+    char* resourceDir="../../../resources";
     char* dbName="proteusData.db";
     if(initializeProteusCore(resourceDir, dbName)) {cout<< "Could not initialize the Proteus Engine"; exit(1);}
 

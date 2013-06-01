@@ -103,13 +103,14 @@ xlater* fetchXlater(icu::Locale *locale);
 typedef map<string, xlater*> LanguageExtentions;
 extern LanguageExtentions langExtentions;
 extern void resetLanguageData();
-extern int initializeProteusCore(char* resourceDir, char* dbName);
+extern int initializeProteusCore(string resourceDir, string dbName);
 extern void shutdownProteusCore();
 extern int calcScopeScore(string wrdS, string trialS);
 
 ///////////////////  INFON RELATED ITEMS  ///////////////////
 
 typedef ptrdiff_t UInt;
+typedef uint32_t UInt32;
 typedef mpz_class BigInt;
 typedef mpq_class BigFrac;
 
@@ -138,14 +139,14 @@ inline void intrusive_ptr_release(infonIndex* p){if(--p->refCnt == 0) delete p;}
 struct agent;
 
 struct pureInfon {
-    UInt flags;
+    UInt32 flags;
     BigFrac offset;
     infDataPtr dataHead;
     union{infon* listHead; infon* proxie;};
 
     string toString(UInt sizeBase);
     pureInfon():flags(0), offset(0), dataHead(0), listHead(0){};
-    pureInfon(infDataPtr Head, UInt flag, BigFrac offSet);
+    pureInfon(infDataPtr Head, UInt32 flag, BigFrac offSet);
     pureInfon(char* str, int base=0);
     pureInfon(BigInt num): offset(0), listHead(0){flags=tNum+fLiteral; dataHead=infDataPtr(new infonData(num));};
     pureInfon& operator=(const string &str);
@@ -156,7 +157,7 @@ struct pureInfon {
 };
 
 struct infon {
-    infon(UInt wf=0, pureInfon* s=0, pureInfon* v=0, infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0);
+    infon(UInt32 wf=0, pureInfon* s=0, pureInfon* v=0, infNode*ID=0,infon*s1=0,infon*s2=0,infon*n=0);
     infon* isntLast(); // 0=this is the last one. >0 = pointer to predecessor of the next one.
     BigInt& getSize();
     bool getInt(BigInt* num);
@@ -170,7 +171,7 @@ struct infon {
     void updateIndex();
     ~infon(){};
 
-    UInt wFlag;
+    UInt32 wFlag;
     UInt pos;
     UInt wSize; // get rid if this. disallow strings and lists in "size"
     pureInfon size;        // The *-term; number of states, chars or items
@@ -205,7 +206,7 @@ typedef queue<QitemPtr> infQ;
 typedef map<infon*, infon*> PtrMap;
 
 struct agent {
-    agent(infon* World=0, bool (*isHF)(string)=0, int (*eval)(infon*, agent*)=0){world=World; isHardFunc=isHF; autoEval=eval;};
+    agent(infon* World=0, bool (*isHF)(string)=0, int (*eval)(infon*, agent*)=0);
     int StartPureTerm(pureInfon* varIn, infon** varOut);
     int StartTerm(infon* varIn, infon** varOut);
     int LastTerm(infon* varIn, infon** varOut);
@@ -223,16 +224,18 @@ struct agent {
     infon* normalize(infon* i, infon* firstID=0);
     infon *world, context;
     icu::Locale locale;
+    void setLocale(string l);
     void* utilField; // Field for application specific use.
     void deepCopyPure(pureInfon* from, pureInfon* to, int flags);
     void deepCopy(infon* from, infon* to, PtrMap* ptrs=0, int flags=0);
-    int loadInfon(const char* filename, infon** inf, bool normIt=true);
+    int loadInfon(string filename, infon** inf, bool normIt=true);
     infon* loadInfonFromString(string ProteusString, infon** inf, bool normIt=false);
     string printInfon(infon* i, infon* CI=0);
     string printPure (pureInfon* i, UInt wSize, infon* CI=0);
 
     int fetch_NodesNormalForm(QitemPtr cn);
     void pushNextInfon(infon* CI, QitemPtr cn, infQ &ItmQ);
+    ~agent();
     private:
         bool (*isHardFunc)(string);
         int (*autoEval)(infon*, agent*);
@@ -246,9 +249,7 @@ struct agent {
         void migrateGetLastIdents(infon *i);
 };
 
-// From InfonIO.cpp
-//string printInfon(infon* i, infon* CI=0);
-//string printPure (pureInfon* i, UInt wSize, infon* CI=0);
+extern string localeString(Locale* L);
 void numberFromString(char* buf, pureInfon* pInf, int base=10);
 const int bufmax=1024*32;
 struct QParser{

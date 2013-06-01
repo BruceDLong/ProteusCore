@@ -20,7 +20,7 @@ bool isGivenNumber(infon *i){
     return true;
 }
 
-infon::infon(UInt wf, pureInfon* s, pureInfon* v, infNode*ID,infon*s1,infon*s2,infon*n):
+infon::infon(UInt32 wf, pureInfon* s, pureInfon* v, infNode*ID,infon*s1,infon*s2,infon*n):
         wFlag(wf), wSize(0), next(n), pred(0), spec1(s1), spec2(s2), wrkList(ID) {
     prev=0; top=0; top2=0; type=0; pos=0; attrs=0; index=0;
     if(s) size=*s;
@@ -257,7 +257,7 @@ pureInfon& pureInfon::operator=(const string &str){
     return *this;
 }
 
-pureInfon::pureInfon(infDataPtr Head, UInt flag, BigFrac offSet):flags(flag), offset(offSet), dataHead(Head), listHead(0){};
+pureInfon::pureInfon(infDataPtr Head, UInt32 flag, BigFrac offSet):flags(flag), offset(offSet), dataHead(Head), listHead(0){};
 
 pureInfon::pureInfon(char* str, int base):listHead(0) {
     if (base==-1) { // str is a string

@@ -5,12 +5,13 @@
     You should have received a copy of the GNU General Public License along with the SlipStream Engine.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-const char* resourceDir="../resources";
+const char* resourceDir="../../../resources";
+const char* dbName="proteusData.db";
 
 #define windowTitle "Turbulance"
 #define MAX_PORTALS 24
 
-#include <time.h>
+//#include <time.h>
 #include <SDL.h>
 #include <SDL2/SDL_thread.h>
 #include <SDL2/SDL_image.h>
@@ -572,7 +573,7 @@ void InitializePortalSystem(int argc, char** argv){
   //UNDO:  SDL_EnableUNICODE(1);
     atexit(cleanup);
 
-    initializeProteusCore(resourceDir, "proteusData.db");
+    if(initializeProteusCore(resourceDir, dbName)) {cout<< "Could not initialize the Proteus Engine\n\n"; exit(1);}
     if(theAgent.loadInfon(worldFile, &theAgent.world)) exit(1);
     User* portalUser=new User;
     if(loadUserRecord(portalUser, username, password)) {MSGl("\nUser could not be authenticated. Exiting..."); exit(5);}
@@ -735,7 +736,7 @@ void StreamEvents(){
 
 int main(int argc, char *argv[]){
     MSGl("\n\n         * * * * * Starting Proteus and The Slipstream * * * * *\n");
-    MSGl("SDL Revision" << SDL_GetRevisionNumber()<<",  "<<"\n");
+    //MSGl("SDL Revision " << SDL_GetRevisionNumber()<<",  "<<"\n");
     InitializePortalSystem(argc, argv);
     newsViewer=new NewsViewer(0,0,0,600,300); newsViewer->dirty=1; newsViewer->visible=1;
     StreamEvents();

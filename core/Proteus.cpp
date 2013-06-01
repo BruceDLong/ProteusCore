@@ -28,7 +28,7 @@ xlater* fetchXlater(icu::Locale *locale){
 }
 
 LanguageExtentions langExtentions; // This map stores valid locales and their xlater if available.
-int initializeProteusCore(char* resourceDir, char* dbName){     // Use this to load available language modules before normalizing any infons.
+int initializeProteusCore(string resourceDir, string dbName){     // Use this to load available language modules before normalizing any infons.
     // Connect to Proteus Database
     string dbPath=resourceDir; dbPath+="/"; dbPath+=dbName;
     int rc = sqlite3_open(dbPath.c_str(), &coreDatabase);
@@ -38,7 +38,7 @@ int initializeProteusCore(char* resourceDir, char* dbName){     // Use this to l
             return(1);
         }
     // Initialize Language modules.
-    u_setDataDirectory(resourceDir);
+    u_setDataDirectory(resourceDir.c_str());
     EnglishXLater.loadLanguageData(coreDatabase);
     int numLocales;
     const icu::Locale* locale = icu::Locale::getAvailableLocales(numLocales);
@@ -71,6 +71,13 @@ void resetLanguageData(){
 
 void shutdownProteusCore(){
     sqlite3_close(coreDatabase);
+}
+
+string localeString(Locale* L){
+	icu::UnicodeString lang,country; 
+	string R=(char*)(L->getDisplayLanguage(*L, lang).getTerminatedBuffer()); R+="-"; 
+	R+=(char*)L->getDisplayCountry(*L, country).getTerminatedBuffer(); R+=" ("; R+=L->getBaseName(); R+=")"; 
+	return R;
 }
 
 int calcScopeScore(string wrdS, string trialS){
@@ -109,14 +116,18 @@ infon* getParent(infon* i){
 #define fetchLastItem(lval, item) {for(lval=item; InfsType(lval)==tList;lval=lval->value->prev);}
 #define fetchFirstItem(lval, item) {for(lval=item; InfsTYpe(lval)==tList;lval=lval->value){};}
 
-int agent::loadInfon(const char* filename, infon** inf, bool normIt){
+agent::agent(infon* World, bool (*isHF)(string), int (*eval)(infon*, agent*)){world=World; isHardFunc=isHF; autoEval=eval; locale.createCanonical(std::locale("").name().c_str());};
+void agent::setLocale(string l){locale=icu::Locale::createCanonical(l.c_str());}
+agent::~agent(){};
+
+int agent::loadInfon(string filename, infon** inf, bool normIt){
     cout<<"Loading:'"<<filename<<"'..."<<flush;
     fstream InfonIn(filename);
-    if(InfonIn.fail()){cout<<"Error: The file "<<filename<<" was not found.\n"<<flush; return 1;}
+    if(InfonIn.fail()){cout<<"\nThe file "<<filename<<" was not found.\n\n"<<flush; return 1;}
     QParser T(InfonIn); T.agnt=this;
     *inf=T.parse();
     if (*inf) {cout<<"done.   "<<flush;}
-    else {cout<<"Error:"<<T.buf<<"   "<<flush; return 1;}
+    else {cout<<"\nError:"<<T.buf<<"   \n\n"<<flush; return 1;}
     if(normIt) {
         alts.clear();
         try{

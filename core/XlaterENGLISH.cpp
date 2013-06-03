@@ -71,7 +71,7 @@ void tagChainToString(WordS *tags, UnicodeString *strOut){
         n= (*itr).get();
         if((*strOut)!="") (*strOut)+=" ";
         n->offsetInSource=strOut->length();
-        (*strOut) += strOut->fromUTF8(n->norm);
+        (*strOut) += strOut->fromUTF8(n->norm.c_str());
     }
 }
 
@@ -84,7 +84,8 @@ WordS* XlaterENGLISH::ReadLanguageWord(QParser *parser, icu::Locale &locale){ //
     WordS* tag=new WordS;
     string &parsed=tag->asRead=parser->buf; tag->locale=locale.getBaseName();
     if(isalpha(tok)){
-        tagNormalizer->normalize(UnicodeString::fromUTF8(parsed), uErr).toUTF8String(tag->norm);
+		UnicodeString uniNorm=tagNormalizer->normalize(UnicodeString::fromUTF8(parsed.c_str()), uErr);
+        UnicodeStrToUTF8_String(uniNorm, tag->norm);
         if(tagIsBad(tag->norm, tag->locale.c_str()))
             {cout<<"BAD TAG:"<<tag->norm<<"\n"; throw ("Problem with characters in word");}
         if(tag->norm.at(0)=='-'){tag->flags1|=wfAsSuffix; tag->norm=tag->norm.substr(1);}

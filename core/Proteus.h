@@ -250,6 +250,7 @@ struct agent {
 };
 
 extern string localeString(Locale* L);
+extern void UnicodeStrToUTF8_String(UnicodeString &s, string &out);
 void numberFromString(char* buf, pureInfon* pInf, int base=10);
 const int bufmax=1024*32;
 struct QParser{

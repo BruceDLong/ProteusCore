@@ -3,12 +3,14 @@
 
 cmake_minimum_required(VERSION 2.8.5)
 
-set(MAKE_SDL ON) #  "Build our own SDL and SDL related libs"
+set(MAKE_SDL ON) #  "Build our own SDL lib"
+set(MAKE_IMG ON) #  "Build our own image display (png, jpg, etc) libs"
 set(MAKE_GMP ON) #  "Build our own math (gmp) and related libs"
 set(MAKE_CPF ON) #  "Build our own cairo/pango/freetype libs"
 set(MAKE_SQL ON) #  "Build our own sqlite lib"
 set(MAKE_RDL ON) #  "Build our own Readline lib"
 set(MAKE_ICU ON) #  "Build our own unicode libs"
+set(MAKE_PRG ON) #  "Build the proteus libs, clip and slip"
 
 set(ICU_UnicodeVersion release-51-1)
 set(GMP_Version gmp-5.0.4)
@@ -61,13 +63,15 @@ elseif (${PLAT_BUILD} STREQUAL "xLINUX_ARM")
 
 elseif (${PLAT_BUILD} STREQUAL "xANDROID_ARM") # android_14
 	message(STATUS "Building for ${PLAT_BUILD}.")
-	set(MAKE_SDL OFF)
+	set(MAKE_SDL 'OFF')
+	set(MAKE_RDL 'OFF')
 	
 	SET(CMAKE_C_COMPILER   ${toolChainPath}/${PLAT_BUILD}/bin/arm-linux-androideabi-gcc)
 	SET(CMAKE_CXX_COMPILER ${toolChainPath}/${PLAT_BUILD}/bin/arm-linux-androideabi-g++)
 	SET(xCONFIG_GMP "--host=arm-android-linux  CC_FOR_BUILD=${LOCAL_CC}")
 	SET(xCONFIG_RDL "--host=arm-eabi")
 	SET(xCONFIG_SQL "--host=arm-eabi")
+	SET(xCONFIG_SDL "--host=arm-android-linux")
 	SET(xCONFIG_VARS "CXXFLAGS=-mthumb")
 	SET(ICU_PLAT_CODE_local Linux)
 	SET(ICU_PLAT_CODE Linux --host=arm-android-linux --with-cross-build=${CMAKE_CURRENT_BINARY_DIR}/deps/unicode/${ICU_UnicodeVersion} CPPFLAGS=-nostdlib)
@@ -117,7 +121,7 @@ include(ExternalProject)
 #find_package(Git)
 #message(STATUS "CMAKE_TOOLCHAIN_FILE='${CMAKE_TOOLCHAIN_FILE}'")
 
-if (MAKE_SDL)
+if ($MAKE_SDL STREQUAL "ON")
 	#find_package(Mercurial)
 	#=========================================
 	# Build SDL
@@ -128,7 +132,7 @@ if (MAKE_SDL)
 	  UPDATE_COMMAND ""
 
 	  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/SDL/src/SDL
-	  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/SDL/src/SDL/configure  CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}   --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/SDL/1.3
+	  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/SDL/src/SDL/configure ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS} --enable-joystick=no --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/SDL/1.3
 
 	  BUILD_COMMAND  $(MAKE) -j4
 	  INSTALL_COMMAND  $(MAKE) install
@@ -146,27 +150,75 @@ if (MAKE_SDL)
 	  UPDATE_COMMAND ""
 
 	  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/SDL_image/src/SDL_image
-	  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/sdl_image_config.sh "\"${CMAKE_CURRENT_BINARY_DIR}\"" "\"CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS} \""
+	  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/sdl_image_config.sh ${xCONFIG_SDL} "\"${CMAKE_CURRENT_BINARY_DIR}\"" "\"CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS} \""
 	  BUILD_COMMAND  $(MAKE) -j4
 	  INSTALL_COMMAND  $(MAKE) install
 	  BUILD_IN_SOURCE 1
 	  DEPENDS "SDL_LIBS"
 	)
-endif (MAKE_SDL)
+endif()
+
+if (${MAKE_IMG} STREQUAL "ON")
+	#=========================================
+	# Build libJpeg
+	ExternalProject_Add(
+	  JPEG_LIB
+	  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/JPEG_LIB/
+	  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/jpegsrc.v9.tar.gz"
+	  
+	  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/JPEG_LIB/src/jpeg-9/
+	  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/JPEG_LIB/src/jpeg-9/configure ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/JPEG_LIB/jpeg-9
+	  BUILD_COMMAND  $(MAKE) -j4
+	  INSTALL_COMMAND  $(MAKE) install
+	  BUILD_IN_SOURCE 0
+	)
+
+	#=========================================
+	# Build libPNG
+	ExternalProject_Add(
+	  PNG_LIB
+	  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/PNG_LIB/
+	  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/libpng-1.6.2.tar.gz"
+	  
+	  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/PNG_LIB/src/libpng-1.6.2/
+	  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/PNG_LIB/src/libpng-1.6.2/configure ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PNG_LIB/libpng-1.6.2
+	  BUILD_COMMAND  $(MAKE) -j4
+	  INSTALL_COMMAND  $(MAKE) install
+	  BUILD_IN_SOURCE 0
+	)
+
+endif()
 
 
-if (MAKE_CPF)
+if (${MAKE_CPF} STREQUAL "ON")
+
+	#=========================================
+	# Build Fontconfig
+	  ExternalProject_Add(
+	  FONTCONFIG
+	  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/
+	  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/fontconfig-2.10.93.zip"
+	  
+	  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/src/fontconfig-2.10.93/
+	  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/src/fontconfig-2.10.93/autogen.sh ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/FONTCONFIG/fontconfig-2.10.93
+	  BUILD_COMMAND  $(MAKE) -j4
+	  INSTALL_COMMAND  $(MAKE) install
+	  BUILD_IN_SOURCE 0
+	)
+	
+	#=========================================
+	# Build Freetype
+	
 	#=========================================
 	# Build Cairo
 
 	#=========================================
 	# Build Pango
 
-	#=========================================
-	# Build Freetype2???
-endif (MAKE_CPF)
 
-if (MAKE_GMP)
+endif()
+
+if (${MAKE_GMP} STREQUAL "ON")
 	#=========================================
 	# Build GMP
 	ExternalProject_Add(
@@ -197,10 +249,10 @@ if (MAKE_GMP)
 	  #BUILD_IN_SOURCE 0
 	  #DEPENDS "GMP_BigInts"
 	#)
-endif (MAKE_GMP)
+endif()
 
 
-if (MAKE_SQL)
+if (${MAKE_SQL} STREQUAL "ON")
 	#=========================================
 	# Build sqlite3
 	ExternalProject_Add(
@@ -215,10 +267,10 @@ if (MAKE_SQL)
 	  INSTALL_COMMAND  $(MAKE) install
 	  BUILD_IN_SOURCE 0
 	)
-endif (MAKE_SQL)
+endif()
 
 
-if (MAKE_RDL)
+if (${MAKE_RDL} STREQUAL "ON")
 	#=========================================
 	# Build Readline
 	ExternalProject_Add(
@@ -233,10 +285,10 @@ if (MAKE_RDL)
 	  INSTALL_COMMAND  $(MAKE) install
 	  BUILD_IN_SOURCE 0
 	)
-endif (MAKE_RDL)
+endif()
 
 
-if (MAKE_ICU)
+if (${MAKE_ICU} STREQUAL "ON")
 	#=========================================
 	# Build ICU (unicode)
 	find_package(Subversion)
@@ -276,8 +328,9 @@ if (MAKE_ICU)
 	  DEPENDS "ICU_unicode_local"
 	)
 	endif()
-endif (MAKE_ICU)
+endif()
 
-
-add_subdirectory (core)
-add_subdirectory (slip)
+	add_subdirectory (core)
+if (${MAKE_PRG} STREQUAL "ON")
+	add_subdirectory (slip)
+endif()

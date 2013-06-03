@@ -80,6 +80,14 @@ string localeString(Locale* L){
 	return R;
 }
 
+void UnicodeStrToUTF8_String(UnicodeString &s, string &out){
+	int32_t len=s.length() * 5;
+	char c[len];
+	CheckedArrayByteSink sbs(c,len);
+	s.toUTF8(sbs);
+	out=c;
+}
+
 int calcScopeScore(string wrdS, string trialS){
     int score=1;
     uint wpStart=0, tpStart=0, wp, tp; // WordPos and trialPos

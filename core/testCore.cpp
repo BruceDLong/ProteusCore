@@ -255,7 +255,7 @@ void multiNorm(agent** a, string entryStr){
 
     while(std::getline(ss, item)) {
         if(item.size()>0) {
-            unsigned pos=item.find("//:");
+            size_t pos=item.find("//:");
             if(pos!=string::npos){
                 in=item.substr(0,pos);
                 out=item.substr(pos+3);

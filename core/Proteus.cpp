@@ -92,7 +92,7 @@ string localeString(Locale* L){
 
 int calcScopeScore(string wrdS, string trialS){
     int score=1;
-    uint wpStart=0, tpStart=0, wp, tp; // WordPos and trialPos
+    size_t wpStart=0, tpStart=0, wp, tp; // WordPos and trialPos
     wrdS+='&'; trialS+='&';
     for (wp=wrdS.find("&"),tp=trialS.find('&'); wp!=string::npos && tp!=string::npos; wp=wrdS.find("&",wp+1),tp=trialS.find('&',tp+1)){
         string WrdScopeSeg=wrdS.substr(wpStart,wp-wpStart), trialScopeSeg=trialS.substr(tpStart, tp-tpStart);

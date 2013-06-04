@@ -36,43 +36,44 @@ target_link_libraries(Proteus Proteus)
 add_executable(clip clip.cpp)
 target_link_libraries(clip Proteus  ${PROTEUS_LIBS} ${CLIP_LIBS})
 
-add_executable(testCore testCore.cpp)
-target_link_libraries(testCore Proteus ${PROTEUS_LIBS})
+if(${PLAT_BUILD} STREQUAL "HOST")
+	##############################################
+	## INCLUDE TESTS, COVERAGE, PACKAGING
+	IF(UNIX)
+	 # SET(MEMORYCHECK_COMMAND "/usr/bin/valgrind")
+	 # SET(COVERAGE_COMMAND "/usr/bin/gcov")
+	ENDIF()
 
-if(0)
-##############################################
-## INCLUDE TESTS, COVERAGE, PACKAGING
-IF(UNIX)
- # SET(MEMORYCHECK_COMMAND "/usr/bin/valgrind")
- # SET(COVERAGE_COMMAND "/usr/bin/gcov")
-ENDIF()
+	INCLUDE(CTest)
+	IF(BUILD_WITH_COVERAGE)
+		# enable coverage analysis using GCC and GCOV
+		IF (CMAKE_COMPILER_IS_GNUCC)
+			SET(CMAKE_C_FLAGS "-g -O0 -Wall -fprofile-arcs -ftest-coverage")
+			SET(CMAKE_CXX_FLAGS "-g -O0 -Wall -fprofile-arcs -ftest-coverage")
+	#        SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-arcs -ftest-coverage -lgcov")
 
-INCLUDE(CTest)
-IF(BUILD_WITH_COVERAGE)
-    # enable coverage analysis using GCC and GCOV
-    IF (CMAKE_COMPILER_IS_GNUCC)
-        SET(CMAKE_C_FLAGS "-g -O0 -Wall -fprofile-arcs -ftest-coverage")
-        SET(CMAKE_CXX_FLAGS "-g -O0 -Wall -fprofile-arcs -ftest-coverage")
-#        SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-arcs -ftest-coverage -lgcov")
+		ENDIF()
+	ENDIF(BUILD_WITH_COVERAGE)
 
-    ENDIF()
-ENDIF(BUILD_WITH_COVERAGE)
+	#        # add lcov target
+	#        include(${CMAKE_SOURCE_DIR}/lcov.cmake)
+	#        ADD_DEPENDENCIES(lcov clip)
 
-#        # add lcov target
-#        include(${CMAKE_SOURCE_DIR}/lcov.cmake)
-#        ADD_DEPENDENCIES(lcov clip)
+	## lcov target
+	ADD_CUSTOM_TARGET(lcov
+		COMMAND mkdir -p coverage
+		COMMAND lcov --directory . --zerocounters
+		COMMAND ctest --timeout 4
+		COMMAND lcov --directory . --capture --output-file ./coverage/stap.info
+		COMMAND genhtml -o ./coverage/stap ./coverage/stap.info.cleaned
+		COMMAND echo "Open ${CMAKE_BINARY_DIR}/coverage/index.html to view the coverage analysis results."
+		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+		)
+	ADD_DEPENDENCIES(lcov clip)
 
-## lcov target
-ADD_CUSTOM_TARGET(lcov
-    COMMAND mkdir -p coverage
-    COMMAND lcov --directory . --zerocounters
-    COMMAND ctest --timeout 4
-    COMMAND lcov --directory . --capture --output-file ./coverage/stap.info
-    COMMAND genhtml -o ./coverage/stap ./coverage/stap.info.cleaned
-    COMMAND echo "Open ${CMAKE_BINARY_DIR}/coverage/index.html to view the coverage analysis results."
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    )
-ADD_DEPENDENCIES(lcov clip)
-
-INCLUDE(CMakeTests.txt)
-endif(0)
+	# Create the testCore program
+	INCLUDE(${Slipstream_SOURCE_DIR}/core/CMakeTests.txt)
+	add_executable(testCore testCore.cpp)
+	add_custom_command(TARGET testCore POST_BUILD COMMAND cp ${Slipstream_SOURCE_DIR}/core/M ${HomeDir})
+	target_link_libraries(testCore Proteus ${PROTEUS_LIBS})
+endif()

@@ -73,19 +73,21 @@ void shutdownProteusCore(){
     sqlite3_close(coreDatabase);
 }
 
-string localeString(Locale* L){
-	icu::UnicodeString lang,country; 
-	string R=(char*)(L->getDisplayLanguage(*L, lang).getTerminatedBuffer()); R+="-"; 
-	R+=(char*)L->getDisplayCountry(*L, country).getTerminatedBuffer(); R+=" ("; R+=L->getBaseName(); R+=")"; 
-	return R;
-}
-
 void UnicodeStrToUTF8_String(UnicodeString &s, string &out){
 	int32_t len=s.length() * 5;
 	char c[len];
 	CheckedArrayByteSink sbs(c,len);
 	s.toUTF8(sbs);
-	out=c;
+	out=string(c, strlen(c));
+}
+
+string localeString(Locale* L){
+	icu::UnicodeString lang,country; 
+	string R, tmp;
+	UnicodeStrToUTF8_String(L->getDisplayLanguage(*L, lang), R); R+="-"; 
+	UnicodeStrToUTF8_String(L->getDisplayCountry(*L, country), tmp); R+=tmp;
+	R+=" ("; R+=L->getBaseName(); R+=")"; 
+	return R;
 }
 
 int calcScopeScore(string wrdS, string trialS){

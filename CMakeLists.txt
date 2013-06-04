@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 2.8.5)
 set(MAKE_SDL ON) #  "Build our own SDL lib"
 set(MAKE_IMG ON) #  "Build our own image display (png, jpg, etc) libs"
 set(MAKE_GMP ON) #  "Build our own math (gmp) and related libs"
-set(MAKE_CPF ON) #  "Build our own cairo/pango/freetype libs"
+set(MAKE_CPF OFF) #  "Build our own cairo/pango/freetype libs"
 set(MAKE_SQL ON) #  "Build our own sqlite lib"
 set(MAKE_RDL ON) #  "Build our own Readline lib"
 set(MAKE_ICU ON) #  "Build our own unicode libs"
@@ -34,6 +34,7 @@ set(CROSS_COMPILE 'yes')
 if (${PLAT_BUILD} STREQUAL "HOST")
 	message(STATUS "Building for local host. (${CMAKE_HOST_SYSTEM_PROCESSOR})")
 	set(CROSS_COMPILE 'no')
+	set(MAKE_CPF OFF)
 	if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "x86_64")
 		SET(xCONFIG_GMP  "--enable-fat")
 	elseif (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "i386")
@@ -195,15 +196,15 @@ if (${MAKE_CPF} STREQUAL "ON")
 	#=========================================
 	# Build Fontconfig
 	  ExternalProject_Add(
-	  FONTCONFIG
-	  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/
-	  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/fontconfig-2.10.93.zip"
-	  
-	  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/src/fontconfig-2.10.93/
-	  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/src/fontconfig-2.10.93/autogen.sh ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/FONTCONFIG/fontconfig-2.10.93
-	  BUILD_COMMAND  $(MAKE) -j4
-	  INSTALL_COMMAND  $(MAKE) install
-	  BUILD_IN_SOURCE 0
+		  FONTCONFIG
+		  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/
+		  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/fontconfig-2.10.93.zip"
+		  
+		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/src/fontconfig-2.10.93/
+		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/src/fontconfig-2.10.93/autogen.sh ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/FONTCONFIG/fontconfig-2.10.93
+		  BUILD_COMMAND  $(MAKE) -j4
+		  INSTALL_COMMAND  $(MAKE) install
+		  BUILD_IN_SOURCE 0
 	)
 	
 	#=========================================

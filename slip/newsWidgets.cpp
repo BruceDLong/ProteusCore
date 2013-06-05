@@ -53,48 +53,45 @@ uint32_t tick(uint32_t interval, void *param); // forward decl
 
 struct ScrollingDispItem:DisplayItem {
     ScrollingDispItem(DisplayItem* Parent=0, int X=0, int Y=0, int W=100, int H=50):DisplayItem(Parent,X,Y,W,H){
-        velocityX=velocityY=0; tmpOffset=offset=0; span=0; timestamp=0; scrollState=still;
-        ptrX=ptrY=0; skewX=skewY=0; deltaX=deltaY=0;
+        offset=0; span=0; timestamp=0; scrollState=still;
+        downX=downY=prevX=prevY=veloX=veloY=0;
     };
     ~ScrollingDispItem(){};
     /////// Scrolling functionality
-    const int moveThreshold = 10;
-    double tmpOffset, offset, span;
-    int velocityX, velocityY;
+    const double moveThreshold = 1;
+    const int interval=20; // Tick interval
+    double offset, span;
+    double downX, downY, prevX, prevY, veloX, veloY, scale;
     UInt timestamp;
-    int ptrX, ptrY, skewX, skewY, deltaX, deltaY;
     scrollStates scrollState;
     SDL_TimerID timer_id;
 
-    void setTmpOffset(double Offset){
-        double off=Offset;
-        if(off != tmpOffset){
+    void setOffset(double off){
+        if(off != offset){
             if(off< -10000) off=-10000;
             if(off> 10000) off=10000;
-            tmpOffset=off;
+            offset=off;
             markDirty();
             SDL_Event ev; ev.type = SDL_USEREVENT;  ev.user.code = 0;  ev.user.data1 = 0;  ev.user.data2 = 0;
             SDL_PushEvent(&ev);
-cout<<"OFFSET:"<<tmpOffset<<"\n";
         }
     }
 
     int handleEvent(SDL_Event &ev){
-        int tmpX, tmpY, delta_x, delta_y;
+        double crntX=0, crntY=0, delta_x, delta_y;
         switch (ev.type) {
             case SDL_MOUSEBUTTONDOWN:
                 if(ev.button.button!=SDL_BUTTON_LEFT) return 0;
-                tmpX=ev.button.x; tmpY=ev.button.y;
-                if(tmpX<=x || tmpX>(x+w) || tmpY<y || tmpY>(y+h)) return 0;
+                crntX=ev.button.x-x; crntY=ev.button.y-y;
+                if(crntX<=0 || crntX>(w) || crntY<0 || crntY>(h)) return 0;
                 captureMouseMsgs(this);
                 if(scrollState==still){                  // Finger Pressed while still
                     scrollState=fingerPressed;
-                    ptrX=tmpX; ptrY=tmpY;
+                    prevX=downX=crntX; prevY=downY=crntY;
                 } else if(scrollState==freeScrolling){  // Finger Pressed while free-scrolling
                     scrollState=stopping;
-                    velocityX=0; velocityY=0;
-                    ptrX=tmpX; ptrY=tmpY;
-                    offset=tmpOffset;
+                    veloX=0; veloY=0;
+                    downX=crntX; downY=crntY;
                     SDL_RemoveTimer(timer_id);  // NOTE: It is not safe to remove a timer multiple times.
 
                 }
@@ -102,55 +99,47 @@ cout<<"OFFSET:"<<tmpOffset<<"\n";
             case SDL_MOUSEBUTTONUP:
                 if(ev.button.button!=SDL_BUTTON_LEFT) return 0;
                 releaseMouseMsgs();
-                tmpX=ev.button.x; tmpY=ev.button.y;
+                crntX=ev.button.x-x; crntY=ev.button.y-y;
                 if(scrollState==fingerPressed){          // Finger released while pressed
                     scrollState=still;
-                    skewX=0; skewY=0;
+ //                   skewX=0; skewY=0;
 //                     for visible items, handleEvent(ev)
 
                 } else if(scrollState==pullScrolling){   // Finger released while pull-scrolling
-                    delta_x=ev.button.x-ptrX; delta_y=ev.button.y-ptrY;
-                    if (SDL_GetTicks() - timestamp > 100) {
-                        timestamp = SDL_GetTicks();
-                        velocityX = delta_x - deltaX; velocityY = delta_y - deltaY;
-                        deltaX=delta_x; deltaY=delta_y;
-                    }
-                    offset=tmpOffset;
-                    ptrX=tmpX; ptrY=tmpY;
-                    if(velocityX==0 && velocityY==0) {scrollState=still;}
+                    delta_x=crntX-prevX; delta_y=crntY-prevY;
+                    prevX=crntX; prevY=crntY;
+                    uint ticks=SDL_GetTicks()-timestamp; timestamp = SDL_GetTicks();
+                    veloX = delta_x*interval/ticks; veloY = delta_y*interval/ticks;
+
+                    if(veloX==0 && veloY==0) {scrollState=still;}
                     else{
                    //     velocityX /= 4; velocityY /= 4;
                         scrollState=freeScrolling;
-                        timer_id = SDL_AddTimer(20, tick, this);
+                        timer_id = SDL_AddTimer(interval, tick, this);
 
                     }
                 } else if(scrollState==stopping){        // Finger released while stopping/slowing.
                     scrollState=still;
-                    skewX=0; skewY=0;
-                    offset=tmpOffset;
+           //         skewX=0; skewY=0;
                 }
                 break;
             case SDL_MOUSEMOTION:
-                if(ev.button.button!=SDL_BUTTON_LEFT) return 0;
-                tmpX=ev.motion.x; tmpY=ev.motion.y;
+                if(!(ev.motion.state & SDL_BUTTON_LMASK)) return 0;
+                crntX=ev.motion.x-x; crntY=ev.motion.y-y;
+                delta_x=crntX-prevX; delta_y=crntY-prevY;
+                prevX=crntX; prevY=crntY;
                 if(scrollState==fingerPressed || scrollState==stopping){ // Finger moves while just pressed or stopping
-                    delta_x=ev.button.x-ptrX; delta_y=ev.button.y-ptrY;
-                    if(delta_x > moveThreshold || delta_x < -moveThreshold ||
-                        delta_y > moveThreshold || delta_y < -moveThreshold){
-                            timestamp = SDL_GetTicks();
-                            scrollState=pullScrolling;
-                            deltaX=deltaY=0;
-                            ptrX=tmpX; ptrY=tmpY;
-                    }
-                } else if(scrollState==pullScrolling){     // Finger moves, pull-scrolling the view.
-                    delta_x=ev.motion.x-ptrX; delta_y=ev.motion.y-ptrY;
-                    setTmpOffset(offset - deltaX); offset=tmpOffset;
-        cout<<"#\n";
-                    if (SDL_GetTicks() - timestamp > 100) {
-                        timestamp = SDL_GetTicks();
-                        velocityX = delta_x - deltaX; velocityY = delta_y - deltaY;
-                        deltaX=delta_x; deltaY=delta_y;
-                    }
+                    if(delta_x > moveThreshold ||delta_y > moveThreshold || delta_x < -moveThreshold || delta_y < -moveThreshold){ cout<<'=';
+						timestamp = SDL_GetTicks();
+						scrollState=pullScrolling;
+						delta_x=delta_y=0;
+                    } else { cout<<'-'<<flush;// Movement, but not much.
+					}
+                } else if(scrollState==pullScrolling){ cout<<'~'<<flush;    // Finger moves, pull-scrolling the view.
+                    setOffset(offset - (delta_x*scale));
+                    uint ticks=SDL_GetTicks()-timestamp; timestamp = SDL_GetTicks();
+                    veloX = delta_x*interval/ticks; veloY = delta_y*interval/ticks;
+                    if(veloX==0 && veloY==0) {scrollState=still;}
                 }
                 break;
             case SDL_MOUSEWHEEL:
@@ -160,14 +149,14 @@ cout<<"OFFSET:"<<tmpOffset<<"\n";
     }
 };
 
-uint32_t tick(uint32_t interval, void *param){
+uint32_t tick(uint32_t interval, void *param){ cout<<':'<<flush;
     ScrollingDispItem *item=(ScrollingDispItem*)param;
     if (item->scrollState == freeScrolling) {
- //       if(--item->velocityX <0) item->velocityX=0;
- //       if(--item->velocityY <0) item->velocityY=0;
-        item->setTmpOffset(item->offset - item->velocityX);
-        item->offset = item->tmpOffset;
-        if(item->velocityX==0 && item->velocityY==0) {
+        if((item->veloX-0.1) <0) item->veloX=0;
+ //       if(--item->veloY <0) item->veloY=0;
+        item->setOffset(item->offset - (item->veloX));
+
+        if(item->veloX==0 && item->veloY==0) {
             item->scrollState = still;
             return 0; // stop ticker
         }
@@ -221,21 +210,22 @@ struct TimelineView:ScrollingDispItem {
     void fetchNext(ItemCacheItr &item){++item;};
 
     TimelineView(DisplayItem* Parent=0, int X=0, int Y=0, int W=100, int H=50):ScrollingDispItem(Parent,X,Y,W,H)
-        {span=500; offset=500;};
+        {span=501; offset=502;};
     ~TimelineView(){};
     int draw(cairo_t *cr){
-  //      if(!dirty || !visible) return 0; else dirty=false;
+        if(!dirty || !visible) return 0; else dirty=false;
         cairo_set_source_rgba(cr, 0.5,0.5,0.6, 0.9);
         roundedRectangle(cr, x,y,w,h,20);
         cairo_fill(cr);
 
         int64_t leftIdx=offset-span;
-        double scale=span/w; //cout<<scale<<" ";
+        scale=span/w; //cout<<"scale:"<<scale<<" ";
         cairo_set_source_rgba(cr, 0.8,0.8,1.0, 1);
         for(ItemCacheItr item=cache.lower_bound(leftIdx); item!=cache.end() && (*item).first <= offset; ++item){
             int64_t idx=(*item).first;
             double xPoint = (double)(idx-leftIdx)/scale;  // Offset in screen units.
-            cairo_move_to(cr,x+xPoint, y+10); renderText(cr,"XYZ"); cairo_fill(cr);
+char buf[40]; itoa((uint)leftIdx, buf);         
+            cairo_move_to(cr,x+xPoint, y+10); renderText(cr,(string(buf).c_str())); cairo_fill(cr);
         }
 //offset+=10;
         return 1;

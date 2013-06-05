@@ -246,7 +246,7 @@ void DrawTimeLines(InfonPortal* portal, DisplayItem* item){
     //cairo_rectangle (cr, 10,10,200,100);
     //cairo_fill(cr);
     //cairo_move_to(cr,0,0);
-newsViewer->dirty=1;
+	item->dirty=1;
     item->draw(cr);
 }
 
@@ -683,7 +683,7 @@ void StreamEvents(){
             case SDL_FINGERUP:
             case SDL_FINGERMOTION:
                 newsViewer->handleEvent(ev);
-
+                portalView->parentPortal->needsToBeDrawn=true;
             case SDL_MULTIGESTURE:      break;
             case SDL_DOLLARGESTURE:     break;
             case SDL_DOLLARRECORD:      break;

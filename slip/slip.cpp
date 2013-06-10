@@ -738,7 +738,7 @@ int main(int argc, char *argv[]){
     MSGl("\n\n         * * * * * Starting Proteus and The Slipstream * * * * *\n");
     //MSGl("SDL Revision " << SDL_GetRevisionNumber()<<",  "<<"\n");
     InitializePortalSystem(argc, argv);
-    newsViewer=new NewsViewer(0,0,0,600,300); newsViewer->dirty=1; newsViewer->visible=1;
+    newsViewer=new NewsViewer(0,0,0,800,600); newsViewer->dirty=1; newsViewer->visible=1;
     StreamEvents();
     delete newsViewer;
     return (0);

@@ -240,14 +240,14 @@ picCache_t picCache;
 #include "newsWidgets.cpp"
 
 void DrawTimeLines(InfonPortal* portal, DisplayItem* item){
-    cairo_t *cr = portal->cr;
+    	cairo_t *cr = portal->cr;
 
-    //cairo_set_source_rgba(cr, 0.8,1,0.2, 1);
-    //cairo_rectangle (cr, 10,10,200,100);
-    //cairo_fill(cr);
-    //cairo_move_to(cr,0,0);
+	//cairo_set_source_rgba(cr, 0.8,1,0.2, 1);
+	//cairo_rectangle (cr, 10,10,200,100);
+	//cairo_fill(cr);
+	//cairo_move_to(cr,0,0);
 	item->dirty=1;
-    item->draw(cr);
+    	item->draw(cr);
 }
 
 void DrawProteusDescription(InfonPortal* portal, infon* ProteusDesc, int indent=0){

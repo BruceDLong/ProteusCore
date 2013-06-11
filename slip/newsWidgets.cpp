@@ -116,8 +116,6 @@ struct ScrollingDispItem:DisplayItem {
                         veloX = (downX-crntX)/10;
 			veloY = (downY-crntY)/10;
                         scrollState=freeScrolling;cout<<'!'<<flush;
-			//cout<<'<'<<offset<<'>'<<flush;
-			//cout<<veloX<<' '<<veloY<<flush;
                         timer_id = SDL_AddTimer(interval, tick, this);
 
                     }

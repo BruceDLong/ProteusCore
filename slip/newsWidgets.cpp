@@ -290,6 +290,11 @@ struct ItemView:DisplayItem {
         cairo_fill(cr);
         return 1;
     }
+       int handleEvent(SDL_Event &ev){
+        if(!visible) return 0;
+
+        return 0;
+    }
 };
 
 struct NewsViewer:ScrollingDispItem {

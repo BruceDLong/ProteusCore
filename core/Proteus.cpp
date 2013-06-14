@@ -9,6 +9,7 @@
 #include <iostream>
 #include <fstream>
 #include <sqlite3.h>
+#include <sys/stat.h>
 #include "Proteus.h"
 #include "remiss.h"
 
@@ -21,6 +22,33 @@ multimap<infon*,WordSPtr> DefPtr2Tag;  // TODO: Verify that smartpointer in cont
 #include "XlaterENGLISH.h"
 XlaterENGLISH EnglishXLater;
 sqlite3 *coreDatabase;
+
+int createDatabase(string dbName){
+	char *zErrMsg = 0; int rc;
+	unlink(dbName.c_str()); unlink(string(dbName+"-journal").c_str());
+	rc = sqlite3_open_v2(dbName.c_str(), &coreDatabase, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0);
+        if( rc ){
+            fprintf(stderr, "Can't create database: %s\n", sqlite3_errmsg(coreDatabase));
+            sqlite3_close(coreDatabase);
+            return(1);
+        }
+	rc = sqlite3_exec(coreDatabase, "CREATE TABLE 'words' (id integer PRIMARY KEY, sourceID text, locale text, word text, senseID text, pos text, "
+                      "key text, gloss text, pronunciation text, attrs text, skillLvl integer, modelID integer);", NULL, 0, &zErrMsg);
+    if (rc != SQLITE_OK) {fprintf(stderr, "SQL error creating words table: %s\n", zErrMsg); return 1;}
+
+	rc = sqlite3_exec(coreDatabase, "CREATE TABLE 'models' (id integer PRIMARY KEY, sourceID text, attrs text, proteus text);", NULL, 0, &zErrMsg);
+    if (rc != SQLITE_OK) {fprintf(stderr, "SQL error creating models table: %s\n", zErrMsg); return 1;}
+    
+    rc = sqlite3_exec(coreDatabase, "CREATE TABLE 'sources' (sourceID text, srcType text, filename text, uri text, "
+                                    "crntHash text, code_pr text, sub_sources text);", NULL, 0, &zErrMsg);
+    if (rc != SQLITE_OK) {fprintf(stderr, "SQL error creating sources table: %s\n", zErrMsg); return 1;}
+    
+    rc = sqlite3_exec(coreDatabase, "CREATE TABLE 'repositories' (name text, srcType text, URI text, updateInterval integer, crntHash text);", NULL, 0, &zErrMsg);
+    if (rc != SQLITE_OK) {fprintf(stderr, "SQL error creating repositories table: %s\n", zErrMsg); return 1;}
+
+	return 0;
+}
+
 xlater* fetchXlater(icu::Locale *locale){
     LanguageExtentions::iterator lang = langExtentions.find(locale->getBaseName());
     if (lang != langExtentions.end()) return lang->second;
@@ -30,13 +58,21 @@ xlater* fetchXlater(icu::Locale *locale){
 LanguageExtentions langExtentions; // This map stores valid locales and their xlater if available.
 int initializeProteusCore(string resourceDir, string dbName){     // Use this to load available language modules before normalizing any infons.
     // Connect to Proteus Database
+    struct stat buffer; int rc;
+	if(stat(resourceDir.c_str(), &buffer)==-1){throw"Could not access data folder.";}
+	if(stat(string(resourceDir+"/news").c_str(), &buffer)==-1){
+		if(mkdir(string(resourceDir+"/news").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)==-1) throw "Could not create news folder.";
+	}
     string dbPath=resourceDir; dbPath+="/"; dbPath+=dbName;
-    int rc = sqlite3_open(dbPath.c_str(), &coreDatabase);
+    if(stat(dbPath.c_str(), &buffer)==-1){
+	}else{
+		rc = sqlite3_open_v2(dbPath.c_str(), &coreDatabase, SQLITE_OPEN_READWRITE, 0);
         if( rc ){
             fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(coreDatabase));
             sqlite3_close(coreDatabase);
             return(1);
         }
+	}
     // Initialize Language modules.
     u_setDataDirectory(resourceDir.c_str());
     EnglishXLater.loadLanguageData(coreDatabase);
@@ -636,8 +672,13 @@ void agent::prepWorkList(infon* CI, Qitem *cn){
                     SetBits(CI->wFlag, asNot, (asNotFlag)?asNot:0);
                     deTagWrkList(CI);
         CI->updateIndex();
-                } else{OUT("\nBad tag:'"<<CI->type->norm<<"'\n");throw("A tag was used but never defined");}
-                break;}
+                } else{
+					if(CI->type->flags1) {OUT("\nMeaning for the word '"<<CI->type->norm<<"' could not be constructed.\n");}
+					else {OUT("\nNo meaning for '"<<CI->type->norm<<"' found.\n");}
+					throw "Don't know what to do with word.";
+                }
+                break;
+			}
             case iGetFirst:  StartTerm (CI, &newID); break;
             case iGetMiddle: break; // TODO: iGetMiddle
             case iGetLast:

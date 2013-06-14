@@ -8,6 +8,7 @@
 
 #include "wordLibrary.h"
 #include "xlater.h"
+#include <sys/stat.h>
 
 WordLibrary::WordLibrary(sqlite3 *DB){
     const char *tail;
@@ -24,7 +25,7 @@ WordSMap::iterator WordLibrary::wrappedLowerBound(wordKey &word, xlater* xlatr){
         if(trialItr->second->flags1 & wfIsFromDB) { return trialItr;}
         else trialItr->second->flags1 |= wfIsFromDB;
     }
-//return trialItr; // TODO: remove this line to reactivate database.
+//return trialItr; // Uncomment this line to deactivate database.
     // Add any words found in the database that match.
     if(sqlite3_bind_text(res, 1, xlatr->localeID.c_str(), -1, SQLITE_TRANSIENT)
     || sqlite3_bind_text(res, 2, word.c_str(), -1, SQLITE_TRANSIENT))
@@ -67,4 +68,8 @@ WordSPtr WordLibrary::chkExists(wordKey &word, string &senseID){
 
 WordSPtr WordLibrary::insertWord(){
     return 0;
+}
+
+InfonManager::InfonManager(sqlite3 *DB){
+
 }

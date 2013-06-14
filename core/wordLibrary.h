@@ -5,8 +5,8 @@
     The Proteus Engine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
     You should have received a copy of the GNU General Public License along with the Proteus Engine.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef _WordLibrary
-#define _WordLibrary
+#ifndef _InfonLibrary
+#define _InfonLibrary
 
 #include <map>
 #include <list>
@@ -127,5 +127,39 @@ struct WordLibrary:WordSMap {
     WordLibrary(sqlite3 *DB);
     ~WordLibrary(){sqlite3_finalize(res);};
 };
+
+struct InfonSource{
+	string sourceID; // name for this source
+	string srcType;  // e.g. git
+	string fileName;
+	string URI;
+	string crntHash;
+	string assertionCode_pr;
+	string sub_sources;
+	time_t lastUpdate;
+	uint updateInterval;  // in seconds.
+	uint errorState;   // 0=OK
+};
+
+struct RepoStatus{
+	string name, URI, crntHash, repoType;
+	int updateInterval;
+	uint errorState;   // 0=OK
+};
+
+struct InfonManager{
+	WordLibrary* mainWordLib;
+	map<string, RepoStatus> repos;
+	map<string, InfonSource> sources;
+	string activeSrcList;
+	string pathToData;
+	uint errorState;   // 0=OK
+	
+	InfonManager(sqlite3 *DB);
+	void registerSource();
+	void activateSource();    // Loads from git/file or cache
+	void updateSource();
+};
+
 
 #endif

@@ -100,8 +100,8 @@ struct InfonViewPort {
 };
 
 struct InfonPortal {
-    InfonPortal(){memset(this, 0, sizeof(InfonPortal));};
-    ~InfonPortal(){delete surface; };
+    InfonPortal(){surface=0; memset(this, 0, sizeof(InfonPortal));};
+    ~InfonPortal(){if(surface) SDL_FreeSurface(surface); };
     SDL_Surface *surface;
     cairo_surface_t *cairoSurf;
     cairo_t *cr;
@@ -389,7 +389,7 @@ void CloseTurbulanceViewport(InfonViewPort* viewPort){
         delete(viewPort);
         if (portal->viewPorts==0){
             if(portal->cairoSurf) cairo_surface_destroy(portal->cairoSurf);
-            if(portal->surface) SDL_FreeSurface(portal->surface);
+            if(portal->surface) {SDL_FreeSurface(portal->surface); portal->surface=0;}
             delete(portal->theme); delete(portal->user); delete(portal->crntFrame);
 
             // remove self from Portals[]
@@ -403,7 +403,7 @@ void CloseTurbulanceViewport(InfonViewPort* viewPort){
 
 void ResizeTurbulancePortal(InfonPortal* portal, int w, int h){
     if(portal->cairoSurf) cairo_surface_destroy(portal->cairoSurf);
-    if(portal->surface) SDL_FreeSurface(portal->surface);
+    if(portal->surface) {SDL_FreeSurface(portal->surface); portal->surface=0;}
     portal->needsToBeDrawn=true;
     portal->surface = SDL_CreateRGBSurface (0, w, h, 32,0x00ff0000,0x0000ff00,0x000000ff,0);
     portal->cairoSurf = cairo_image_surface_create_for_data((unsigned char*)portal->surface->pixels, CAIRO_FORMAT_RGB24, w, h,portal->surface->pitch);
@@ -493,7 +493,7 @@ bool CreateTurbulancePortal(char* title, int x, int y, int w, int h, User* user,
 void DestroyTurbulancePortal(InfonPortal *portal){
     //TODO slide portals items down
     cairo_surface_destroy(portal->cairoSurf);
-    SDL_FreeSurface(portal->surface);
+    SDL_FreeSurface(portal->surface); portal->surface=0;
     for(InfonViewPort *portView=portal->viewPorts; portView; portView=portView->next) // for each view
         SDL_DestroyRenderer(portView->renderer);
 }

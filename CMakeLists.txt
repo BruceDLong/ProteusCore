@@ -6,9 +6,10 @@ cmake_minimum_required(VERSION 2.8.5)
 set(MAKE_SDL ON) #  "Build our own SDL lib"
 set(MAKE_IMG ON) #  "Build our own image display (png, jpg, etc) libs"
 set(MAKE_GMP ON) #  "Build our own math (gmp) and related libs"
-set(MAKE_CPF OFF) #  "Build our own cairo/pango/freetype libs"
+set(MAKE_CPF ON) #  "Build our own cairo/pango/freetype libs"
 set(MAKE_SQL ON) #  "Build our own sqlite lib"
 set(MAKE_RDL ON) #  "Build our own Readline lib"
+set(MAKE_GIT ON) #  "Build our own GIT lib"
 set(MAKE_ICU ON) #  "Build our own unicode libs"
 set(MAKE_PRG ON) #  "Build the proteus libs, clip and slip"
 
@@ -37,9 +38,10 @@ if (${PLAT_BUILD} STREQUAL "HOST")
 	set(MAKE_CPF OFF)
 	if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "x86_64")
 		SET(xCONFIG_GMP  "--enable-fat")
+		SET(xCONFIG_VARS "CXXFLAGS=-I./builds/libs/Freetype/include/")
 	elseif (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "i386")
 		SET(xCONFIG_GMP  "--enable-fat")
-		SET(xCONFIG_VARS "")
+		SET(xCONFIG_VARS "CXXFLAGS=-I./builds/libs/Freetype/include/")
 	endif()
 	SET(ICU_PLAT_CODE_local Linux)
 
@@ -70,10 +72,12 @@ elseif (${PLAT_BUILD} STREQUAL "xANDROID_ARM") # android_14
 	SET(CMAKE_C_COMPILER   ${toolChainPath}/${PLAT_BUILD}/bin/arm-linux-androideabi-gcc)
 	SET(CMAKE_CXX_COMPILER ${toolChainPath}/${PLAT_BUILD}/bin/arm-linux-androideabi-g++)
 	SET(xCONFIG_GMP "--host=arm-android-linux  CC_FOR_BUILD=${LOCAL_CC}")
+	SET(xCONFIG_FC --host=arm-linux  CC_FOR_BUILD=${LOCAL_CC} --with-arch=arm --sysconfdir=${toolChainPath}/${PLAT_BUILD}/)
 	SET(xCONFIG_RDL "--host=arm-eabi")
 	SET(xCONFIG_SQL "--host=arm-eabi")
 	SET(xCONFIG_SDL "--host=arm-android-linux")
 	SET(xCONFIG_VARS "CXXFLAGS=-mthumb")
+	SET(xCONFIG_PIX  PNG_LIBS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PNG_LIB/libpng-1.6.2/lib/libpng.so PNG_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PNG_LIB/libpng-1.6.2/include  CPPFLAGS=-I/home/bruce/dev/AndroidDev/android-ndk-r8e/sources/android/cpufeatures)
 	SET(ICU_PLAT_CODE_local Linux)
 	SET(ICU_PLAT_CODE Linux --host=arm-android-linux --with-cross-build=${CMAKE_CURRENT_BINARY_DIR}/deps/unicode/${ICU_UnicodeVersion} CPPFLAGS=-nostdlib)
 
@@ -168,7 +172,7 @@ if (${MAKE_IMG} STREQUAL "ON")
 	  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/jpegsrc.v9.tar.gz"
 	  
 	  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/JPEG_LIB/src/jpeg-9/
-	  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/JPEG_LIB/src/jpeg-9/configure ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/JPEG_LIB/jpeg-9
+	  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/JPEG_LIB/src/jpeg-9/configure ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS} --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/JPEG_LIB/jpeg-9
 	  BUILD_COMMAND  $(MAKE) -j4
 	  INSTALL_COMMAND  $(MAKE) install
 	  BUILD_IN_SOURCE 0
@@ -194,14 +198,14 @@ endif()
 if (${MAKE_CPF} STREQUAL "ON")
 
 	#=========================================
-	# Build Fontconfig
+	# Build Expat
 	  ExternalProject_Add(
-		  FONTCONFIG
-		  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/
-		  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/fontconfig-2.10.93.zip"
+		  EXPAT
+		  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/EXPAT/
+		  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/expat-2.1.0.tar.gz"
 		  
-		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/src/fontconfig-2.10.93/
-		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/src/fontconfig-2.10.93/autogen.sh ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/FONTCONFIG/fontconfig-2.10.93
+		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/EXPAT/src/expat-2.1.0/
+		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/EXPAT/src/expat-2.1.0/configure ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/EXPAT
 		  BUILD_COMMAND  $(MAKE) -j4
 		  INSTALL_COMMAND  $(MAKE) install
 		  BUILD_IN_SOURCE 0
@@ -209,10 +213,63 @@ if (${MAKE_CPF} STREQUAL "ON")
 	
 	#=========================================
 	# Build Freetype
+	  ExternalProject_Add(
+		  Freetype
+		  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/Freetype/
+		  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/freetype-2.4.12.tar.gz"
+		  
+		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/Freetype/src/freetype-2.4.12/
+		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/Freetype/src/freetype-2.4.12/configure ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype
+		  BUILD_COMMAND  $(MAKE) -j4
+		  INSTALL_COMMAND  $(MAKE) install
+		  BUILD_IN_SOURCE 0
+		  DEPENDS "EXPAT"
+	)
+	
+	#=========================================
+	# Build Fontconfig
+	  ExternalProject_Add(
+		  FONTCONFIG
+		  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/
+		  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/fontconfig-2.10.93.zip"
+		  
+		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/src/fontconfig-2.10.93/
+		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/src/fontconfig-2.10.93/autogen.sh ${xCONFIG_FC} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER}  CC_FOR_BUILD=/usr/bin/gcc ${xCONFIG_VARS} LDFLAGS=-L${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype/lib/ --with-expat=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/EXPAT/ CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype/include/ --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/FONTCONFIG/fontconfig-2.10.93
+		  BUILD_COMMAND  $(MAKE) -j4
+		  INSTALL_COMMAND  $(MAKE) install
+		  BUILD_IN_SOURCE 0
+		  DEPENDS "Freetype"
+	)
+	
+	#=========================================
+	# Build Pixman
+	  ExternalProject_Add(
+		  Pixman
+		  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/Pixman/
+		  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/pixman-0.30.0.tar.gz"
+		  
+		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/Pixman/src/pixman-0.30.0/
+		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/Pixman/src/pixman-0.30.0/autogen.sh ${xCONFIG_SDL}  ${xCONFIG_PIX}  CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS} --disable-dependency-tracking --enable-static --disable-shared --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Pixman
+		  BUILD_COMMAND  $(MAKE)
+		  INSTALL_COMMAND  $(MAKE) install
+		  BUILD_IN_SOURCE 0
+	)
 	
 	#=========================================
 	# Build Cairo
-
+	  ExternalProject_Add(
+		  Cairo
+		  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/Cairo/
+		  DOWNLOAD_COMMAND git clone git://anongit.freedesktop.org/git/cairo
+		  
+		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/Cairo/src/Cairo/
+		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/Cairo/src/Cairo/configure ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Cairo
+		  BUILD_COMMAND  $(MAKE) -j4
+		  INSTALL_COMMAND  $(MAKE) install
+		  BUILD_IN_SOURCE 0
+		  DEPENDS "Pixman"
+	)
+	
 	#=========================================
 	# Build Pango
 
@@ -285,6 +342,23 @@ if (${MAKE_RDL} STREQUAL "ON")
 	  BUILD_COMMAND  $(MAKE) -j4
 	  INSTALL_COMMAND  $(MAKE) install
 	  BUILD_IN_SOURCE 0
+	)
+endif()
+
+
+if (${MAKE_GIT} STREQUAL "ON")
+	#=========================================
+	# Build libgit2
+	ExternalProject_Add(
+	  GIT_LIB
+	  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/GIT_LIB/
+	  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/libgit2-0.18.0.tar.gz"
+
+	  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/GIT_LIB/src/libgit2-0.18.0/
+	  CMAKE_COMMAND cmake   -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/GIT_LIB/libgit2-0.18.0/
+
+	  BUILD_COMMAND  $(MAKE) -j4
+	  INSTALL_COMMAND  $(MAKE) install
 	)
 endif()
 

@@ -9,9 +9,9 @@ set(LANG_MODULES XlaterENGLISH.cpp)
 add_definitions( -std=gnu++11 -Wno-deprecated -Wno-write-strings -fpermissive -g -Wall -O0 -fPIC)
 SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ")
 
-set(PROTEUS_SRCS Proteus.cpp convs.cpp InfonIO.cpp Functions.cpp wordLibrary.cpp ${LANG_MODULES})
+set(PROTEUS_SRCS Proteus.cpp convs.cpp InfonIO.cpp Functions.cpp wordLibrary.cpp ${LANG_MODULES} repoMngr.cpp)
 set(UNICODE_LIBS icuio icui18n icutu icuuc icudata icule iculx icutest dl)
-set(PROTEUS_LIBS gmpxx gmp dl pthread sqlite3 ${UNICODE_LIBS})
+set(PROTEUS_LIBS git2 gmpxx gmp dl pthread sqlite3 ${UNICODE_LIBS})
 set(CLIP_LIBS ncurses readline)
 
 set(HomeDir ${CMAKE_CURRENT_BINARY_DIR})
@@ -22,12 +22,14 @@ include_directories( ${HomeDir}/../builds/libs/GMP_BigInts/${GMP_Version}/includ
                      ${Slipstream_SOURCE_DIR}/deps/archive/
                      ${HomeDir}/../builds/libs/sqlite3/sqlite-autoconf-3071602/include/
                      ${HomeDir}/../builds/libs/Readline/readline-6.2/include/
+                     ${HomeDir}/../builds/libs/GIT_LIB/libgit2-0.18.0/include/
                     )
                     
 link_directories(${HomeDir}/../builds/libs/GMP_BigInts/${GMP_Version}/lib/
                  ${HomeDir}/../builds/libs/unicode/release-51-1/lib/
                  ${HomeDir}/../builds/libs/Readline/readline-6.2/lib/
                  ${HomeDir}/../builds/libs/sqlite3/sqlite-autoconf-3071602/lib/
+                 ${HomeDir}/../builds/libs/GIT_LIB/libgit2-0.18.0/lib/
                  )
 
 add_library(Proteus SHARED ${PROTEUS_SRCS})

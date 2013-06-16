@@ -70,6 +70,12 @@ WordSPtr WordLibrary::insertWord(){
     return 0;
 }
 
-InfonManager::InfonManager(sqlite3 *DB){
+void InfonManager::registerSource(string srcName, string srcType, string srcFileSpec, string srcURI){
+	// Sanity check then clone a repo as needed.
+	
+}
 
+void InfonManager::activateSource(){
+	// Read an infon from either repo/file or the cache.
+	
 }

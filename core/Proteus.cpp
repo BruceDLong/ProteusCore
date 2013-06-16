@@ -56,12 +56,14 @@ xlater* fetchXlater(icu::Locale *locale){
 }
 
 LanguageExtentions langExtentions; // This map stores valid locales and their xlater if available.
-int initializeProteusCore(string resourceDir, string dbName){     // Use this to load available language modules before normalizing any infons.
+int initializeProteusCore(string resourceDir, string dbName, string newsURL){     // Use this to load available language modules before normalizing any infons.
     // Connect to Proteus Database
     struct stat buffer; int rc;
+    string newsDir=resourceDir+"/news";
+    string repoDir=newsDir+"/master";
 	if(stat(resourceDir.c_str(), &buffer)==-1){throw"Could not access data folder.";}
-	if(stat(string(resourceDir+"/news").c_str(), &buffer)==-1){
-		if(mkdir(string(resourceDir+"/news").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)==-1) throw "Could not create news folder.";
+	if(stat(newsDir.c_str(), &buffer)==-1){
+		if(mkdir(newsDir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)==-1) throw "Could not create news folder.";
 	}
     string dbPath=resourceDir; dbPath+="/"; dbPath+=dbName;
     if(stat(dbPath.c_str(), &buffer)==-1){
@@ -73,6 +75,15 @@ int initializeProteusCore(string resourceDir, string dbName){     // Use this to
             return(1);
         }
 	}
+	
+	// Clone Repository as needed
+	if(stat(repoDir.c_str(), &buffer)==-1){
+		cout<<"Cloning "<<newsURL<<" into "<<repoDir<<"\n";
+		rc=do_clone(newsURL.c_str(), repoDir.c_str());
+	} else { // TODO: update the repository here.
+		cout<<"HERE WE SHOULD UPDATE REPOSITORY.\n";
+	}
+	
     // Initialize Language modules.
     u_setDataDirectory(resourceDir.c_str());
     EnglishXLater.loadLanguageData(coreDatabase);
@@ -170,7 +181,7 @@ int agent::loadInfon(string filename, infon** inf, bool normIt){
     cout<<"Loading:'"<<filename<<"'..."<<flush;
     fstream InfonIn(filename);
     if(InfonIn.fail()){cout<<"\nThe file "<<filename<<" was not found.\n\n"<<flush; return 1;}
-    QParser T(InfonIn); T.agnt=this;
+    QParser T(&InfonIn); T.agnt=this;
     *inf=T.parse();
     if (*inf) {cout<<"done.   "<<flush;}
     else {cout<<"\nError:"<<T.buf<<"   \n\n"<<flush; return 1;}
@@ -187,7 +198,7 @@ int agent::loadInfon(string filename, infon** inf, bool normIt){
 infon* agent::loadInfonFromString(string ProteusString, infon** inf, bool normIt){
     string entry="<%  " + ProteusString + " \n %>";
     istrstream InfonIn(entry.c_str());
-    QParser T(InfonIn); T.agnt=this;
+    QParser T(&InfonIn); T.agnt=this;
     *inf=T.parse();
     if ((*inf)==0) {cout<<"Error:"<<T.buf<<"   "<<flush; return 0;}
     if(normIt) {

@@ -225,7 +225,7 @@ string normToWorld(agent** a, string entryStr){
     string ret="NOT_INITD";
     entryStr="<% { " + entryStr + " \n} %>";
     istrstream fin(entryStr.c_str());
-    QParser q(fin); q.agnt=*a;
+    QParser q(&fin); q.agnt=*a;
     Entry=q.parse(); // cout <<"Parsed.\n";
     if (Entry) try{
         infon* outerList=Entry;
@@ -275,7 +275,8 @@ int main (int argc, char* const argv[])
 
     char* resourceDir="../../../resources";
     char* dbName="proteusData.db";
-    if(initializeProteusCore(resourceDir, dbName)) {cout<< "Could not initialize the Proteus Engine"; exit(1);}
+    char* NewsURL="git://github.com/BruceDLong/NewsTest.git";
+    if(initializeProteusCore(resourceDir, dbName, NewsURL)) {cout<< "Could not initialize the Proteus Engine"; exit(1);}
 
     // Run the tests
     int result = Catch::Main( argc, argv );

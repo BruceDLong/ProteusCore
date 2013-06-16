@@ -77,7 +77,7 @@ elseif (${PLAT_BUILD} STREQUAL "xANDROID_ARM") # android_14
 	SET(xCONFIG_SQL "--host=arm-eabi")
 	SET(xCONFIG_SDL "--host=arm-android-linux")
 	SET(xCONFIG_VARS "CXXFLAGS=-mthumb")
-	SET(xCONFIG_PIX  PNG_LIBS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PNG_LIB/libpng-1.6.2/lib/libpng.so PNG_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PNG_LIB/libpng-1.6.2/include  CPPFLAGS=-I/home/bruce/dev/AndroidDev/android-ndk-r8e/sources/android/cpufeatures)
+	SET(xCONFIG_PIX  PNG_LIBS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PNG_LIB/libpng-1.6.2/lib/libpng.so PNG_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PNG_LIB/libpng-1.6.2/include  CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR})
 	SET(ICU_PLAT_CODE_local Linux)
 	SET(ICU_PLAT_CODE Linux --host=arm-android-linux --with-cross-build=${CMAKE_CURRENT_BINARY_DIR}/deps/unicode/${ICU_UnicodeVersion} CPPFLAGS=-nostdlib)
 

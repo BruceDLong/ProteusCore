@@ -58,7 +58,9 @@ bool IsHardFunc(string tag);
 int main(int argc, char **argv){
     string resourceDir="../../../resources";
     string dbName="proteusData.db";
-	if(initializeProteusCore(resourceDir, dbName)) {cout<< "Could not initialize the Proteus Engine\n\n"; exit(1);}
+char* NewsURL="git://github.com/BruceDLong/NewsTest.git";
+    
+	if(initializeProteusCore(resourceDir, dbName, NewsURL)) {cout<< "Could not initialize the Proteus Engine\n\n"; exit(1);}
     initReadline();
     signal(SIGSEGV, reportFault);
 
@@ -91,7 +93,7 @@ int main(int argc, char **argv){
         //cout << "Parsing ["<<entry<<"]\n";
         entry="<% { " + entry + " \n} %>";
         istrstream fin(entry.c_str());
-        QParser q(fin); q.agnt=&a;
+        QParser q(&fin); q.agnt=&a;
         Entry=q.parse(); // cout <<"Parsed.\n";
         if (Entry) try{
 

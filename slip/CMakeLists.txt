@@ -17,6 +17,7 @@ include_directories(  ${HomeDir}/../builds/libs/SDL/1.3/include/
 			   		  ${HomeDir}/../builds/libs/GMP_BigInts/${GMP_Version}/include/
 					  ${HomeDir}/../builds/libs/sqlite3/sqlite-autoconf-3071602/include/
 					  ${HomeDir}/../builds/libs/unicode/${ICU_UnicodeVersion}/include/
+					  ${HomeDir}/../builds/libs/GIT_LIB/libgit2-0.18.0/include/
 				      ${PANGO_INCLUDE_DIRS}
 					  ${Slipstream_SOURCE_DIR}/deps/archive/
 					)
@@ -28,7 +29,8 @@ link_directories(
                  ${HomeDir}/../builds/libs/SDL_image/lib/ 
                  ${HomeDir}/../builds/libs/SDL/1.3/lib
                  ${HomeDir}/../builds/libs/sqlite3/sqlite-autoconf-3071602/lib/
+                 ${HomeDir}/../builds/libs/GIT_LIB/libgit2-0.18.0/lib/
 				)
 
 add_executable(slip  slip.cpp )
-target_link_libraries(slip Proteus  gmp gmpxx  pthread sqlite3 ${UNICODE_LIBS} SDL2_image SDL2 ${PANGO_LIBS})
+target_link_libraries(slip Proteus git2 gmp gmpxx  pthread sqlite3 ${UNICODE_LIBS} SDL2_image SDL2 ${PANGO_LIBS})

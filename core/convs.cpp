@@ -112,7 +112,7 @@ bool infon::join(infon* rVal){
             if((rVal)->value.flags & fInvert) mpz_sub(thisNum, thisNum, &Q);
             else mpz_add(thisNum, thisNum, &Q);
         }
-        if(thisFrac >= 1){
+        if(thisFrac >= (infon*)1){
             mpz_sub(thisNum, thisNum, thisDen);
             *thisInt->value.dataHead+=1;
         }

@@ -572,8 +572,8 @@ void InitializePortalSystem(int argc, char** argv){
  //UNDO:   SDL_EnableKeyRepeat(300, 130);
   //UNDO:  SDL_EnableUNICODE(1);
     atexit(cleanup);
-
-    if(initializeProteusCore(resourceDir, dbName)) {cout<< "Could not initialize the Proteus Engine\n\n"; exit(1);}
+char* NewsURL="git://github.com/BruceDLong/NewsTest.git";
+    if(initializeProteusCore(resourceDir, dbName, NewsURL)) {cout<< "Could not initialize the Proteus Engine\n\n"; exit(1);}
     if(theAgent.loadInfon(worldFile, &theAgent.world)) exit(1);
     User* portalUser=new User;
     if(loadUserRecord(portalUser, username, password)) {MSGl("\nUser could not be authenticated. Exiting..."); exit(5);}

@@ -98,20 +98,20 @@ string agent::printInfon(infon* i, infon* CI){
     return s;
 }
 
-#define streamPut(nChars) {for(int n=nChars; n>0; --n){stream.putback(textParsed[textParsed.size()-1]); textParsed.resize(textParsed.size()-1);}}
-#define ChkNEOF {if(stream.eof() || stream.fail()) throw "Unexpected End of file";}
+#define streamPut(nChars) {for(int n=nChars; n>0; --n){stream->putback(textParsed[textParsed.size()-1]); textParsed.resize(textParsed.size()-1);}}
+#define ChkNEOF {if(stream->eof() || stream->fail()) throw "Unexpected End of file";}
 #define getbuf(c) {ChkNEOF; for(p=0;(c);buf[p++]=streamGet()){if (p>=bufmax) throw "String Overflow";} buf[p]=0;}
 #define check(ch) {RmvWSC(); ChkNEOF; tok=streamGet(); if(tok != ch) {cout<<"Expected "<<ch<<"\n"; throw "Unexpected character";}}
 
-char QParser::streamGet(){char ch=stream.get(); textParsed+=ch; return ch;}
-char QParser::peek(){if (stream.fail()) throw "Unexpected end of file";  return stream.peek();}
+char QParser::streamGet(){char ch=stream->get(); textParsed+=ch; return ch;}
+char QParser::peek(){if (stream->fail()) throw "Unexpected end of file";  return stream->peek();}
 char QParser::Peek(){RmvWSC(); return peek();}
 
 void QParser::scanPast(char* str){
     char p; char* ch=str;
     while(*ch!='\0'){
         p=streamGet();
-        if (stream.eof() || stream.fail())
+        if (stream->eof() || stream->fail())
             throw (string("Expected String not found before end-of-file: '")+string(str)+"'").c_str();
         if (*ch==p) ch++; else ch=str;
         if (p=='\n') ++line;
@@ -120,15 +120,15 @@ void QParser::scanPast(char* str){
 
 void QParser::RmvWSC (){ // Remove whitespace and comments.
     char p,p2;
-    for (p=stream.peek(); (p==' '||p=='/'||p=='\n'||p=='\r'||p=='\t'); p=stream.peek()){
+    for (p=stream->peek(); (p==' '||p=='/'||p=='\n'||p=='\r'||p=='\t'); p=stream->peek()){
         if (p=='/') {
-            streamGet(); p2=stream.peek();
+            streamGet(); p2=stream->peek();
             if (p2=='/') {
-                for (p=stream.peek(); !(stream.eof() || stream.fail()) && p!='\n'; p=stream.peek()) streamGet();
+                for (p=stream->peek(); !(stream->eof() || stream->fail()) && p!='\n'; p=stream->peek()) streamGet();
             } else if (p2=='*') {
-                for (p=streamGet(); !(stream.eof() || stream.fail()) && !(p=='*' && stream.peek()=='/'); p=streamGet())
+                for (p=streamGet(); !(stream->eof() || stream->fail()) && !(p=='*' && stream->peek()=='/'); p=streamGet())
                     if (p=='\n') ++line;
-                if (stream.eof() || stream.fail()) throw "'/*' Block comment never terminated";
+                if (stream->eof() || stream->fail()) throw "'/*' Block comment never terminated";
             } else {streamPut(1); return;}
         }
         if (streamGet()=='\n') ++line;
@@ -464,7 +464,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
         infon *R, *toSet=0, *toRef=0; int idFlags=0;
         cTok=nxtTokN(2,"::",":");
         eTok=nxtTokN(2,"==","=");
-        if(peek()=='!'){stream.get(); idFlags|=OverrideIdent;}
+        if(peek()=='!'){stream->get(); idFlags|=OverrideIdent;}
         if(isEq(cTok,":") && (eTok==0)){  // X:Y is about the same as Y := X.
             if(peek()=='>') {streamPut(1); break;}  // Oops, this is a function :> Parse it below.
             if(noIDs&8){streamPut(1); break;}
@@ -519,6 +519,6 @@ infon* QParser::parse(){
     catch(char const* err){char l[30]; itoa(line,l); strcpy(buf,"An Error Occured: "); strcat(buf,err);
         strcat(buf,". (line ");strcat(buf,l); strcat(buf,")\n");}
     catch(...){strcpy(buf,"An Unknown Error Occurred While Parsing.\n");};
-    if(stream.fail()) cout << "End of File Reached";
+    if(stream->fail()) cout << "End of File Reached";
     return 0;
 }

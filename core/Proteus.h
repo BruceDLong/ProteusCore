@@ -103,7 +103,7 @@ xlater* fetchXlater(icu::Locale *locale);
 typedef map<string, xlater*> LanguageExtentions;
 extern LanguageExtentions langExtentions;
 extern void resetLanguageData();
-extern int initializeProteusCore(string resourceDir, string dbName);
+extern int initializeProteusCore(string resourceDir, string dbName, string newsURL);
 extern void shutdownProteusCore();
 extern int calcScopeScore(string wrdS, string trialS);
 
@@ -254,7 +254,7 @@ extern void UnicodeStrToUTF8_String(UnicodeString &s, string &out);
 void numberFromString(char* buf, pureInfon* pInf, int base=10);
 const int bufmax=1024*32;
 struct QParser{
-    QParser(istream& _stream):stream(_stream){};
+    QParser(istream *_stream){stream=_stream;};
     infon* parse(); // if there is an error it is returned in buf as a char* string.
     UInt ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2, string &scopeID);
     infon* ReadInfon(string &scopeID, int noIDs=0);
@@ -267,7 +267,7 @@ struct QParser{
     void RmvWSC ();
     char peek(); // Returns next char.
     char Peek(); // Returns next char after whitespace.
-    istream& stream;
+    istream *stream;
     string s;
     char buf[bufmax];
     char nTok; // First character of last token
@@ -302,5 +302,7 @@ inline infon* getTop(infon* i){
 
 #define PrntLocale(L) {icu::UnicodeString lang,country; cout<<L.getDisplayLanguage(L, lang) <<"-"<< L.getDisplayCountry(L, country) <<" (" << L.getBaseName()<<")\n"; }
 
+// Repository functions
+extern int do_clone(const char* url, const char* path);
 
 #endif

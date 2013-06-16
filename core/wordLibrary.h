@@ -19,7 +19,6 @@
 #include <unicode/putil.h>
 #include <unicode/ustream.h>
 #include <boost/intrusive_ptr.hpp>
-
 #include <sqlite3.h>
 
 using namespace std;
@@ -148,16 +147,16 @@ struct RepoStatus{
 };
 
 struct InfonManager{
-	WordLibrary* mainWordLib;
+	sqlite3 *db;       // The cache database.
 	map<string, RepoStatus> repos;
 	map<string, InfonSource> sources;
 	string activeSrcList;
 	string pathToData;
 	uint errorState;   // 0=OK
 	
-	InfonManager(sqlite3 *DB);
-	void registerSource();
-	void activateSource();    // Loads from git/file or cache
+	InfonManager(string dataFolder, sqlite3 *DB):db(DB), pathToData(dataFolder){};
+	void registerSource(string srcName, string srcType, string srcFileSpec, string srcURI);
+	void activateSource();    // Loads an infon from either git/file or the cache
 	void updateSource();
 };
 

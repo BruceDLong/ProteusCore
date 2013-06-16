@@ -23,8 +23,8 @@
 
 using namespace std;
 
-#define streamPut(nChars) {for(int n=nChars; n>0; --n){stream.putback(textParsed[textParsed.size()-1]); textParsed.resize(textParsed.size()-1);}}
-#define ChkNEOFs(stream) {if(stream.eof() || stream.fail()) throw "Unexpected End of file";}
+#define streamPut(nChars) {for(int n=nChars; n>0; --n){stream->putback(textParsed[textParsed.size()-1]); textParsed.resize(textParsed.size()-1);}}
+#define ChkNEOFs(stream) {if(stream->eof() || stream->fail()) throw "Unexpected End of file";}
 #define getBufs(c,parser) {ChkNEOFs(parser->stream); int p=0; for(;(c);parser->buf[p++]=parser->streamGet()){if (p>=bufmax) throw "String Overflow";} parser->buf[p]=0;}
 #define check(ch) {RmvWSC(); ChkNEOF; tok=streamGet(); if(tok != ch) {cout<<"Expected "<<ch<<"\n"; throw "Unexpected character";}}
 

@@ -252,6 +252,7 @@ struct agent {
 extern string localeString(Locale* L);
 extern void UnicodeStrToUTF8_String(UnicodeString &s, string &out);
 void numberFromString(char* buf, pureInfon* pInf, int base=10);
+
 const int bufmax=1024*32;
 struct QParser{
     QParser(istream *_stream){stream=_stream;};
@@ -267,11 +268,13 @@ struct QParser{
     void RmvWSC ();
     char peek(); // Returns next char.
     char Peek(); // Returns next char after whitespace.
+    
     istream *stream;
-    string s;
+    string streamName;
     char buf[bufmax];
     char nTok; // First character of last token
     int line;  // linenumber, position in text
+    char prevChar;
     string textParsed;
     agent* agnt;
     infon* ti; // top infon

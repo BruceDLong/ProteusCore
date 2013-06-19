@@ -102,6 +102,7 @@ string agent::printInfon(infon* i, infon* CI){
 #define ChkNEOF {if(stream->eof() || stream->fail()) throw "Unexpected End of file";}
 #define getbuf(c) {ChkNEOF; for(p=0;(c);buf[p++]=streamGet()){if (p>=bufmax) throw "String Overflow";} buf[p]=0;}
 #define check(ch) {RmvWSC(); ChkNEOF; tok=streamGet(); if(tok != ch) {cout<<"Expected "<<ch<<"\n"; throw "Unexpected character";}}
+#define nxtTok(tok) nxtTokN(1,tok)
 
 char QParser::streamGet(){char ch=stream->get(); textParsed+=ch; return ch;}
 char QParser::peek(){if (stream->fail()) throw "Unexpected end of file";  return stream->peek();}
@@ -131,7 +132,7 @@ void QParser::RmvWSC (){ // Remove whitespace and comments.
                 if (stream->eof() || stream->fail()) throw "'/*' Block comment never terminated";
             } else {streamPut(1); return;}
         }
-        if (streamGet()=='\n') ++line;
+        if (streamGet()=='\n') {++line; prevChar='\n';} else prevChar='\0';
     }
 }
 
@@ -231,7 +232,6 @@ const char* QParser::nxtTokN(int n, ...){
     va_end(ap);
     return tok;
 }
-#define nxtTok(tok) nxtTokN(1,tok)
 
 bool IsHardFunc(string tag);
 void chk4HardFunc(infon* i){
@@ -341,7 +341,20 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
             else if(nxtTok("...")){
                 pureInfon pSize(size+1);
                 j=new infon(iNone+isVirtual, &pSize); SetValueFormat(j, fUnknown); j->pos=(size+1); stay=0;
-            } else j=ReadInfon(scopeID);
+            } else {
+				string sourceID=""; int lineNum(line); string StreamName=streamName; istream* prevStream(stream);
+				if(prevChar=='\n' && nxtTok("%INSERT")){
+					for (p=stream->peek(); !(stream->eof() || stream->fail()) && (p==' '||p=='\t'); p=stream->peek()) streamGet();
+					for (p=stream->peek(); !(stream->eof() || stream->fail()) && p!='\n'; p=stream->peek()) sourceID+=streamGet();
+					if(sourceID=="") throw"Expected the name of a file to insert";
+					stream=infonSource(sourceID); line=1; streamName=sourceID;
+					cout<<"\nINSERTING:"<<sourceID<<".";
+				}
+				j=ReadInfon(scopeID);
+				if(sourceID != "") {
+					stream=prevStream; line=lineNum; streamName=StreamName; prevChar='\n';
+				}
+			}
             if(++size==1){
                 if(!foundRet && !foundBar && stay && nxtTok("|")){
                     *s2=j; *flags|=fLoop; size=0; foundBar=1; RmvWSC(); continue;
@@ -508,9 +521,8 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
 }
 
 infon* QParser::parse(){
-    char tok;
+    char tok; textParsed=""; string topScope="U"; prevChar='\0';
     try{
-        textParsed=""; string topScope="U";
         line=1; scanPast((char*)"<%");
         infon*i=ReadInfon(topScope, 0);
         //cout<<"\n["<<textParsed<<"]\n";

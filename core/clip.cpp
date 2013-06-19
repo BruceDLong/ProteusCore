@@ -67,7 +67,7 @@ char* NewsURL="git://github.com/BruceDLong/NewsTest.git";
     // Load World
     agent a(0, IsHardFunc, AutoEval);
     cout<<"Locale: "<<localeString(&a.locale)<<"\n";
-    if(a.loadInfon(resourceDir+"/world.pr", &a.world, 0)) exit(1);
+    if(a.loadInfon(resourceDir+"/news/master/master.pr", &a.world, 0)) exit(1);
     topInfon=a.world;  // use topInfon in the ddd debugger to view World
 
     cout<<"\nThe Proteus CLI. Type some infons or 'quit'\n\n";

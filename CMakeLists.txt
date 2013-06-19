@@ -76,8 +76,23 @@ elseif (${PLAT_BUILD} STREQUAL "xANDROID_ARM") # android_14
 	SET(xCONFIG_RDL "--host=arm-eabi")
 	SET(xCONFIG_SQL "--host=arm-eabi")
 	SET(xCONFIG_SDL "--host=arm-android-linux")
+	SET(xCONFIG_CAIRO --disable-xlib --disable-xcb --disable-xlib-xcb 
+	      CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype/include/freetype2 
+	      FREETYPE_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype/include/ 
+	      FREETYPE_LIBS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype/lib/libfreetype.a 
+	      FONTCONFIG_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/FONTCONFIG/fontconfig-2.10.93/include/ 
+	      FONTCONFIG_LIBS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/FONTCONFIG/fontconfig-2.10.93/lib/libfontconfig.a 
+	      pixman_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Pixman/include/pixman-1/ 
+	      pixman_LIBS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Pixman/lib/libpixman-1.a 
+	      png_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PNG_LIB/libpng-1.6.2/include/ 
+	      png_LIBS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PNG_LIB/libpng-1.6.2/lib/libpng.a
+	      )
 	SET(xCONFIG_VARS "CXXFLAGS=-mthumb")
-	SET(xCONFIG_PIX  PNG_LIBS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PNG_LIB/libpng-1.6.2/lib/libpng.so PNG_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PNG_LIB/libpng-1.6.2/include  CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR})
+	SET(xCONFIG_PIX --disable-arm-iwmmxt 
+	      PNG_LIBS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PNG_LIB/libpng-1.6.2/lib/libpng.so 
+	      PNG_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PNG_LIB/libpng-1.6.2/include  
+	      CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}
+	      )
 	SET(ICU_PLAT_CODE_local Linux)
 	SET(ICU_PLAT_CODE Linux --host=arm-android-linux --with-cross-build=${CMAKE_CURRENT_BINARY_DIR}/deps/unicode/${ICU_UnicodeVersion} CPPFLAGS=-nostdlib)
 
@@ -262,8 +277,8 @@ if (${MAKE_CPF} STREQUAL "ON")
 		  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/Cairo/
 		  DOWNLOAD_COMMAND git clone git://anongit.freedesktop.org/git/cairo
 		  
-		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/Cairo/src/Cairo/
-		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/Cairo/src/Cairo/configure ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Cairo
+		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/Cairo/src/cairo/
+		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/Cairo/src/cairo/autogen.sh ${xCONFIG_SDL} ${xCONFIG_CAIRO} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Cairo
 		  BUILD_COMMAND  $(MAKE) -j4
 		  INSTALL_COMMAND  $(MAKE) install
 		  BUILD_IN_SOURCE 0

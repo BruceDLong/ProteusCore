@@ -11,6 +11,10 @@ enum filterModes {
 };
 enum timeUnits {uSecond, uMinute, uHour, uWorkDay, uDay, uWeek, uWorkWeek, uMonth, uYear, uDecade, uCentury};
 enum viewModes {vmHorizontal=0, vmVertical=1, vmTimeLine=2, vmCalendar=4};
+enum deviceUI {uiTouch, uiKbdMouse, uiWeb}
+enum OSBrand {osApple, osAndroid, osPC, osLinux}
+enum scnDensity {sdComfortable, sdCozy, sdCompact}
+enum skinStyle {skinLight, skinDark, skinBlue, skinMetal, skinUnicorn} // Colors, graphics, animations, etc.
 
 struct factoid {
     int64_t index;

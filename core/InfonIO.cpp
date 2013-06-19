@@ -347,7 +347,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
 					for (p=stream->peek(); !(stream->eof() || stream->fail()) && (p==' '||p=='\t'); p=stream->peek()) streamGet();
 					for (p=stream->peek(); !(stream->eof() || stream->fail()) && p!='\n'; p=stream->peek()) sourceID+=streamGet();
 					if(sourceID=="") throw"Expected the name of a file to insert";
-					stream=infonSource(sourceID); line=1; streamName=sourceID;
+				//	stream=infonSource(sourceID); line=1; streamName=sourceID;
 					cout<<"\nINSERTING:"<<sourceID<<".";
 				}
 				j=ReadInfon(scopeID);

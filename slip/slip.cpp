@@ -12,7 +12,7 @@ const char* dbName="proteusData.db";
 #define MAX_PORTALS 24
 
 //#include <time.h>
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #include <SDL2/SDL_thread.h>
 #include <SDL2/SDL_image.h>
 
@@ -101,7 +101,7 @@ struct InfonViewPort {
 
 struct InfonPortal {
     InfonPortal(){surface=0; memset(this, 0, sizeof(InfonPortal));};
-    ~InfonPortal(){if(surface) SDL_FreeSurface(surface); };
+    ~InfonPortal(){if(surface) SDL_FreeSurface(surface);};
     SDL_Surface *surface;
     cairo_surface_t *cairoSurf;
     cairo_t *cr;
@@ -572,8 +572,8 @@ void InitializePortalSystem(int argc, char** argv){
  //UNDO:   SDL_EnableKeyRepeat(300, 130);
   //UNDO:  SDL_EnableUNICODE(1);
     atexit(cleanup);
-char* NewsURL="git://github.com/BruceDLong/NewsTest.git";
-    if(initializeProteusCore(resourceDir, dbName, NewsURL)) {cout<< "Could not initialize the Proteus Engine\n\n"; exit(1);}
+
+    if(initializeProteusCore(resourceDir, dbName)) {cout<< "Could not initialize the Proteus Engine\n\n"; exit(1);}
     if(theAgent.loadInfon(worldFile, &theAgent.world)) exit(1);
     User* portalUser=new User;
     if(loadUserRecord(portalUser, username, password)) {MSGl("\nUser could not be authenticated. Exiting..."); exit(5);}
@@ -738,7 +738,7 @@ int main(int argc, char *argv[]){
     MSGl("\n\n         * * * * * Starting Proteus and The Slipstream * * * * *\n");
     //MSGl("SDL Revision " << SDL_GetRevisionNumber()<<",  "<<"\n");
     InitializePortalSystem(argc, argv);
-    newsViewer=new NewsViewer(0,0,0,600,300); newsViewer->dirty=1; newsViewer->visible=1;
+    newsViewer=new NewsViewer(0,0,0,800,600); newsViewer->dirty=1; newsViewer->visible=1;
     StreamEvents();
     delete newsViewer;
     return (0);

@@ -11,10 +11,10 @@ enum filterModes {
 };
 enum timeUnits {uSecond, uMinute, uHour, uWorkDay, uDay, uWeek, uWorkWeek, uMonth, uYear, uDecade, uCentury};
 enum viewModes {vmHorizontal=0, vmVertical=1, vmTimeLine=2, vmCalendar=4};
-enum deviceUI {uiTouch, uiKbdMouse, uiWeb}
-enum OSBrand {osApple, osAndroid, osPC, osLinux}
-enum scnDensity {sdComfortable, sdCozy, sdCompact}
-enum skinStyle {skinLight, skinDark, skinBlue, skinMetal, skinUnicorn} // Colors, graphics, animations, etc.
+enum deviceUI {uiTouch, uiKbdMouse, uiWeb};
+enum OSBrand {osApple, osAndroid, osPC, osLinux};
+enum scnDensity {sdComfortable, sdCozy, sdCompact};
+enum skinStyle {skinLight, skinDark, skinBlue, skinMetal, skinUnicorn}; // Colors, graphics, animations, etc.
 
 struct factoid {
     int64_t index;
@@ -28,7 +28,7 @@ struct factoid {
     // list<links>; // links to articles, videos, people, etc.
     // list<sources>;
 
-    factoid(int64_t idx, string headLine){index=idx; headline=headLine;}
+    factoid(int64_t idx, string headLine, int import){index=idx; headline=headLine; importance=import;}
 };
 
 //////////////////////////////////////////////////////////////
@@ -117,8 +117,9 @@ struct ScrollingDispItem:DisplayItem {
 
                     if(veloX==0 && veloY==0) {scrollState=still;}
                     else{
-                   //     velocityX /= 4; velocityY /= 4;
-                        scrollState=freeScrolling;
+                        veloX = (downX-crntX)/10;
+			veloY = (downY-crntY)/10;
+                        scrollState=freeScrolling;cout<<'!'<<flush;
                         timer_id = SDL_AddTimer(interval, tick, this);
 
                     }
@@ -133,7 +134,7 @@ struct ScrollingDispItem:DisplayItem {
                 delta_x=crntX-prevX; delta_y=crntY-prevY;
                 prevX=crntX; prevY=crntY;
                 if(scrollState==fingerPressed || scrollState==stopping){ // Finger moves while just pressed or stopping
-                    if(delta_x > moveThreshold ||delta_y > moveThreshold || delta_x < -moveThreshold || delta_y < -moveThreshold){ cout<<'=';
+                    if(delta_x > moveThreshold || delta_y > moveThreshold || delta_x < -moveThreshold || delta_y < -moveThreshold){ cout<<'=';
 						timestamp = SDL_GetTicks();
 						scrollState=pullScrolling;
 						delta_x=delta_y=0;
@@ -156,10 +157,13 @@ struct ScrollingDispItem:DisplayItem {
 uint32_t tick(uint32_t interval, void *param){ cout<<':'<<flush;
     ScrollingDispItem *item=(ScrollingDispItem*)param;
     if (item->scrollState == freeScrolling) {
-        if((item->veloX-0.1) <0) item->veloX=0;
- //       if(--item->veloY <0) item->veloY=0;
-        item->setOffset(item->offset - (item->veloX));
-
+	item->veloX *= 0.99;
+        if(item->veloX >0 && item->veloX <0.1) item->veloX=0;
+        else if(item->veloX <0 && item->veloX >-0.1) item->veloX=0;
+	item->veloY *= 0.99;
+        if(item->veloY >0 && item->veloY <0.1) item->veloY=0;
+        else if(item->veloY <0 && item->veloY >-0.1) item->veloY=0;
+        item->setOffset(item->offset + (item->veloX));
         if(item->veloX==0 && item->veloY==0) {
             item->scrollState = still;
             return 0; // stop ticker
@@ -214,22 +218,29 @@ struct TimelineView:ScrollingDispItem {
     void fetchNext(ItemCacheItr &item){++item;};
 
     TimelineView(DisplayItem* Parent=0, int X=0, int Y=0, int W=100, int H=50):ScrollingDispItem(Parent,X,Y,W,H)
-        {span=501; offset=502;};
+        {span=501; offset=span+1;};
     ~TimelineView(){};
     int draw(cairo_t *cr){
         if(!dirty || !visible) return 0; else dirty=false;
-        cairo_set_source_rgba(cr, 0.5,0.5,0.6, 0.9);
+        cairo_set_source_rgba(cr, 0,0,1,1);
         roundedRectangle(cr, x,y,w,h,20);
-        cairo_fill(cr);
-
+        cairo_stroke(cr);
+        roundedRectangle(cr, x,y,w,h,20);
+        cairo_set_source_rgba(cr, 0,0,0,1);
+	cairo_fill(cr);
         int64_t leftIdx=offset-span;
         scale=span/w; //cout<<"scale:"<<scale<<" ";
-        cairo_set_source_rgba(cr, 0.8,0.8,1.0, 1);
         for(ItemCacheItr item=cache.lower_bound(leftIdx); item!=cache.end() && (*item).first <= offset; ++item){
-            int64_t idx=(*item).first;
-            double xPoint = (double)(idx-leftIdx)/scale;  // Offset in screen units.
-char buf[40]; itoa((uint)leftIdx, buf);         
-            cairo_move_to(cr,x+xPoint, y+10); renderText(cr,(string(buf).c_str())); cairo_fill(cr);
+            	int64_t idx=(*item).first;
+            	double xPoint = (double)(idx-leftIdx)/scale;  // Offset in screen units
+		if(xPoint < 600) {
+			if(idx >= 0)
+				cairo_set_source_rgba(cr, 1,1,1, 1);
+			else 
+				cairo_set_source_rgba(cr, 1,0,0, 1);
+			roundedRectangle(cr, x+xPoint,y,2*item->second->importance,2*item->second->importance,20);
+			cairo_stroke(cr);
+		}
         }
 //offset+=10;
         return 1;
@@ -241,7 +252,7 @@ struct ItemsViewPane:DisplayItem {
     ~ItemsViewPane(){};
     int draw(cairo_t *cr){
         if(!dirty || !visible) return 0; else dirty=false;
-        cairo_set_source_rgba(cr, 0.5,0.5,1.0, 0.8);
+        cairo_set_source_rgba(cr, 0,0,0,0);
         roundedRectangle(cr, x,y,w,h,20);
         cairo_fill(cr);
         return 1;
@@ -253,23 +264,21 @@ typedef list<TimelineView*>::iterator TimeLineItr;
 
 struct  TimelinesPane:DisplayItem {
     TimelinesPane(DisplayItem* Parent=0, int X=0, int Y=0, int W=100, int H=50):DisplayItem(Parent,X,Y,W,H){
-        int hi=50;
-        for(int i=0; i<4; ++i){
-            TimelineView* TLV=new TimelineView(this,X+1,Y+((hi+10)*i)+40,W-2,hi);
-            for(int j=0; j<=200; ++j){
-                int rIdx=rand() % 10000;
-                TLV->cache.insert(ItemCacheVal(rIdx, new factoid(rIdx, "Hello")));
-            }
-            timeLines.push_back(TLV);
-        }
+	    TimelineView* TLV=new TimelineView(this,X+5,Y+5,W-10,H-10);
+	    for(int j=0; j<=400; ++j){
+		int rIdx=rand() % 20000 - 10000;
+		int rImport=rand() % 100;
+		TLV->cache.insert(ItemCacheVal(rIdx, new factoid(rIdx, "Hello", rImport)));
+	    }
+	    timeLines.push_back(TLV);
     };
     ~TimelinesPane(){for(TimeLineItr i=timeLines.begin(); i!=timeLines.end(); ++i) delete(*i);};
     TimeLines timeLines;
     int draw(cairo_t *cr){
         if(!dirty || !visible) return 0; else dirty=false;
-        cairo_set_source_rgba(cr, 0.5,0.5,0.8, 0.8);
+        cairo_set_source_rgba(cr, 1,0,0, 1);
         roundedRectangle(cr, x,y,w,h,20);
-        cairo_fill(cr);
+        cairo_stroke(cr);
         for(TimeLineItr i=timeLines.begin(); i!=timeLines.end(); ++i){
             (*i)->dirty=1; (*i)->draw(cr);
         }
@@ -303,23 +312,23 @@ struct ItemView:DisplayItem {
 
 struct NewsViewer:ScrollingDispItem {
     NewsViewer(DisplayItem* Parent=0, int X=0, int Y=0, int W=100, int H=50):
-        ScrollingDispItem(Parent,X,Y,W,H),
-        bookmarks(this, X+(W/3)*0+5,Y+10,W/3-10,H-20),
-        timelines(this, X+(W/3)*1+5,Y+10,W/3-10,H-20),
-        itemView (this, X+(W/3)*2+5,Y+10,W/3-10,H-20)
+        //ScrollingDispItem(Parent,X,Y,W,H),
+        //bookmarks(this, X+(W/3)*0+5,Y+10,W/3-10,H-20),
+        timelines(this, X,Y,W,H)
+        //itemView (this, X+(W/3)*2+5,Y+10,W/3-10,H-20)
         {srand (time(NULL)); WidgetWithCapturedMouse=0;};
     ~NewsViewer(){};
-    BookmarkPane bookmarks;
+    //BookmarkPane bookmarks;
     TimelinesPane timelines;
-    ItemsViewPane itemView;
+    //ItemsViewPane itemView;
     int draw(cairo_t *cr){
         if(!dirty || !visible) return 0; else dirty=false;
-        cairo_set_source_rgba(cr, 0.8,0.2,0.9, 1);
-        roundedRectangle(cr, x,y,w,h,20);
-        cairo_stroke(cr);
-        bookmarks.dirty=1; bookmarks.draw(cr);
+        //cairo_set_source_rgba(cr, 0,1,1,1);
+        //roundedRectangle(cr, x,y,w,h,20);
+        //cairo_stroke(cr);
+        //bookmarks.dirty=1; bookmarks.draw(cr);
         timelines.dirty=1; timelines.draw(cr);
-        itemView.dirty=1;  itemView.draw(cr);
+        //itemView.dirty=1;  itemView.draw(cr);
         return 1;
     }
 
@@ -327,8 +336,8 @@ struct NewsViewer:ScrollingDispItem {
         if(!visible) return 0;
         if(WidgetWithCapturedMouse) {WidgetWithCapturedMouse->handleEvent(ev); return 1;}
         if(timelines.handleEvent(ev)) return 1;
-        if(itemView.handleEvent(ev))  return 1;
-        if(bookmarks.handleEvent(ev)) return 1;
+        //if(itemView.handleEvent(ev))  return 1;
+        //if(bookmarks.handleEvent(ev)) return 1;
         return 0;
     }
 };

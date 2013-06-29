@@ -29,7 +29,7 @@ using namespace std;
 #define check(ch) {RmvWSC(); ChkNEOF; tok=streamGet(); if(tok != ch) {cout<<"Expected "<<ch<<"\n"; throw "Unexpected character";}}
 
 
-struct QParser;
+struct ProteusParser;
 
 class xlater{
 public:
@@ -41,7 +41,7 @@ public:
     WordLibrary *wordLibrary;   // Here is where the tags to models for this language are stored
 
     //////////////////////////////////////////////////////////
-    /* ReadLanguageWord() extends a QParser to read a 'word' in some language (possibly a natural language).
+    /* ReadLanguageWord() extends a ProteusParser to read a 'word' in some language (possibly a natural language).
      *  Words differ from simple Proteus tags in language defined ways. For example:
      *      * Proteus tags are in Unicode.  Words here may restrict characters to those from the language being read.
      *      * Proteus tags cannot contain appostrophies or hyphens while words may be defined to to have them.
@@ -51,17 +51,17 @@ public:
      *  This function works when loading an infon and won't have access to the tag library.
      */
 
-    virtual WordS* ReadLanguageWord(QParser *parser, icu::Locale &locale)=0;
+    virtual WordS* ReadLanguageWord(ProteusParser *parser, icu::Locale &locale)=0;
 
     //////////////////////////////////////////////////////////
-    /* ReadTagChain() extends a QParser to read a phrase in some language (possibly a natural language).
+    /* ReadTagChain() extends a ProteusParser to read a phrase in some language (possibly a natural language).
      *   It likely calls ReadWord() to read a chain of 'words' in the langauge in question.
      *   ReadTagChain may also read punctuation.
      *   ReadTagChain must leave the stream in the correct place on return. (Either having read nothing or an entire phrase but no more.)
      *   This function works when loading an infon and won't have access to the tag library.
      */
 
-    virtual void ReadTagChain(QParser *parser, icu::Locale &locale, WordS& result)=0;
+    virtual void ReadTagChain(ProteusParser *parser, icu::Locale &locale, WordS& result)=0;
 
     //////////////////////////////////////////////////////////
     /* Tags2Proteus() converts a list of tags read by ReadTagChain() into an infon and returns a pointer to it.

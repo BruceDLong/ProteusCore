@@ -54,21 +54,22 @@ static void reportFault(int Signal){cout<<"\nSegmentation Fault.\n"; fflush(stdo
 infon *topInfon, *Entry;
 int AutoEval(infon* CI, agent* a);
 bool IsHardFunc(string tag);
+extern InfonManager *informationSources;
 
 int main(int argc, char **argv){
     string resourceDir="../../../resources";
     string dbName="proteusData.db";
-char* NewsURL="git://github.com/BruceDLong/NewsTest.git";
+	char* NewsURI="git://github.com/BruceDLong/NewsTest.git:master.pr";
     
-	if(initializeProteusCore(resourceDir, dbName, NewsURL)) {cout<< "Could not initialize the Proteus Engine\n\n"; exit(1);}
+	if(initializeProteusCore(resourceDir, dbName)) {cout<< "Could not initialize the Proteus Engine\n\n"; exit(1);}
     initReadline();
     signal(SIGSEGV, reportFault);
 
-    // Load World
-    agent a(0, IsHardFunc, AutoEval);
+    // Load World model
+    agent a(0, IsHardFunc, AutoEval);                       // One agent per user.
     cout<<"Locale: "<<localeString(&a.locale)<<"\n";
-    if(a.loadInfon(resourceDir+"/news/master/master.pr", &a.world, 0)) exit(1);
-    topInfon=a.world;  // use topInfon in the ddd debugger to view World
+    if(a.loadInfon(NewsURI, &a.world, 0)) exit(1);     // Load/cache the master news file
+    topInfon=a.world;  // Use topInfon in the ddd debugger to view World
 
     cout<<"\nThe Proteus CLI. Type some infons or 'quit'\n\n";
     if(sizeof(int)!=4) cout<<"WARNING! int size is "<<sizeof(int)<<" bytes.\n\n";
@@ -89,12 +90,9 @@ char* NewsURL="git://github.com/BruceDLong/NewsTest.git";
             cout<<"Locale: "<<localeString(&a.locale)<<"\n";
             continue;
         } if (entry=="") continue;
-        //char ch='x', pr; do {pr=ch; ch=getCH(); entry+=ch;} while (!(pr=='%' && ch=='>'));
-        //cout << "Parsing ["<<entry<<"]\n";
-        entry="<% { " + entry + " \n} %>";
-        istrstream fin(entry.c_str());
-        QParser q(&fin); q.agnt=&a;
-        Entry=q.parse(); // cout <<"Parsed.\n";
+        entry="string://Entry: { " + entry + " \n} ";
+        ProteusParser pp(entry, informationSources); pp.agnt=&a;
+        Entry=pp.parse(); // cout <<"Parsed.\n";
         if (Entry) try{
 
             infon* outerList=Entry;  // This functionality would be better implemented by streamed parsing of world.
@@ -108,7 +106,7 @@ char* NewsURL="git://github.com/BruceDLong/NewsTest.git";
         } catch (char const* errMsg){cout<<errMsg<<"\n";}
 
         if (Entry) cout<<"\n"<<a.printInfon(Entry)<<"\n\n";
-        else {cout<<"\nError: "<<q.buf<<"\n\n";}
+        else {cout<<"\nError: "<<pp.buf<<"\n\n";}
     }
     shutdownProteusCore();
     return 0;

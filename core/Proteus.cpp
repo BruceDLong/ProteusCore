@@ -22,6 +22,7 @@ multimap<infon*,WordSPtr> DefPtr2Tag;  // TODO: Verify that smartpointer in cont
 #include "XlaterENGLISH.h"
 XlaterENGLISH EnglishXLater;
 sqlite3 *coreDatabase;
+InfonManager *informationSources;
 
 int createDatabase(string dbName){
 	char *zErrMsg = 0; int rc;
@@ -56,11 +57,10 @@ xlater* fetchXlater(icu::Locale *locale){
 }
 
 LanguageExtentions langExtentions; // This map stores valid locales and their xlater if available.
-int initializeProteusCore(string resourceDir, string dbName, string newsURL){     // Use this to load available language modules before normalizing any infons.
+int initializeProteusCore(string resourceDir, string dbName){     // Use this to load available language modules before normalizing any infons.
     // Connect to Proteus Database
     struct stat buffer; int rc;
     string newsDir=resourceDir+"/news";
-    string repoDir=newsDir+"/master";
 	if(stat(resourceDir.c_str(), &buffer)==-1){throw"Could not access data folder.";}
 	if(stat(newsDir.c_str(), &buffer)==-1){
 		if(mkdir(newsDir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)==-1) throw "Could not create news folder.";
@@ -76,13 +76,7 @@ int initializeProteusCore(string resourceDir, string dbName, string newsURL){   
         }
 	}
 	
-	// Clone Repository as needed
-	if(stat(repoDir.c_str(), &buffer)==-1){
-		cout<<"Cloning "<<newsURL<<" into "<<repoDir<<"\n";
-		rc=do_clone(newsURL.c_str(), repoDir.c_str());
-	} else { // TODO: update the repository here.
-		cout<<"HERE WE SHOULD UPDATE REPOSITORY.\n";
-	}
+	informationSources=new InfonManager(newsDir, coreDatabase);
 	
     // Initialize Language modules.
     u_setDataDirectory(resourceDir.c_str());
@@ -177,14 +171,15 @@ agent::agent(infon* World, bool (*isHF)(string), int (*eval)(infon*, agent*)){wo
 void agent::setLocale(string l){locale=icu::Locale::createCanonical(l.c_str());}
 agent::~agent(){};
 
-int agent::loadInfon(string filename, infon** inf, bool normIt){
-    cout<<"Loading:'"<<filename<<"'..."<<flush;
-    fstream InfonIn(filename);
-    if(InfonIn.fail()){cout<<"\nThe file "<<filename<<" was not found.\n\n"<<flush; return 1;}
-    QParser T(&InfonIn); T.agnt=this;
-    *inf=T.parse();
+int agent::loadInfon(string sourceSpec, infon** inf, bool normIt){
+    cout<<"Loading:'"<<sourceSpec<<"'..."<<flush;
+//    fstream InfonIn(sourceSpec);
+//    if(InfonIn.fail()){cout<<"\nThe file "<<sourceSpec<<" was not found.\n\n"<<flush; return 1;}
+ 
+    ProteusParser pp(sourceSpec, informationSources); pp.agnt=this;
+    *inf=pp.parse();
     if (*inf) {cout<<"done.   "<<flush;}
-    else {cout<<"\nError:"<<T.buf<<"   \n\n"<<flush; return 1;}
+    else {cout<<"\nError:"<<pp.buf<<"   \n\n"<<flush; return 1;}
     if(normIt) {
         alts.clear();
         try{
@@ -196,11 +191,10 @@ int agent::loadInfon(string filename, infon** inf, bool normIt){
 }
 
 infon* agent::loadInfonFromString(string ProteusString, infon** inf, bool normIt){
-    string entry="<%  " + ProteusString + " \n %>";
-    istrstream InfonIn(entry.c_str());
-    QParser T(&InfonIn); T.agnt=this;
-    *inf=T.parse();
-    if ((*inf)==0) {cout<<"Error:"<<T.buf<<"   "<<flush; return 0;}
+    string entry="string://STR:" + ProteusString;
+    ProteusParser pp(entry, informationSources); pp.agnt=this;
+    *inf=pp.parse();
+    if ((*inf)==0) {cout<<"Error:"<<pp.buf<<" "<<flush; return 0;}
     if(normIt) {
         alts.clear();
         try{

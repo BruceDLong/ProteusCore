@@ -24,7 +24,7 @@ bool isCardinalOrOrdinal(char ch){
     return (isdigit(ch) || ch=='.'  || ch=='-' || ch=='s' || ch=='t' || ch=='h' || ch=='n' || ch=='r' || ch=='d');
 }
 
-string parseSenseID(QParser *parser){
+string parseSenseID(ProteusParser *parser){
     string senseID="";
     if     (parser->chkStr("#n#")){senseID="#n#";}
     else if(parser->chkStr("#v#")){senseID="#v#";}
@@ -75,7 +75,7 @@ void tagChainToString(WordS *tags, UnicodeString *strOut){
     }
 }
 
-WordS* XlaterENGLISH::ReadLanguageWord(QParser *parser, icu::Locale &locale){ // Reads a 'word' consisting of a number or an alphabetic+hyphen+appostrophies tag
+WordS* XlaterENGLISH::ReadLanguageWord(ProteusParser *parser, icu::Locale &locale){ // Reads a 'word' consisting of a number or an alphabetic+hyphen+appostrophies tag
     char tok=parser->Peek();
     if(isdigit(tok) || tok=='-') {getBufs(isCardinalOrOrdinal(parser->peek()),parser);}
     else if(isalpha(tok)){getBufs(isEngWordChar(parser->peek()),parser);}
@@ -115,7 +115,7 @@ WordS* XlaterENGLISH::ReadLanguageWord(QParser *parser, icu::Locale &locale){ //
     return tag;
 }
 
-void XlaterENGLISH::ReadTagChain(QParser *parser, icu::Locale &locale, WordS& head){ // Reads a phrase that ends at a non-matching character or a period that isn't in a number.
+void XlaterENGLISH::ReadTagChain(ProteusParser *parser, icu::Locale &locale, WordS& head){ // Reads a phrase that ends at a non-matching character or a period that isn't in a number.
     WordS* nxtTag;
     while((nxtTag=ReadLanguageWord(parser, locale))){
         if(head.words.size()==0) {head.norm="";} else head.norm+="-";

@@ -220,13 +220,13 @@ string entryStr;
 infon *topInfon, *Entry;  // use topInfon in the ddd debugger to view World
 int AutoEval(infon* CI, agent* a);
 bool IsHardFunc(string tag);
+extern InfonManager *informationSources;
 
 string normToWorld(agent** a, string entryStr){
     string ret="NOT_INITD";
-    entryStr="<% { " + entryStr + " \n} %>";
-    istrstream fin(entryStr.c_str());
-    QParser q(&fin); q.agnt=*a;
-    Entry=q.parse(); // cout <<"Parsed.\n";
+    entryStr="string:// TEST:{ " + entryStr + " \n}"; // TODO: Oddly, removing the '\n' is a problem for simpleParse1
+    ProteusParser pp(entryStr, informationSources); pp.agnt=*a;
+    Entry=pp.parse(); // cout <<"Parsed.\n";
     if (Entry) try{
         infon* outerList=Entry;
         Entry=Entry->value.listHead; outerList->value.listHead=0; delete outerList;
@@ -239,7 +239,7 @@ string normToWorld(agent** a, string entryStr){
 
     if(ret=="NOT_INITD"){
         if (Entry) ret= (*a)->printInfon(Entry);
-        else {ret= q.buf;}
+        else {ret= pp.buf;}
     }
     return ret;
 }
@@ -251,7 +251,7 @@ void multiNorm(agent** a, string entryStr){
     resetLanguageData();
     (*a) = new agent(0, IsHardFunc, AutoEval);
     (*a)->locale.createCanonical(locale("").name().c_str());
-    (*a)->loadInfonFromString("{'ONE' 'TWO' {33 44 55} ...}", &(*a)->world, 0); topInfon=(*a)->world;
+    (*a)->loadInfon("string://TEST:" "{'ONE' 'TWO' {33 44 55} ...}", &(*a)->world, 0); topInfon=(*a)->world;
 
     while(std::getline(ss, item)) {
         if(item.size()>0) {
@@ -275,8 +275,8 @@ int main (int argc, char* const argv[])
 
     char* resourceDir="../../../resources";
     char* dbName="proteusData.db";
-    char* NewsURL="git://github.com/BruceDLong/NewsTest.git";
-    if(initializeProteusCore(resourceDir, dbName, NewsURL)) {cout<< "Could not initialize the Proteus Engine"; exit(1);}
+//    char* NewsURL="git://github.com/BruceDLong/NewsTest.git";
+    if(initializeProteusCore(resourceDir, dbName)) {cout<< "Could not initialize the Proteus Engine"; exit(1);}
 
     // Run the tests
     int result = Catch::Main( argc, argv );

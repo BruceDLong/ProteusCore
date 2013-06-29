@@ -128,17 +128,27 @@ struct WordLibrary:WordSMap {
 };
 
 struct InfonSource{
-	string sourceID; // name for this source
+	InfonSource(string SourceSpec, uint interval=30*60);
+	istream *stream();
+	string sourceSpec; // URI + file path.
+	string sourceID; // hash name for this source
 	string srcType;  // e.g. git
-	string fileName;
-	string URI;
+	string filePath;
+	string relativePath; // Path to the file from dataDir/news/
+	string URI, URI_path;
 	string crntHash;
 	string assertionCode_pr;
 	string sub_sources;
 	time_t lastUpdate;
-	uint updateInterval;  // in seconds.
-	uint errorState;   // 0=OK
+	uint   updateInterval;  // in seconds.
+	uint   errorState;      // 0=OK
+	string errorDesc;       // If errorState is not OK, this describes why.
+	uint refcnt;
 };
+
+typedef boost::intrusive_ptr<InfonSource> InfonSourcePtr;
+inline void intrusive_ptr_add_ref(InfonSource* p){++p->refcnt;}
+inline void intrusive_ptr_release(InfonSource* p){if(--p->refcnt == 0) delete p;}
 
 struct RepoStatus{
 	string name, URI, crntHash, repoType;
@@ -149,15 +159,14 @@ struct RepoStatus{
 struct InfonManager{
 	sqlite3 *db;       // The cache database.
 	map<string, RepoStatus> repos;
-	map<string, InfonSource> sources;
+	map<string, InfonSourcePtr> sources;
+	string dataFolder;
 	string activeSrcList;
-	string pathToData;
 	uint errorState;   // 0=OK
 	
-	InfonManager(string dataFolder, sqlite3 *DB):db(DB), pathToData(dataFolder){};
-	void registerSource(string srcName, string srcType, string srcFileSpec, string srcURI);
-	void activateSource();    // Loads an infon from either git/file or the cache
-	void updateSource();
+	InfonManager(string DataFolder, sqlite3 *DB):db(DB), dataFolder(DataFolder){};
+	istream* cachedStream(string srcSpec);    // fetches an infon stream from either git/file or the cache
+	void updateRepositories();
 };
 
 

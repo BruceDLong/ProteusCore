@@ -104,34 +104,46 @@ string agent::printInfon(infon* i, infon* CI){
 #define check(ch) {RmvWSC(); ChkNEOF; tok=streamGet(); if(tok != ch) {cout<<"Expected "<<ch<<"\n"; throw "Unexpected character";}}
 #define nxtTok(tok) nxtTokN(1,tok)
 
-char QParser::streamGet(){char ch=stream->get(); textParsed+=ch; return ch;}
-char QParser::peek(){if (stream->fail()) throw "Unexpected end of file";  return stream->peek();}
-char QParser::Peek(){RmvWSC(); return peek();}
+char ProteusParser::streamGet(){char ch=stream->get(); textParsed+=ch; return ch;}
+char ProteusParser::peek(){if (stream->fail()) return '\0'; /*throw "Unexpected end of file"; */ return stream->peek();}
+char ProteusParser::Peek(){RmvWSC(); return peek();}
 
-void QParser::scanPast(char* str){
+void ProteusParser::scanPast(char* str){
     char p; char* ch=str;
     while(*ch!='\0'){
         p=streamGet();
-        if (stream->eof() || stream->fail())
+        if (stream->eof() || stream->fail()){
+			if (strcmp(str,"<%")==0) return;
             throw (string("Expected String not found before end-of-file: '")+string(str)+"'").c_str();
+		}
         if (*ch==p) ch++; else ch=str;
         if (p=='\n') ++line;
     }
 }
 
-void QParser::RmvWSC (){ // Remove whitespace and comments.
+void ProteusParser::RmvWSC(attrStorePtr attrs){ // Remove whitespace and comments.
     char p,p2;
-    for (p=stream->peek(); (p==' '||p=='/'||p=='\n'||p=='\r'||p=='\t'); p=stream->peek()){
+    for (p=stream->peek(); (p==' '||p=='/'||p=='\n'||p=='\r'||p=='\t'||p=='%'); p=stream->peek()){
         if (p=='/') {
             streamGet(); p2=stream->peek();
             if (p2=='/') {
-                for (p=stream->peek(); !(stream->eof() || stream->fail()) && p!='\n'; p=stream->peek()) streamGet();
+				string comment="";
+                for (p=stream->peek(); !(stream->eof() || stream->fail()) && p!='\n'; p=stream->peek()) comment+=streamGet();
+                if (attrs){
+					if(comment.substr(1,7)=="author=") attrs->insert(pair<string,string>("author",comment.substr(1,7)));
+					else if(comment.substr(1,8)=="picture=") attrs->insert(pair<string,string>("picture",comment.substr(1,8)));
+					else if(comment.substr(1,8)=="engHead=") attrs->insert(pair<string,string>("endHead",comment.substr(1,8)));
+					else if(comment.substr(1,7)=="import=") attrs->insert(pair<string,string>("import",comment.substr(1,7)));
+				}
             } else if (p2=='*') {
                 for (p=streamGet(); !(stream->eof() || stream->fail()) && !(p=='*' && stream->peek()=='/'); p=streamGet())
                     if (p=='\n') ++line;
                 if (stream->eof() || stream->fail()) throw "'/*' Block comment never terminated";
             } else {streamPut(1); return;}
-        }
+        } else if (p=='%'){
+			streamGet(); p2=stream->peek();
+			if(p2=='>'){scanPast((char*)"<%");} else {streamPut(1); return;}
+		}
         if (streamGet()=='\n') {++line; prevChar='\n';} else prevChar='\0';
     }
 }
@@ -172,7 +184,7 @@ const char* altTok(string tok){
     return 0;
 }
 
-bool QParser::chkStr(const char* tok){
+bool ProteusParser::chkStr(const char* tok){
     int startPos=textParsed.size();
     if (tok==0) return 0;
     for(const char* p=tok; *p; p++) {
@@ -185,7 +197,7 @@ bool QParser::chkStr(const char* tok){
     return true;
 }
 
-xlater* QParser::chkLocale(icu::Locale* locale){
+xlater* ProteusParser::chkLocale(icu::Locale* locale){
     int p, startPos=textParsed.size();
     getbuf(isAscStart(peek()));
     string localeID=buf;
@@ -202,7 +214,7 @@ xlater* QParser::chkLocale(icu::Locale* locale){
     return 0;
 }
 
-WordSPtr QParser::ReadTagChain(icu::Locale* locale, xlater **XL_return, string scopeID){
+WordSPtr ProteusParser::ReadTagChain(icu::Locale* locale, xlater **XL_return, string scopeID){
     icu::Locale tmpLocale= *locale;
     xlater* Xlater = chkLocale(&tmpLocale);
     if(Xlater==0) throw "Words read with unsupported or no locale";
@@ -217,7 +229,7 @@ WordSPtr QParser::ReadTagChain(icu::Locale* locale, xlater **XL_return, string s
 #include <cstdarg>
 bool isBinDigit(char ch) {return (ch=='0' || ch=='1');}
 
-const char* QParser::nxtTokN(int n, ...){
+const char* ProteusParser::nxtTokN(int n, ...){
     char* tok; va_list ap; va_start(ap,n); int i,p;
     for(i=n; i; --i){
         tok=va_arg(ap, char*); nTok=Peek();
@@ -280,9 +292,9 @@ infon* grok(infon* item, UInt tagCode, int* code){
     }
     return 0;
 }
-
+string indent;
 char errMsg[100];
-UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2, string &scopeID){
+UInt ProteusParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2, attrStorePtr listAttrs, string &scopeID){
     UInt p=0, size=0, stay=1; char rchr, tok, seperator='\0'; const char* pTok; infon *head=0, *prev; infon* j;
     infDataPtr* i=&(pInf)->dataHead;
     if(nxtTok("(") || nxtTok("{") || nxtTok("[") || nxtTok("<")){
@@ -290,7 +302,7 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
         else if(nTok=='['){rchr=']'; *flags|=(tList+fLiteral); *wFlag|=iGetLast;}
         else if(nTok=='<'){rchr='>'; *flags|=(tList+fLiteral); *wFlag|=(iGetLast+xOptmize1);} // Later: iGetMiddle
         else {rchr='}'; *flags|=(tList+fLiteral);}
-        RmvWSC(); int foundRet=0; int foundBar=0;
+        RmvWSC(listAttrs); int foundRet=0; int foundBar=0;
         for(tok=peek(); tok != rchr && stay; tok=peek()){
             if(tok=='&') { // This is a definition, not an element
                 if(rchr=='>') throw "Definitions (&) are not allowed inside <TYPE>";
@@ -342,17 +354,19 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
                 pureInfon pSize(size+1);
                 j=new infon(iNone+isVirtual, &pSize); SetValueFormat(j, fUnknown); j->pos=(size+1); stay=0;
             } else {
-				string sourceID=""; int lineNum(line); string StreamName=streamName; istream* prevStream(stream);
+				string sourceID=""; int prevLine; string prevStreamName=streamName; istream* prevStream=stream; string prevIndent;
 				if(prevChar=='\n' && nxtTok("%INSERT")){
+					prevLine=line; prevStreamName=streamName; prevStream=stream;  prevIndent=indent; indent+="   ";
 					for (p=stream->peek(); !(stream->eof() || stream->fail()) && (p==' '||p=='\t'); p=stream->peek()) streamGet();
 					for (p=stream->peek(); !(stream->eof() || stream->fail()) && p!='\n'; p=stream->peek()) sourceID+=streamGet();
-					if(sourceID=="") throw"Expected the name of a file to insert";
-				//	stream=infonSource(sourceID); line=1; streamName=sourceID;
-					cout<<"\nINSERTING:"<<sourceID<<".";
+					if(sourceID=="") throw"Expected the specifier of a code to insert";
+					stream=sources->cachedStream(sourceID); line=1; streamName=sourceID;
+					cout<<"\n"<<indent<<"Loading:"<<sourceID<<"..."<<flush;
+					if(stream==0 || stream->fail()) {cout<<"\nUnable to open stream "<<sourceID<<"\n"; exit(1);}
 				}
 				j=ReadInfon(scopeID);
 				if(sourceID != "") {
-					stream=prevStream; line=lineNum; streamName=StreamName; prevChar='\n';
+					stream=prevStream; line=prevLine; streamName=prevStreamName; prevChar='\n'; indent=prevIndent;
 				}
 			}
             if(++size==1){
@@ -410,9 +424,12 @@ UInt QParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s
     return size;
 }
 
-infon* QParser::ReadInfon(string &scopeID, int noIDs){
+extern void RegisterArticle(infon* articalInfon); // This will go away later.
+
+infon* ProteusParser::ReadInfon(string &scopeID, int noIDs){
     char op=0; UInt size=0; pureInfon iSize, iVal; infon *s1=0,*s2=0; UInt wFlag=0,fs=0,fv=0;
     WordSPtr tags=0; const char* cTok, *eTok, *cTok2; /*int textEnd=0; int textStart=textParsed.size();*/
+    attrStorePtr attrs(new attrStore);
     if(nxtTok("@")){wFlag|=toExec;}
     if(nxtTok("#")){wFlag|=asDesc;}
     if(nxtTok("\\")){wFlag|=xDevToHome;}
@@ -440,7 +457,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
         wFlag|=iNone;
         if(nxtTok("+") || nxtTok("-")) op='+'; else if(nxtTok("*") || nxtTok("/")) op='*';
         if( nTok=='-' || nTok=='/') fs|=fInvert;
-        size=ReadPureInfon(&iSize, &fs, &wFlag, &s2, scopeID);
+        size=ReadPureInfon(&iSize, &fs, &wFlag, &s2, attrs, scopeID);
         if(op=='+'){
             iVal=iSize; iSize=pureInfon(size); fv=iVal.flags&(mFormat+mType); // Use identity term '1'
             if (size==0 && (fv==(fUnknown+tNum) || fv==(fUnknown+tString))) {iSize.flags=fUnknown+tNum;}
@@ -448,7 +465,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
         }else if(op=='*'){
             if((fs&mType)==tString || (fs&mType)==tList) throw("Terms cannot be strings or lists");
             if(nxtTok("+")) op='+'; else if(nxtTok("-")) {op='+'; fv|=fInvert;}
-            if (op=='+'){size=ReadPureInfon(&iVal,&fv,&wFlag,&s2, scopeID);}
+            if (op=='+'){size=ReadPureInfon(&iVal,&fv,&wFlag,&s2, attrs, scopeID);}
             else {iVal=0; fv=tNum+fLiteral;}    // Use identity summand '0'
         } else { // No operator given
                 iVal=iSize; iSize=pureInfon(size); fv=iVal.flags&(mFormat+mType);
@@ -456,7 +473,7 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
                 else if(((fv&mType)==tList) && iVal.listHead && InfIsVirtual(iVal.listHead->prev)) {iSize.flags=fUnknown+tNum;} // Set size's flags for {...}
         }
     }
-    infon* i=new infon(wFlag, &iSize,&iVal,0,s1,s2,0); i->wSize=size; i->type=tags;
+    infon* i=new infon(wFlag, &iSize,&iVal,0,s1,s2,0); i->wSize=size; i->type=tags; if(attrs){i->attrs=attrs; RegisterArticle(i);}
     if(ValueIsConcat(i) && ((*i->size.dataHead)==1) && !InfIsLoop(i)){infon* ret=i->value.listHead; delete(i); i=ret; i->wFlag&=~mListPos; i->top=i->next=i->prev=0;} // BUT we lose some flags (desc, ...)
     else {
         if (i->size.listHead) i->size.listHead->top=i;
@@ -520,15 +537,18 @@ infon* QParser::ReadInfon(string &scopeID, int noIDs){
     return i;
 }
 
-infon* QParser::parse(){
-    char tok; textParsed=""; string topScope="U"; prevChar='\0';
+infon* ProteusParser::parse(){
+    textParsed=""; string topScope="U"; prevChar='\0'; indent="";
+    stream=sources->cachedStream(sourceSpec);
+    if(stream==0) {cout<<"Could not fetch "<<sourceSpec<<".\n"; return 0;}
+    streamName=sourceSpec;
+    // TODO: set cache mode here. cache or don't_cache.
     try{
-        line=1; scanPast((char*)"<%");
-        infon*i=ReadInfon(topScope, 0);
-        //cout<<"\n["<<textParsed<<"]\n";
-        check('%'); check('>'); buf[0]=0; return i;
+        line=1;
+        infon*i=ReadInfon(topScope, 0);  //cout<<"\n["<<textParsed<<"]\n";
+        buf[0]=0; return i;
     }
-    catch(char const* err){char l[30]; itoa(line,l); strcpy(buf,"An Error Occured: "); strcat(buf,err);
+    catch(char const* err){char l[30]; itoa(line,l); strcpy(buf,"An Error Occured in "); strcat(buf,streamName.c_str()); strcat(buf,": "); strcat(buf,err);
         strcat(buf,". (line ");strcat(buf,l); strcat(buf,")\n");}
     catch(...){strcpy(buf,"An Unknown Error Occurred While Parsing.\n");};
     if(stream->fail()) cout << "End of File Reached";

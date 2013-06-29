@@ -185,7 +185,7 @@ int AutoEval(infon* CI, agent* a){
     } else if (funcName=="loadinfon"){
         string fileName; infon* I;
         if (!getStrArg(CI, &fileName, a)) return 0;
-        a->loadInfon(fileName.c_str(), &I, 1);
+        a->loadInfon(string("file://")+fileName, &I, 1);
         copyTo(I,CI);
     } else if (funcName=="timestr"){ //cout << "DOING TIME\n";
         timeval t; gettimeofday(&t,0);

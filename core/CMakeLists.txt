@@ -35,8 +35,10 @@ link_directories(${HomeDir}/../builds/libs/GMP_BigInts/${GMP_Version}/lib/
 add_library(Proteus SHARED ${PROTEUS_SRCS})
 target_link_libraries(Proteus Proteus)
 
-add_executable(clip clip.cpp)
-target_link_libraries(clip Proteus  ${PROTEUS_LIBS} ${CLIP_LIBS})
+if(NOT(${PLAT_BUILD} STREQUAL "xANDROID_ARM"))
+	add_executable(clip clip.cpp)
+	target_link_libraries(clip Proteus  ${PROTEUS_LIBS} ${CLIP_LIBS})
+endif()
 
 if(${PLAT_BUILD} STREQUAL "HOST")
 	##############################################

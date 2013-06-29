@@ -9,6 +9,9 @@
 #include "wordLibrary.h"
 #include "xlater.h"
 #include <sys/stat.h>
+#include <strstream>
+#include <iostream>
+#include <fstream>
 
 WordLibrary::WordLibrary(sqlite3 *DB){
     const char *tail;
@@ -70,12 +73,58 @@ WordSPtr WordLibrary::insertWord(){
     return 0;
 }
 
-void InfonManager::registerSource(string srcName, string srcType, string srcFileSpec, string srcURI){
-	// Sanity check then clone a repo as needed.
+// Repository functions
+extern int do_clone(const char* url, const char* path);
+
+InfonSource::InfonSource(string SourceSpec, uint interval):sourceSpec(SourceSpec){
+	// SourceSpec format like: git://github.com/BruceDLong/NewsTest.git:master.pr
+	int pos1=sourceSpec.find("://");
+	srcType=sourceSpec.substr(0,pos1);
+	if (srcType!="git" && srcType!="file" && srcType!="string"){errorDesc="Invalid source type: "+srcType; errorState=1; return;}
 	
+	pos1+=3;
+	int pos2=sourceSpec.find(":", pos1);
+	URI_path=sourceSpec.substr(pos1,pos2-pos1);
+	if(URI_path.find("..")!=string::npos){errorDesc="Invalid repository spec"; errorState=1; return;}
+	
+	filePath=sourceSpec.substr(pos2+1);
+	if(srcType!="string" && filePath.find("..")!=string::npos){errorDesc="Invalid path to file"; errorState=1; return;}
+	relativePath=URI_path+'/'+filePath;
+	URI=srcType+"://"+URI_path;
+	sourceID=""; // hash name for this source
+	crntHash="";
+	assertionCode_pr="";
+	sub_sources="";
+	lastUpdate=0;
+	updateInterval=interval;  // in seconds.
+	errorState=0;   // 0=OK
+	errorDesc="";
 }
 
-void InfonManager::activateSource(){
-	// Read an infon from either repo/file or the cache.
-	
+istream* InfonManager::cachedStream(string srcSpec){
+	InfonSourcePtr infSrc(new InfonSource(srcSpec));
+	string repoDir=dataFolder+'/'+infSrc->URI_path;
+	sources[infSrc->sourceSpec] = infSrc;
+	if(infSrc->srcType=="git"){
+		struct stat buffer; int rc;
+		if(stat(repoDir.c_str(), &buffer)==-1){
+			cout<<"Cloning "<<infSrc->URI<<" into "<<repoDir<<"\n";
+			rc=do_clone(infSrc->URI.c_str(), repoDir.c_str());
+			if(rc!=0){return 0;}
+		} else { // TODO: update the repository here.
+	//			if(it's time to update this repo)
+		}
+		return new fstream(string(repoDir+'/'+infSrc->filePath).c_str());
+	} else if(infSrc->srcType=="string"){ return new istrstream(infSrc->filePath.c_str());
+	} else if(infSrc->srcType=="file")  { return new fstream(string(repoDir+'/'+infSrc->filePath).c_str());
+	} else if(infSrc->srcType=="stdin"){ cout<<"stdin unsupported\n"; return 0;
+	} else if(infSrc->srcType=="https"){ cout<<"https unsupported\n"; return 0;
+	}
+	return 0;
+}
+
+void InfonManager::updateRepositories(){
+//	for (each repo){
+//		update
+//	}
 }

@@ -23,10 +23,7 @@ enum {LINUX, MACINTOSH, WINDOWS, MEEGO, IOS, ANDROID, RIM, PALM, XBOX, PS3, WII,
 static int doneYet=0, numEvents=0, numPortals=0;
 
 //////////////////// Slip Code
-#include <strstream>
 #include <iostream>
-#include <fstream>
-#include <sstream>
 #include <map>
 #include "../core/Proteus.h"
 
@@ -530,7 +527,7 @@ static int SimThread(void *nothing){
     SDL_Event ev; InfonPortal* portal; infon* nextFrame;
     ev.type = SDL_USEREVENT;  ev.user.code = TURB_UPDATE_SURFACE;  ev.user.data1 = 0;  ev.user.data2 = 0;
     while (!doneYet) {
-        for (int i = 0; i < numPortals; ++i) {  // Collect and dispatch frames for portals.
+        for (UInt i = 0; i < numPortals; ++i) {  // Collect and dispatch frames for portals.
             portal=portals[i];
             nextFrame=new infon;
             theAgent.deepCopy(portal->stuff, nextFrame);
@@ -547,12 +544,12 @@ static int SimThread(void *nothing){
 
 void InitializePortalSystem(int argc, char** argv){
     numPortals=0;
-    char* worldFile="world.pr"; char* username="bruce"; char* password="erty"; string theme;
+    char* worldSpec="git://github.com/BruceDLong/NewsTest.git:master.pr"; char* username="bruce"; char* password="erty"; string theme;
     for (int i=1; i<argc;) {
         int consumed = 0;
         if (consumed == 0) {
             consumed = -1;
-            if (SDL_strcasecmp(argv[i], "--world") == 0) {if (argv[i + 1]) {worldFile=argv[i+1]; consumed = 2;}}
+            if (SDL_strcasecmp(argv[i], "--world") == 0) {if (argv[i + 1]) {worldSpec=argv[i+1]; consumed = 2;}}
             else if (SDL_strcasecmp(argv[i], "--theme") == 0) {if (argv[i + 1]) {theme=argv[i+1]; consumed = 2;}}
             else if (SDL_strcasecmp(argv[i], "--user") == 0) {if (argv[i + 1]) {username=argv[i+1]; consumed = 2;}}
             else if (SDL_strcasecmp(argv[i], "--pass") == 0) {if (argv[i + 1]) {password=argv[i+1]; consumed = 2;}}
@@ -574,15 +571,18 @@ void InitializePortalSystem(int argc, char** argv){
     atexit(cleanup);
 
     if(initializeProteusCore(resourceDir, dbName)) {cout<< "Could not initialize the Proteus Engine\n\n"; exit(1);}
-    if(theAgent.loadInfon(worldFile, &theAgent.world)) exit(1);
+    if(theAgent.loadInfon(worldSpec, &theAgent.world, 0)) exit(1);     // Load/cache the master news file
+    
     User* portalUser=new User;
     if(loadUserRecord(portalUser, username, password)) {MSGl("\nUser could not be authenticated. Exiting..."); exit(5);}
     if (theme=="") theme=portalUser->defaultTheme;
-    infon *themeInfon, *stuffInfon;
-    if(theAgent.loadInfon(theme.c_str(), &themeInfon, 0)) exit(1);
+    infon *themeInfon=0, *stuffInfon=0;
+//    if(theAgent.loadInfon(theme.c_str(), &themeInfon, 0)) exit(1);
     theAgent.utilField=themeInfon;
-    if(theAgent.loadInfon(portalUser->myStuff.c_str(), &stuffInfon, 0)) exit(1);
-/*
+//    if(theAgent.loadInfon(portalUser->myStuff.c_str(), &stuffInfon, 0)) exit(1);
+    
+    
+/*  THIS MAY BE NEEDED LATER
 infon* PORTAL;
 if(theAgent.loadInfon("portals.pr", &PORTAL, 0)) exit(1);
 debugInfon=PORTAL;
@@ -593,7 +593,7 @@ exit(2);
 
 
     //CreateTurbulancePortal(windowTitle, 100,1300,1024,768, portalUser, themeInfon, stuffInfon);
-    CreateTurbulancePortal(windowTitle, 150,100,800,600, portalUser, themeInfon, stuffInfon);
+    CreateTurbulancePortal(windowTitle, 150,100,800,1200, portalUser, themeInfon, stuffInfon);
 }
 
 #define IS_CTRL (ev.key.keysym.mod&KMOD_CTRL)
@@ -611,10 +611,10 @@ void StreamEvents(){
             switch (ev.type) {
             case SDL_USEREVENT:
                 --numEvents;
-                switch(ev.user.code){
+                switch(ev.user.code){					
                     case TURB_UPDATE_SURFACE:
-                      portals[(uint)ev.user.data1]->crntFrame=(infon*)ev.user.data2;
-                      portals[(uint)ev.user.data1]->needsToBeDrawn=true;
+                      portals[(UInt)ev.user.data1]->crntFrame=(infon*)ev.user.data2;
+                      portals[(UInt)ev.user.data1]->needsToBeDrawn=true;
                       break;
                     case TURB_ADD_SCREEN: break;
                     case TURB_DEL_SCREEN: break;
@@ -639,13 +639,13 @@ void StreamEvents(){
             case SDL_KEYDOWN:
                 switch (ev.key.keysym.sym) {
                 case SDLK_PRINTSCREEN: break; // see sdl_common.c
-                case SDLK_c: if (IS_CTRL) {SDL_SetClipboardText("SDL rocks!\nYou know it!");} break;
+                case SDLK_c: if (IS_CTRL) {SDL_SetClipboardText("Clipboard text");} break;
                 case SDLK_v: if (IS_CTRL) {} break;       // Paste. see sdl_common.c
                 case SDLK_g: if (IS_CTRL) {} break;       // Grab Input. see sdl_common.c
                 case SDLK_p: if (IS_CTRL) {} break;       // Create PDF view and render to file
                 case SDLK_k: if (IS_CTRL) {} break;       // Toggle on-screen Keyboard
                 case SDLK_t: if (IS_CTRL) {} break;       // Cycle Themes
-                case SDLK_l: if (IS_CTRL) {               // Toggle portal locking
+                case SDLK_l: if ( 0 && IS_CTRL) {               // Toggle portal locking
                     portalView->parentPortal->isLocked=!portalView->parentPortal->isLocked;
                     portalView->parentPortal->viewsNeedRefactoring=true;
                     }
@@ -662,7 +662,7 @@ void StreamEvents(){
                             } else {SDL_SetWindowFullscreen(window, SDL_TRUE);}
                     }
                     break;
-                case SDLK_d: if (IS_CTRL) {
+                case SDLK_d: if (0 && IS_CTRL) {
                     //CreateTurbulancePortal(windowTitle, 100,1300,1024,768, portalView->parentPortal->user,
                     CreateTurbulancePortal(windowTitle, 150,90,800,600, portalView->parentPortal->user,
                         portalView->parentPortal->theme, portalView->parentPortal->crntFrame);} break;       // New Portal
@@ -738,7 +738,7 @@ int main(int argc, char *argv[]){
     MSGl("\n\n         * * * * * Starting Proteus and The Slipstream * * * * *\n");
     //MSGl("SDL Revision " << SDL_GetRevisionNumber()<<",  "<<"\n");
     InitializePortalSystem(argc, argv);
-    newsViewer=new NewsViewer(0,0,0,800,600); newsViewer->dirty=1; newsViewer->visible=1;
+    newsViewer=new NewsViewer(0,0,0,800,1200); newsViewer->dirty=1; newsViewer->visible=1;
     StreamEvents();
     delete newsViewer;
     return (0);

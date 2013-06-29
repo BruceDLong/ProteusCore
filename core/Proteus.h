@@ -103,7 +103,7 @@ xlater* fetchXlater(icu::Locale *locale);
 typedef map<string, xlater*> LanguageExtentions;
 extern LanguageExtentions langExtentions;
 extern void resetLanguageData();
-extern int initializeProteusCore(string resourceDir, string dbName, string newsURL);
+extern int initializeProteusCore(string resourceDir, string dbName);
 extern void shutdownProteusCore();
 extern int calcScopeScore(string wrdS, string trialS);
 
@@ -228,8 +228,8 @@ struct agent {
     void* utilField; // Field for application specific use.
     void deepCopyPure(pureInfon* from, pureInfon* to, int flags);
     void deepCopy(infon* from, infon* to, PtrMap* ptrs=0, int flags=0);
-    int loadInfon(string filename, infon** inf, bool normIt=true);
-    infon* loadInfonFromString(string ProteusString, infon** inf, bool normIt=false);
+    int loadInfon(string sourceSpec, infon** inf, bool normIt=true);
+    infon* loadInfonFromString(string ProteusString, infon** inf, bool normIt);
     string printInfon(infon* i, infon* CI=0);
     string printPure (pureInfon* i, UInt wSize, infon* CI=0);
 
@@ -254,10 +254,10 @@ extern void UnicodeStrToUTF8_String(UnicodeString &s, string &out);
 void numberFromString(char* buf, pureInfon* pInf, int base=10);
 
 const int bufmax=1024*32;
-struct QParser{
-    QParser(istream *_stream){stream=_stream;};
+struct ProteusParser{
+    ProteusParser(string srcSpec, InfonManager* srcs):sourceSpec(srcSpec), sources(srcs){};
     infon* parse(); // if there is an error it is returned in buf as a char* string.
-    UInt ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2, string &scopeID);
+    UInt ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, infon** s2, attrStorePtr attrs, string &scopeID);
     infon* ReadInfon(string &scopeID, int noIDs=0);
     char streamGet();
     void scanPast(char* str);
@@ -265,10 +265,12 @@ struct QParser{
     xlater* chkLocale(icu::Locale* locale);
     WordSPtr ReadTagChain(icu::Locale* locale, xlater **XL_return, string scopeID);
     const char* nxtTokN(int n, ...);
-    void RmvWSC ();
+    void RmvWSC(attrStorePtr attrs=0);
     char peek(); // Returns next char.
     char Peek(); // Returns next char after whitespace.
     
+    string sourceSpec;
+    InfonManager *sources;
     istream *stream;
     string streamName;
     char buf[bufmax];

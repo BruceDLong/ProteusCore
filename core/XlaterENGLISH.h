@@ -46,8 +46,8 @@ struct WordChain;
 
 class XlaterENGLISH:public xlater{
 public:
-    WordS* ReadLanguageWord(QParser *parser, icu::Locale &language); // Reads a 'word' consisting of a number or an alphabetic+hyphen+appostrophies tag
-    void ReadTagChain(QParser *parser, icu::Locale &language, WordS& result); // Reads a phrase that ends at a non-matching character or a period that isn't in a number.
+    WordS* ReadLanguageWord(ProteusParser *parser, icu::Locale &language); // Reads a 'word' consisting of a number or an alphabetic+hyphen+appostrophies tag
+    void ReadTagChain(ProteusParser *parser, icu::Locale &language, WordS& result); // Reads a phrase that ends at a non-matching character or a period that isn't in a number.
     infon* tags2Proteus(WordS& tags);     // Converts a list of tags read by ReadTagChain() into an infon and returns a pointer to it.
     void proteus2Tags(infon* proteus, WordS& WordsOut);  // Converts an infon to a tag chain.
     virtual bool loadLanguageData(sqlite3 *db);

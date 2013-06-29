@@ -11,7 +11,7 @@ set(MAKE_SQL ON) #  "Build our own sqlite lib"
 set(MAKE_RDL ON) #  "Build our own Readline lib"
 set(MAKE_GIT ON) #  "Build our own GIT lib"
 set(MAKE_ICU ON) #  "Build our own unicode libs"
-set(MAKE_PRG ON) #  "Build the proteus libs, clip and slip"
+set(MAKE_PRG ON) #  "Build the proteus slip"
 
 set(ICU_UnicodeVersion release-51-1)
 set(GMP_Version gmp-5.0.4)
@@ -68,6 +68,7 @@ elseif (${PLAT_BUILD} STREQUAL "xANDROID_ARM") # android_14
 	message(STATUS "Building for ${PLAT_BUILD}.")
 	set(MAKE_SDL 'OFF')
 	set(MAKE_RDL 'OFF')
+	set(MAKE_PRG 'OFF')
 	
 	SET(CMAKE_C_COMPILER   ${toolChainPath}/${PLAT_BUILD}/bin/arm-linux-androideabi-gcc)
 	SET(CMAKE_CXX_COMPILER ${toolChainPath}/${PLAT_BUILD}/bin/arm-linux-androideabi-g++)
@@ -78,6 +79,7 @@ elseif (${PLAT_BUILD} STREQUAL "xANDROID_ARM") # android_14
 	SET(xCONFIG_SDL "--host=arm-android-linux")
 	SET(xCONFIG_CAIRO --disable-xlib --disable-xcb --disable-xlib-xcb 
 	      CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype/include/freetype2 
+	      "LDFLAGS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/EXPAT/lib/libexpat.a -l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Remiss/libremiss.a"
 	      FREETYPE_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype/include/ 
 	      FREETYPE_LIBS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype/lib/libfreetype.a 
 	      FONTCONFIG_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/FONTCONFIG/fontconfig-2.10.93/include/ 
@@ -86,7 +88,23 @@ elseif (${PLAT_BUILD} STREQUAL "xANDROID_ARM") # android_14
 	      pixman_LIBS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Pixman/lib/libpixman-1.a 
 	      png_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PNG_LIB/libpng-1.6.2/include/ 
 	      png_LIBS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PNG_LIB/libpng-1.6.2/lib/libpng.a
+	      "GOBJECT_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Glib/include/glib-2.0 -I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Glib/lib/glib-2.0/include"
+	      GOBJECT_LIBS=-L${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Glib/lib
+		  glib_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Glib/include
+		  "glib_LIBS=-L${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Glib/lib/libgio-2.0.a -L${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Glib/lib/libgobject-2.0.a"
 	      )
+	SET(xCONFIG_PANGO
+	      CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype/include/freetype2 
+	      "LDFLAGS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Glib/lib/libglib-2.0.a -l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Glib/lib/libgobject-2.0.a"
+	      FREETYPE_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype/include/ 
+	      FREETYPE_LIBS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype/lib/libfreetype.a 
+	      FONTCONFIG_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/FONTCONFIG/fontconfig-2.10.93/include/ 
+	      FONTCONFIG_LIBS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/FONTCONFIG/fontconfig-2.10.93/lib/libfontconfig.a 
+	      CAIRO_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Cairo/include/
+	      CAIRO_LIBS=-L${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Cairo/lib/
+		  GLIB_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Glib/include/glib-2.0/
+		  "GLIB_LIBS=-L${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Glib/lib/ -L${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Glib/lib/libgobject-2.0.a"
+	      )	      
 	SET(xCONFIG_VARS "CXXFLAGS=-mthumb")
 	SET(xCONFIG_PIX --disable-arm-iwmmxt 
 	      PNG_LIBS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PNG_LIB/libpng-1.6.2/lib/libpng.so 
@@ -220,7 +238,9 @@ if (${MAKE_CPF} STREQUAL "ON")
 		  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/expat-2.1.0.tar.gz"
 		  
 		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/EXPAT/src/expat-2.1.0/
-		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/EXPAT/src/expat-2.1.0/configure ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/EXPAT
+		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/EXPAT/src/expat-2.1.0/configure ${xCONFIG_SDL} 
+		       CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}
+		       --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/EXPAT
 		  BUILD_COMMAND  $(MAKE) -j4
 		  INSTALL_COMMAND  $(MAKE) install
 		  BUILD_IN_SOURCE 0
@@ -234,11 +254,12 @@ if (${MAKE_CPF} STREQUAL "ON")
 		  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/freetype-2.4.12.tar.gz"
 		  
 		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/Freetype/src/freetype-2.4.12/
-		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/Freetype/src/freetype-2.4.12/configure ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype
+		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/Freetype/src/freetype-2.4.12/configure ${xCONFIG_SDL} 
+		       CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}
+		       --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype
 		  BUILD_COMMAND  $(MAKE) -j4
 		  INSTALL_COMMAND  $(MAKE) install
 		  BUILD_IN_SOURCE 0
-		  DEPENDS "EXPAT"
 	)
 	
 	#=========================================
@@ -249,11 +270,18 @@ if (${MAKE_CPF} STREQUAL "ON")
 		  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/fontconfig-2.10.93.zip"
 		  
 		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/src/fontconfig-2.10.93/
-		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/src/fontconfig-2.10.93/autogen.sh ${xCONFIG_FC} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER}  CC_FOR_BUILD=/usr/bin/gcc ${xCONFIG_VARS} LDFLAGS=-L${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype/lib/ --with-expat=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/EXPAT/ CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype/include/ --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/FONTCONFIG/fontconfig-2.10.93
+		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/FONTCONFIG/src/fontconfig-2.10.93/autogen.sh 
+		       ${xCONFIG_FC} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER}  CC_FOR_BUILD=/usr/bin/gcc ${xCONFIG_VARS} 
+		       FREETYPE_LIBS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype/lib/libfreetype.a
+		       "FREETYPE_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype/include/ -I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Freetype/include/freetype2"
+		       --with-expat=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/EXPAT/
+		       EXPAT_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/EXPAT/include
+		       EXPAT_LIBS=-L${CMAKE_CURRENT_BINARY_DIR}/builds/libs/EXPAT/lib/libexpat.a
+		       --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/FONTCONFIG/fontconfig-2.10.93
 		  BUILD_COMMAND  $(MAKE) -j4
 		  INSTALL_COMMAND  $(MAKE) install
 		  BUILD_IN_SOURCE 0
-		  DEPENDS "Freetype"
+		  DEPENDS Freetype EXPAT
 	)
 	
 	#=========================================
@@ -264,30 +292,148 @@ if (${MAKE_CPF} STREQUAL "ON")
 		  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/pixman-0.30.0.tar.gz"
 		  
 		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/Pixman/src/pixman-0.30.0/
-		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/Pixman/src/pixman-0.30.0/autogen.sh ${xCONFIG_SDL}  ${xCONFIG_PIX}  CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS} --disable-dependency-tracking --enable-static --disable-shared --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Pixman
+		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/Pixman/src/pixman-0.30.0/autogen.sh ${xCONFIG_SDL}  ${xCONFIG_PIX}  
+		       CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS} 
+		       --disable-dependency-tracking --enable-static --disable-shared 
+		       --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Pixman
 		  BUILD_COMMAND  $(MAKE)
+		  INSTALL_COMMAND  $(MAKE) install
+		  BUILD_IN_SOURCE 0
+		  DEPENDS FONTCONFIG
+	)
+	
+	#=========================================
+	# Build iconv
+	  ExternalProject_Add(
+		  iconv
+		  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/iconv/
+		  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/libiconv-1.14.tar.gz"
+		  #DOWNLOAD_COMMAND git clone git://git.savannah.gnu.org/libiconv.git
+		  
+		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/iconv/src/libiconv-1.14/
+		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/iconv/src/libiconv-1.14/configure  gl_cv_header_working_stdint_h=yes  --disable-shared --enable-static ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS} --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/iconv
+		  BUILD_COMMAND  $(MAKE) -j4
+		  INSTALL_COMMAND  $(MAKE) install
+		  BUILD_IN_SOURCE 0
+	)	
+	
+	#=========================================
+	# Build FFI
+	  ExternalProject_Add(
+		  FFI
+		  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/FFI/
+		  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/libffi-3.0.13.tar.gz"
+		  
+		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/FFI/src/libffi-3.0.13/
+		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/FFI/src/libffi-3.0.13/configure --disable-shared --enable-static 
+		       ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS} 
+		       --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/FFI
+		  BUILD_COMMAND  $(MAKE) -j4
 		  INSTALL_COMMAND  $(MAKE) install
 		  BUILD_IN_SOURCE 0
 	)
 	
 	#=========================================
+	# Build gettext
+	  ExternalProject_Add(
+		  gettext
+		  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/gettext/
+		  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/gettext-0.18.2.tar.gz"
+		  
+		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/gettext/src/gettext-0.18.2/
+		  # I manually changed msginit.c:1084 to fullname ="USER";/* pwd->pw_gecos; */
+		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/gettext/src/gettext-0.18.2/configure --disable-shared --enable-static 
+		  ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS} 
+		  CPPFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/iconv/include LDFLAGS=-L${CMAKE_CURRENT_BINARY_DIR}/builds/libs/iconv/lib/libconv.a 
+		       --without-emacs --without-git --disable-java --disable-c++ --disable-curses --disable-libasprintf --disable-rpath --enable-relocatable 
+		       --without-bzip2 --without-xz --without-included-regex --disable-nls
+			   --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/gettext
+		  BUILD_COMMAND  $(MAKE) -j4
+		  INSTALL_COMMAND  $(MAKE) install
+		  BUILD_IN_SOURCE 0
+	)
+	
+	#=========================================
+	# Build glib
+	
+	# If, in building glib, an error about automake not being available happens, run: 
+	#    find -type f -name Makefile.in -exec touch {} \; 
+	  ExternalProject_Add(
+		  Glib
+		  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/Glib/
+		  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/glib-2.37.2.tar.gz"
+		  
+		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/Glib/src/glib-2.37.2/
+		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/Glib/src/glib-2.37.2/configure --enable-static --disable-shared --enable-man=no 
+			  ${xCONFIG_SDL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}
+			  --cache-file=${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/glibOnAndroid.cache
+		      "CPPFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/iconv/include" 
+		      "CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/gettext/include"
+		      "LDFLAGS=-L${CMAKE_CURRENT_BINARY_DIR}/builds/libs/iconv/lib -L${CMAKE_CURRENT_BINARY_DIR}/builds/libs/gettext/lib"
+		      "LIBS=-l${CMAKE_CURRENT_BINARY_DIR}/builds/libs/FFI/lib/libffi.a"
+		      LIBFFI_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/FFI/lib/libffi-3.0.13/include 
+		      LIBFFI_LIBS=-L${CMAKE_CURRENT_BINARY_DIR}/builds/libs/FFI/lib/
+		      --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Glib
+		  BUILD_COMMAND  $(MAKE) -j4
+		  INSTALL_COMMAND  $(MAKE) install
+		  BUILD_IN_SOURCE 0
+		  DEPENDS iconv FFI gettext
+	)
+		
+	#=========================================
+	# Build Remiss
+	  ExternalProject_Add(
+		  Remiss
+		  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/Remiss/
+		  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/remiss.tar.gz"
+		  
+		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/Remiss/src/remiss
+		  CONFIGURE_COMMAND 
+		  CMAKE_COMMAND cmake -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+		  BUILD_COMMAND  $(MAKE)
+		  INSTALL_COMMAND  mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Remiss && cp ${CMAKE_CURRENT_BINARY_DIR}/deps/Remiss/src/Remiss-build/libremiss.a ${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Remiss
+	)
+	
+	#=========================================
 	# Build Cairo
+	# I manually changed android/deps/Cairo/src/cairo/src/cairo-output-stream.c:318
+	# and android/deps/Cairo/src/cairo/src/cairo-cff-subset.c:317
+	# and android/deps/Cairo/src/cairo/src/cairo-cff-subset.c:309 to
+	#     decimal_point = ".";
 	  ExternalProject_Add(
 		  Cairo
 		  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/Cairo/
 		  DOWNLOAD_COMMAND git clone git://anongit.freedesktop.org/git/cairo
 		  
 		  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/Cairo/src/cairo/
-		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/Cairo/src/cairo/autogen.sh ${xCONFIG_SDL} ${xCONFIG_CAIRO} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Cairo
+		  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/Cairo/src/cairo/autogen.sh ${xCONFIG_SDL} ${xCONFIG_CAIRO} 
+			   -disable-trace --disable-full-testing
+		       CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}
+		       --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Cairo
 		  BUILD_COMMAND  $(MAKE) -j4
 		  INSTALL_COMMAND  $(MAKE) install
 		  BUILD_IN_SOURCE 0
-		  DEPENDS "Pixman"
+		  DEPENDS Glib Pixman Remiss
 	)
 	
 	#=========================================
 	# Build Pango
-
+	ExternalProject_Add(
+	  PANGO
+	  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/PANGO/
+	  #DOWNLOAD_COMMAND git clone git://git.gnome.org/pango
+	  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/pango-1.30.0.tar.gz"
+	  
+	  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/PANGO/src/pango/
+	  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/PANGO/src/pango/configure ${xCONFIG_SDL}  ${xCONFIG_PANGO} 
+	       --disable-gtk-doc --enable-gtk-doc-html 
+	       CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  
+	       --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PANGO/pango
+	  BUILD_COMMAND  $(MAKE) -j4
+	  INSTALL_COMMAND  $(MAKE) install
+	  BUILD_IN_SOURCE 0
+	  DEPENDS Cairo
+	)
 
 endif()
 

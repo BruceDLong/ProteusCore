@@ -1,7 +1,6 @@
 /// Copyright 2013 Bruce Long. All rights reserved.
 // This file is intended to be included in slip.cpp.
 
-
 enum filterModes {
     fmReadOnly=1, fmUnreadOnly=2, fmReadUnread=3,
     fmUserKnownOnly=4, fmUserDoesntKnowOnly=8, fmKnownBoth=12,
@@ -9,6 +8,21 @@ enum filterModes {
     fmComedy=64, fmGossip=128, fmNoViolence=256
     // friendsKnow, dontCare, etc.
 };
+const uint64_t year_ticks=0x40000000;
+const uint64_t day_ticks=year_ticks/365.25;
+const uint64_t sec_ticks=year_ticks/31557600;  // 34 ticks/sec.  (should be 34.024825209)
+const uint64_t week_ticks=day_ticks*7;
+const int secondsPerDay=24*60*60;
+
+const int daysFromJanuary[12] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
+uint64_t timeToUnivTicks(tm* time, int64_t year=0){ // If year=0, use the year in tm.
+	uint64_t yearTicks=(14000000000+((year!=0)?year:(time->tm_year+1900))) << 30;
+	uint dayNum = daysFromJanuary[time->tm_mon] + time->tm_mday + (((time->tm_mon>1) && ( (year % 4 == 0) && ( year % 100 != 0 || year % 400 == 0 )))?1:0);
+	uint secondsToday = time->tm_hour*3600 + time->tm_min*60 + time->tm_sec;
+	
+	return yearTicks + dayNum*day_ticks + secondsToday*sec_ticks;  // TODO: There are rounding errors here. For daily news this should be OK.
+}
+
 enum timeUnits {uSecond, uMinute, uHour, uWorkDay, uDay, uWeek, uWorkWeek, uMonth, uYear, uDecade, uCentury};
 enum viewModes {vmHorizontal=0, vmVertical=1, vmTimeLine=2, vmCalendar=4};
 enum deviceUI {uiTouch, uiKbdMouse, uiWeb};
@@ -17,19 +31,74 @@ enum scnDensity {sdComfortable, sdCozy, sdCompact};
 enum skinStyle {skinLight, skinDark, skinBlue, skinMetal, skinUnicorn}; // Colors, graphics, animations, etc.
 
 struct factoid {
-    int64_t index;
-    string headline;
+    int64_t time;
     int height;
+    string headline;
+    string imagePath;
+    uint picWidth, picHeight;
     int importance;
     bool hasRead;
     bool havent_read_dontWantTo;
     int userKnows;
+    string topic; int topicCode;
     // friends who know...
     // list<links>; // links to articles, videos, people, etc.
     // list<sources>;
 
-    factoid(int64_t idx, string headLine, int import){index=idx; headline=headLine; importance=import;}
+    factoid(int64_t Time, string headLine, int import){time=Time; headline=headLine; importance=import;}
 };
+
+#define rand64(max) ((((uint64_t) rand() <<  0) & 0x000000000000FFFFull) | (((uint64_t) rand() << 16) & 0x00000000FFFF0000ull) | (((uint64_t) rand() << 32) & 0x0000FFFF00000000ull) | (((uint64_t) rand() << 48) & 0xFFFF000000000000ull) % (max))
+
+factoid* randomfact(uint64_t startTime, uint64_t timespan){
+	factoid* f=new factoid(startTime+rand64(timespan), "Science cures Microsoft", rand()%7);
+    f->picWidth=50+rand()%300;
+    f->picHeight=f->picWidth + ((rand()%(f->picWidth/2))-(f->picWidth/4));
+    f->topicCode=rand()%5;
+    f->height=f->topicCode*200;
+    switch(f->topicCode){
+		case 0: f->topic="science"; break;
+		case 1: f->topic="politics"; f->headline="Senator denies being 'Jolly'"; break;
+		case 2: f->topic="entertainment:sports"; f->headline="Kim-K marries Hobo";break;
+		case 3: f->topic="colorado:boulder"; f->headline="Boulder 'fracked' says local."; break;
+		case 4: f->topic="US"; f->headline="Earth swallows family alive"; break;
+	}
+    return f;
+    
+}
+
+void RegisterArticle(infon* articalInfon){ cout<<"AT-A\n"<<flush;
+	string time= articalInfon->attrs->at("posted");
+	string headLine=articalInfon->attrs->at("engTitle");
+	string summary=articalInfon->attrs->at("summary");
+	string image=articalInfon->attrs->at("image");
+	string link=articalInfon->attrs->at("link");
+	string category=articalInfon->attrs->at("category");
+	string author=articalInfon->attrs->at("author");
+	string import=articalInfon->attrs->at("import");
+cout<<"AT-B\n"<<flush;	
+	struct tm *tm;  memset (tm, '\0', sizeof (*tm));
+	const char * cp = strptime (time.c_str(), "%F %r", tm);
+    if (cp == NULL){ /* Does not match.  Try the US form.  */
+	   cp = strptime (time.c_str(), "%D %r", tm);   // 06/28/2013 3:58 pm EDT
+	 }
+    uint64_t Time=timeToUnivTicks(tm);
+cout<<"AT-C\n"<<flush;	
+	factoid *f=new factoid(Time, headLine, atoi(import.c_str()));
+	f->imagePath=image;
+	f->topic=category;
+	if     (category=="science") {f->topicCode=0;}
+	else if(category=="politics"){f->topicCode=1;}
+	else if(category=="sports")  {f->topicCode=2;}
+	else if(category=="boulder") {f->topicCode=3;}
+	else if(category=="US")      {f->topicCode=4;}
+	
+	f->picWidth=50+rand()%300;
+    f->picHeight=f->picWidth + ((rand()%(f->picWidth/2))-(f->picWidth/4));
+    f->height=f->topicCode*200+rand()%50;
+cout<<"AT-E\n"<<flush;    
+}
+
 
 //////////////////////////////////////////////////////////////
 //     D R A W I N G   M A N A G E M E N T   C L A S S E S
@@ -64,7 +133,7 @@ struct ScrollingDispItem:DisplayItem {
     /////// Scrolling functionality
     const double moveThreshold = 1;
     const int interval=20; // Tick interval
-    double offset, span;
+    uint64_t offset, span;
     double downX, downY, prevX, prevY, veloX, veloY, scale;
     UInt timestamp;
     scrollStates scrollState;
@@ -72,13 +141,13 @@ struct ScrollingDispItem:DisplayItem {
 
     void setOffset(double off){
         if(off != offset){
-            if(off< -10000) off=-10000;
-            if(off> 10000) off=10000;
+    //        if(off< -10000) off=-10000;
+    //        if(off> 10000) off=10000;
             offset=off;
+		}
             markDirty();
-            SDL_Event ev; ev.type = SDL_USEREVENT;  ev.user.code = 0;  ev.user.data1 = 0;  ev.user.data2 = 0;
+            SDL_Event ev; ev.type = SDL_USEREVENT;  ev.user.code = 1;  ev.user.data1 = 0;  ev.user.data2 = 0;
             SDL_PushEvent(&ev);
-        }
     }
 
     int handleEvent(SDL_Event &ev){
@@ -118,7 +187,7 @@ struct ScrollingDispItem:DisplayItem {
                     if(veloX==0 && veloY==0) {scrollState=still;}
                     else{
                         veloX = (downX-crntX)/10;
-			veloY = (downY-crntY)/10;
+						veloY = (downY-crntY)/10;
                         scrollState=freeScrolling;cout<<'!'<<flush;
                         timer_id = SDL_AddTimer(interval, tick, this);
 
@@ -154,16 +223,24 @@ struct ScrollingDispItem:DisplayItem {
     }
 };
 
+const double friction=0.1;  // The rate at which scrolling decelerates.
+void adjustVelocity(double &velocity){
+	if (velocity<0){
+		velocity+=friction;
+		if(velocity>0) velocity=0;
+	} else if (velocity>0){
+		velocity-=friction;
+		if(velocity<0) velocity=0;
+	}
+}
+
 uint32_t tick(uint32_t interval, void *param){ cout<<':'<<flush;
     ScrollingDispItem *item=(ScrollingDispItem*)param;
     if (item->scrollState == freeScrolling) {
-	item->veloX *= 0.99;
-        if(item->veloX >0 && item->veloX <0.1) item->veloX=0;
-        else if(item->veloX <0 && item->veloX >-0.1) item->veloX=0;
-	item->veloY *= 0.99;
-        if(item->veloY >0 && item->veloY <0.1) item->veloY=0;
-        else if(item->veloY <0 && item->veloY >-0.1) item->veloY=0;
-        item->setOffset(item->offset + (item->veloX));
+		adjustVelocity(item->veloX);
+		adjustVelocity(item->veloY);
+        
+        item->setOffset(item->offset + (item->veloX*item->scale));
         if(item->veloX==0 && item->veloY==0) {
             item->scrollState = still;
             return 0; // stop ticker
@@ -176,9 +253,38 @@ uint32_t tick(uint32_t interval, void *param){ cout<<':'<<flush;
 //        N E W S   M A N A G E M E N T   C L A S S E S
 //////////////////////////////////////////////////////////////
 
-struct BookmarkPane:DisplayItem {
-    BookmarkPane(DisplayItem* Parent=0, int X=0, int Y=0, int W=100, int H=50):DisplayItem(Parent,X,Y,W,H){};
-    ~BookmarkPane(){};
+struct ItemView:DisplayItem {
+    ItemView(DisplayItem* Parent=0, int X=0, int Y=0, int W=100, int H=50):DisplayItem(Parent,X,Y,W,H){};
+    ~ItemView(){};
+    factoid* fact;
+    uint64_t time;
+    int picWidth, picHeight;
+    int draw(cairo_t *cr, int X, int Y){
+  //      if(!dirty || !visible) return 0; else dirty=false;
+        switch(fact->topicCode){
+			case 0: cairo_set_source_rgba(cr, 0.5,0.4,1.0, 0.8); break;
+			case 1: cairo_set_source_rgba(cr, 0.6,0.2,0.4, 0.8); break;
+			case 2: cairo_set_source_rgba(cr, 0.3,0.8,0.1, 0.8); break;
+			case 3: cairo_set_source_rgba(cr, 0.7,0.8,0.7, 0.8); break;
+			default: cairo_set_source_rgba(cr, 0.7,0.6,0.2, 0.8);break;
+		}
+        roundedRectangle(cr, X,Y,picWidth,picHeight,10);
+        cairo_fill_preserve(cr);
+        cairo_set_source_rgba(cr, 0,0,0.1, 0.8);
+        cairo_stroke(cr);
+        cairo_move_to(cr,X+5,Y+picHeight/2); renderText(cr,fact->headline.c_str()); cairo_fill(cr);
+        return 1;
+    }
+    int handleEvent(SDL_Event &ev){
+		if(!visible) return 0;
+
+		return 0;
+    }
+};
+
+struct navbarPane:DisplayItem {
+    navbarPane(DisplayItem* Parent=0, int X=0, int Y=0, int W=100, int H=50):DisplayItem(Parent,X,Y,W,H){};
+    ~navbarPane(){};
     int draw(cairo_t *cr){
         if(!dirty || !visible) return 0; else dirty=false;
         cairo_set_source_rgba(cr, 0.2,0.2,0.4, 0.8);
@@ -186,15 +292,15 @@ struct BookmarkPane:DisplayItem {
         cairo_fill(cr);
 
         cairo_set_source_rgba(cr, 0.8,0.8,1.0, 1);
-        cairo_move_to(cr,30,10); renderText(cr,"Bookmarks"); cairo_fill(cr);
+        cairo_move_to(cr,60,18); renderText(cr,"<      Refresh      | . . . . | . . . .| June 24 2013 | . . . .| . . . . |      View      >"); cairo_fill(cr);
         // Items like: Important to you, trending, comedy, entertainment, sensational, editorial, ...
         return 1;
     }
 };
 
-typedef map<int64_t, factoid*> ItemCache;
+typedef map<int64_t, ItemView*> ItemCache;
 typedef ItemCache::iterator ItemCacheItr;
-typedef pair<int64_t, factoid*> ItemCacheVal;
+typedef pair<int64_t, ItemView*> ItemCacheVal;
 
 struct TimelineView:ScrollingDispItem {
     infon* timeLineData;
@@ -214,130 +320,74 @@ struct TimelineView:ScrollingDispItem {
     void setViewMode();
     void setTitle();
 
-    void fetchPrev(ItemCacheItr &item){--item;};
-    void fetchNext(ItemCacheItr &item){++item;};
+    void fetchPrev(ItemCacheItr &itemItr){--itemItr;};
+    void fetchNext(ItemCache* cache, ItemCacheItr &itemItr){
+		if(std::next(itemItr)==cache->end()){
+			factoid *f=randomfact((*itemItr).first, day_ticks/100);
+			ItemView* IV=new ItemView(); 
+			IV->time=f->time, IV->fact=f; IV->picWidth=f->picWidth; IV->picHeight=f->picHeight;
+			cache->insert(ItemCacheVal(f->time, IV)); 
+		}
+		itemItr++;
+		
+	};
 
-    TimelineView(DisplayItem* Parent=0, int X=0, int Y=0, int W=100, int H=50):ScrollingDispItem(Parent,X,Y,W,H)
-        {span=501; offset=span+1;};
+    TimelineView(DisplayItem* Parent=0, int X=0, int Y=0, int W=100, int H=50):ScrollingDispItem(Parent,X,Y,W,H){
+		  time_t now_ticks, startTicks, endTicks;
+		  time (&now_ticks);
+		  startTicks=now_ticks-(30*secondsPerDay);
+		  endTicks=now_ticks+(30*secondsPerDay);;
+		  for(time_t T=startTicks; T<=endTicks; T+=60*60){
+			  tm tm_T = *gmtime(&T);
+			  uint64_t UnivTicks=timeToUnivTicks(&tm_T);
+			  factoid *f=randomfact(UnivTicks, day_ticks/100);
+			  ItemView* IV=new ItemView(); 
+			  IV->time=f->time, IV->fact=f; IV->picWidth=f->picWidth; IV->picHeight=f->picHeight;
+			  cache.insert(ItemCacheVal(UnivTicks, IV)); 
+		  }
+		  span=day_ticks; offset=timeToUnivTicks(gmtime(&now_ticks));
+		
+	};
     ~TimelineView(){};
     int draw(cairo_t *cr){
-        if(!dirty || !visible) return 0; else dirty=false;
+   //     if(!dirty || !visible) return 0; else dirty=false;
         cairo_set_source_rgba(cr, 0,0,1,1);
         roundedRectangle(cr, x,y,w,h,20);
-        cairo_stroke(cr);
-        roundedRectangle(cr, x,y,w,h,20);
-        cairo_set_source_rgba(cr, 0,0,0,1);
-	cairo_fill(cr);
+        cairo_fill(cr);
+        int count=0;
         int64_t leftIdx=offset-span;
-        scale=span/w; //cout<<"scale:"<<scale<<" ";
-        for(ItemCacheItr item=cache.lower_bound(leftIdx); item!=cache.end() && (*item).first <= offset; ++item){
-            	int64_t idx=(*item).first;
-            	double xPoint = (double)(idx-leftIdx)/scale;  // Offset in screen units
-		if(xPoint < 600) {
-			if(idx >= 0)
-				cairo_set_source_rgba(cr, 1,1,1, 1);
-			else 
-				cairo_set_source_rgba(cr, 1,0,0, 1);
-			roundedRectangle(cr, x+xPoint,y,2*item->second->importance,2*item->second->importance,20);
-			cairo_stroke(cr);
-		}
+        scale=span/w;// cout<<"scale:"<<scale<<" ";
+        for(ItemCacheItr itemItr=cache.lower_bound(leftIdx); itemItr!=cache.end() && ((*itemItr).first <= (uint64_t)offset); ++itemItr){
+           	int64_t idx=(*itemItr).first;
+           	ItemView* item=(*itemItr).second;
+           	int64_t xPoint = (int64_t)(idx-leftIdx)/scale;  // Offset in screen units
+			item->dirty=1; item->draw(cr, xPoint,55+item->fact->height);
+			count++;
         }
-//offset+=10;
+        cout<<count<<" ";
         return 1;
     }
 };
 
-struct ItemsViewPane:DisplayItem {
-    ItemsViewPane(DisplayItem* Parent=0, int X=0, int Y=0, int W=100, int H=50):DisplayItem(Parent,X,Y,W,H){};
-    ~ItemsViewPane(){};
-    int draw(cairo_t *cr){
-        if(!dirty || !visible) return 0; else dirty=false;
-        cairo_set_source_rgba(cr, 0,0,0,0);
-        roundedRectangle(cr, x,y,w,h,20);
-        cairo_fill(cr);
-        return 1;
-    }
-};
 
-typedef list<TimelineView*> TimeLines;
-typedef list<TimelineView*>::iterator TimeLineItr;
-
-struct  TimelinesPane:DisplayItem {
-    TimelinesPane(DisplayItem* Parent=0, int X=0, int Y=0, int W=100, int H=50):DisplayItem(Parent,X,Y,W,H){
-	    TimelineView* TLV=new TimelineView(this,X+5,Y+5,W-10,H-10);
-	    for(int j=0; j<=400; ++j){
-		int rIdx=rand() % 20000 - 10000;
-		int rImport=rand() % 100;
-		TLV->cache.insert(ItemCacheVal(rIdx, new factoid(rIdx, "Hello", rImport)));
-	    }
-	    timeLines.push_back(TLV);
-    };
-    ~TimelinesPane(){for(TimeLineItr i=timeLines.begin(); i!=timeLines.end(); ++i) delete(*i);};
-    TimeLines timeLines;
-    int draw(cairo_t *cr){
-        if(!dirty || !visible) return 0; else dirty=false;
-        cairo_set_source_rgba(cr, 1,0,0, 1);
-        roundedRectangle(cr, x,y,w,h,20);
-        cairo_stroke(cr);
-        for(TimeLineItr i=timeLines.begin(); i!=timeLines.end(); ++i){
-            (*i)->dirty=1; (*i)->draw(cr);
-        }
-        return 1;
-    }
-
-    int handleEvent(SDL_Event &ev){
-        if(!visible) return 0;
-        for(TimeLineItr i=timeLines.begin(); i!=timeLines.end(); ++i)
-            if((*i)->handleEvent(ev)) return 1;
-        return 0;
-    }
-};
-
-struct ItemView:DisplayItem {
-    ItemView(DisplayItem* Parent=0, int X=0, int Y=0, int W=100, int H=50):DisplayItem(Parent,X,Y,W,H){};
-    ~ItemView(){};
-    int draw(cairo_t *cr){
-        if(!dirty || !visible) return 0; else dirty=false;
-        cairo_set_source_rgba(cr, 0.8,0.2,0.9, 0.8);
-        roundedRectangle(cr, x,y,w,h,20);
-        cairo_fill(cr);
-        return 1;
-    }
-       int handleEvent(SDL_Event &ev){
-        if(!visible) return 0;
-
-        return 0;
-    }
-};
-
-struct NewsViewer:ScrollingDispItem {
+struct NewsViewer:DisplayItem{
     NewsViewer(DisplayItem* Parent=0, int X=0, int Y=0, int W=100, int H=50):
-        //ScrollingDispItem(Parent,X,Y,W,H),
-        //bookmarks(this, X+(W/3)*0+5,Y+10,W/3-10,H-20),
-        timelines(this, X,Y,W,H)
-        //itemView (this, X+(W/3)*2+5,Y+10,W/3-10,H-20)
-        {srand (time(NULL)); WidgetWithCapturedMouse=0;};
+        navbar(this, X,Y,W,50), timeline(this, X,50,W,H-50) {srand (time(NULL)); WidgetWithCapturedMouse=0;};
     ~NewsViewer(){};
-    //BookmarkPane bookmarks;
-    TimelinesPane timelines;
-    //ItemsViewPane itemView;
+    navbarPane navbar;
+    TimelineView timeline;
     int draw(cairo_t *cr){
-        if(!dirty || !visible) return 0; else dirty=false;
-        //cairo_set_source_rgba(cr, 0,1,1,1);
-        //roundedRectangle(cr, x,y,w,h,20);
-        //cairo_stroke(cr);
-        //bookmarks.dirty=1; bookmarks.draw(cr);
-        timelines.dirty=1; timelines.draw(cr);
-        //itemView.dirty=1;  itemView.draw(cr);
+      //  if(!dirty || !visible) return 0; else dirty=false;
+        navbar.dirty=1; navbar.draw(cr);
+        timeline.dirty=1; timeline.draw(cr);
         return 1;
     }
 
     int handleEvent(SDL_Event &ev){
         if(!visible) return 0;
         if(WidgetWithCapturedMouse) {WidgetWithCapturedMouse->handleEvent(ev); return 1;}
-        if(timelines.handleEvent(ev)) return 1;
-        //if(itemView.handleEvent(ev))  return 1;
-        //if(bookmarks.handleEvent(ev)) return 1;
+        if(timeline.handleEvent(ev)) return 1;
+        if(navbar.handleEvent(ev)) return 1;
         return 0;
     }
 };

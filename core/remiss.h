@@ -1,5 +1,6 @@
 #ifndef _remiss
 #define _remiss
+#include <cctype>
 
 // fix g++ deficiencies
 inline char* itoa(unsigned int n, char str[]){

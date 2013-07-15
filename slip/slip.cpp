@@ -18,7 +18,7 @@ const char* dbName="proteusData.db";
 
 #include <pango/pangocairo.h>
 
-enum {LINUX, MACINTOSH, WINDOWS, MEEGO, IOS, ANDROID, RIM, PALM, XBOX, PS3, WII, NOOK, KINDLE, WINCE};
+enum {pLINUX, pMACINTOSH, pWINDOWS, pMEEGO, pIOS, pANDROID, pRIM, pPALM, pXBOX, pPS3, pWII, pNOOK, pKINDLE, pWINCE};
 
 static int doneYet=0, numEvents=0, numPortals=0;
 
@@ -221,6 +221,29 @@ void roundedRectangle(cairo_t *cr, double x, double y, double w, double h, doubl
     cairo_curve_to(cr,x,y,x,y,x+r,y);             //# Curve to A;
 }
 
+typedef map<string, cairo_surface_t*> picCache_t;
+picCache_t picCache;
+
+void displayImage(cairo_t *cr, char* filename, double x, double y, double scale){
+	cairo_surface_t* pic=0;
+	picCache_t::iterator picPtr=picCache.find(filename);
+	if (picPtr==picCache.end()) {picCache[filename]=pic=cairo_image_surface_create_from_png(filename);}
+	else pic=picPtr->second;
+	{//pic=cairo_image_surface_create_from_png(filename);
+  /*      int w = cairo_image_surface_get_width (pic);
+		int h = cairo_image_surface_get_height (pic);
+		double pw = portal->surface->w;
+		double ph = portal->surface->h;  */
+		cairo_save(cr);
+		cairo_move_to(cr, x*scale,y*scale);
+		cairo_scale(cr,1/scale,1/scale);
+
+		cairo_set_source_surface(cr,pic,x,y);
+		cairo_paint(cr);
+		cairo_restore(cr);
+	}
+}
+
 enum dTools{rectangle=1, curvedRect, circle, lineTo, lineRel, moveTo, moveRel, curveTo, curveRel, arcClockWise, arcCtrClockW, text,
             strokePreserve=14, fillPreserve, strokePath=16, fillPath, paintSurface, closePath,
             inkColor=20, inkColorAlpha, inkLinearGrad, inkRadialGrad, inkImage, inkDrawing, inkSetColorPt,
@@ -231,8 +254,6 @@ enum dTools{rectangle=1, curvedRect, circle, lineTo, lineRel, moveTo, moveRel, c
             drawItem=100
 };
 
-typedef map<string, cairo_surface_t*> picCache_t;
-picCache_t picCache;
 
 #include "newsWidgets.cpp"
 
@@ -246,7 +267,7 @@ void DrawTimeLines(InfonPortal* portal, DisplayItem* item){
 	item->dirty=1;
     item->draw(cr);
 }
-
+/*
 void DrawProteusDescription(InfonPortal* portal, infon* ProteusDesc, int indent=0){
     cairo_surface_t* surface=portal->cairoSurf;
     if (surface==0 || ProteusDesc==0 || ProteusDesc->getSize()==0) ERRl("Description Flag Raised."<<ProteusDesc); // Missing description.
@@ -341,10 +362,10 @@ void DrawProteusDescription(InfonPortal* portal, infon* ProteusDesc, int indent=
                 else pic=picPtr->second;
                 {//pic=cairo_image_surface_create_from_png(Sa);
                     double scale=c;
-              /*      int w = cairo_image_surface_get_width (pic);
-                    int h = cairo_image_surface_get_height (pic);
-                    double pw = portal->surface->w;
-                    double ph = portal->surface->h;  */
+       //             int w = cairo_image_surface_get_width (pic);
+       //             int h = cairo_image_surface_get_height (pic);
+       //             double pw = portal->surface->w;
+       //             double ph = portal->surface->h;  
                     cairo_save(cr);
                     cairo_move_to(cr, a*scale,b*scale);
                     cairo_scale(cr,1/scale,1/scale);
@@ -369,7 +390,7 @@ void DrawProteusDescription(InfonPortal* portal, infon* ProteusDesc, int indent=
     DEB2(indentStr<<"+<-------------------------------");
  //   cairo_destroy (cr);
 }
-
+*/
 /////////////////// End of Slip Drawing, Begin Interface to Proteus Engine
 void CloseTurbulanceViewport(InfonViewPort* viewPort){
     if(viewPort->renderer) SDL_DestroyRenderer(viewPort->renderer);
@@ -735,6 +756,8 @@ void StreamEvents(){
 }
 
 int main(int argc, char *argv[]){
+//	void* myHandle SDL_LoadObject("libProteus.so");
+
     MSGl("\n\n         * * * * * Starting Proteus and The Slipstream * * * * *\n");
     //MSGl("SDL Revision " << SDL_GetRevisionNumber()<<",  "<<"\n");
     InitializePortalSystem(argc, argv);

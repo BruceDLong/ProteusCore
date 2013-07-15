@@ -16,7 +16,7 @@
 #include <cstdarg>
 
 using namespace std;
-
+/*
 struct bRule{
     int ID;
     string head;
@@ -41,7 +41,7 @@ struct Grammar{
     bRulePtr addRule(bool mainLib, int id, int n, ...);
     void loadRules();
 };
-
+*/
 struct WordChain;
 
 class XlaterENGLISH:public xlater{
@@ -56,7 +56,7 @@ public:
     ~XlaterENGLISH(){unloadLanguageData();};
 
 private:
-    Grammar EnglishGrammarRules;
+ //   Grammar EnglishGrammarRules;
     void findDefinitions(WordS& tags);
     void stitchAndDereference(WordS& tags);
     infon* infonate(WordS& tags);

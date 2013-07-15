@@ -5,7 +5,7 @@
     The Proteus Engine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
     You should have received a copy of the GNU General Public License along with the Proteus Engine.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <strstream>
+#include <sstream>
 #include <iostream>
 #include <fstream>
 #include <sqlite3.h>
@@ -33,7 +33,8 @@ int createDatabase(string dbName){
             sqlite3_close(coreDatabase);
             return(1);
         }
-	rc = sqlite3_exec(coreDatabase, "CREATE TABLE 'words' (id integer PRIMARY KEY, sourceID text, locale text, word text, senseID text, pos text, "
+	rc = sqlite3_exec(coreDatabase, "CREATE TABLE 'words' (id integer PRIMARY KEY, sourceID text, locale text, "
+	                  "word text, senseID text, scopeSpec text, pos text, "
                       "key text, gloss text, pronunciation text, attrs text, skillLvl integer, modelID integer);", NULL, 0, &zErrMsg);
     if (rc != SQLITE_OK) {fprintf(stderr, "SQL error creating words table: %s\n", zErrMsg); return 1;}
 

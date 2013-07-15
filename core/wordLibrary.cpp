@@ -9,13 +9,14 @@
 #include "wordLibrary.h"
 #include "xlater.h"
 #include <sys/stat.h>
-#include <strstream>
+#include <sstream>
 #include <iostream>
 #include <fstream>
 
 WordLibrary::WordLibrary(sqlite3 *DB){
     const char *tail;
     db=DB;
+    query="select locale,word,senseID,pos,gloss from words WHERE locale like ?1 || '%' AND (word = ?2 OR word like ?2 || ' %') order by word,senseID;";
     int err = sqlite3_prepare_v2(db, query.c_str(), -1, &res, &tail);
     if (err != SQLITE_OK) {cout<<"Error in query:"<<query<<"\n";}
 }
@@ -101,7 +102,8 @@ InfonSource::InfonSource(string SourceSpec, uint interval):sourceSpec(SourceSpec
 	errorDesc="";
 }
 
-istream* InfonManager::cachedStream(string srcSpec){
+istream* InfonManager::cachedStream(string srcSpec, bool &doCache){
+	doCache=false;
 	InfonSourcePtr infSrc(new InfonSource(srcSpec));
 	string repoDir=dataFolder+'/'+infSrc->URI_path;
 	sources[infSrc->sourceSpec] = infSrc;
@@ -114,8 +116,16 @@ istream* InfonManager::cachedStream(string srcSpec){
 		} else { // TODO: update the repository here.
 	//			if(it's time to update this repo)
 		}
+		// if (cache for this stream exists) {
+			// Get hash codes of git version and cached version.
+			// if(crnt Git hash == cashed hash){
+				// append fileSpec to activate cached version
+				// fetch code.pr from db
+				// return new istrstream(code_pr.c_str());
+			// } else {doCache=true; delete items from cache} // later just modify the changed items.
+		// } else doCache=true;
 		return new fstream(string(repoDir+'/'+infSrc->filePath).c_str());
-	} else if(infSrc->srcType=="string"){ return new istrstream(infSrc->filePath.c_str());
+	} else if(infSrc->srcType=="string"){ return new istringstream(infSrc->filePath.c_str());
 	} else if(infSrc->srcType=="file")  { return new fstream(string(repoDir+'/'+infSrc->filePath).c_str());
 	} else if(infSrc->srcType=="stdin"){ cout<<"stdin unsupported\n"; return 0;
 	} else if(infSrc->srcType=="https"){ cout<<"https unsupported\n"; return 0;

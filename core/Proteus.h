@@ -127,6 +127,7 @@ struct infonData :BigFrac {
 typedef boost::intrusive_ptr<infonData> infDataPtr;
 
 struct attrStore:map<string, string>{UInt refCnt;};
+typedef attrStore::iterator attrItr;
 typedef boost::intrusive_ptr<attrStore> attrStorePtr;
 inline void intrusive_ptr_add_ref(attrStore* p){++p->refCnt;}
 inline void intrusive_ptr_release(attrStore* p){if(--p->refCnt == 0) delete p;}
@@ -273,6 +274,7 @@ struct ProteusParser{
     InfonManager *sources;
     istream *stream;
     string streamName;
+    bool doCache;
     char buf[bufmax];
     char nTok; // First character of last token
     int line;  // linenumber, position in text

@@ -1,4 +1,4 @@
-#include <strstream>
+#include <sstream>
 #include <iostream>
 #include <fstream>
 
@@ -50,6 +50,7 @@ string readln(string prompt){
 #include <signal.h>
 
 static void reportFault(int Signal){cout<<"\nSegmentation Fault.\n"; fflush(stdout); abort();}
+void RegisterArticle(infon* articleInfon){};
 
 infon *topInfon, *Entry;
 int AutoEval(infon* CI, agent* a);

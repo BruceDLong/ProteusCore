@@ -4,7 +4,7 @@
 #define CATCH_CONFIG_RUNNER  // This tell CATCH that we provide a main() - only do this in one cpp file
 #include "catch.hpp"
 #include "Proteus.h"
-#include <strstream>
+#include <sstream>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -221,6 +221,7 @@ infon *topInfon, *Entry;  // use topInfon in the ddd debugger to view World
 int AutoEval(infon* CI, agent* a);
 bool IsHardFunc(string tag);
 extern InfonManager *informationSources;
+void RegisterArticle(infon* articleInfon){};
 
 string normToWorld(agent** a, string entryStr){
     string ret="NOT_INITD";

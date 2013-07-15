@@ -8,9 +8,9 @@
 #ifndef _Functions
 #define _Functions
 
-#include <strstream>
-#include <iostream>
-#include <fstream>
+//#include <sstream>
+//#include <iostream>
+//#include <fstream>
 #include <stdlib.h>
 #include <math.h>
 #include "Proteus.h"

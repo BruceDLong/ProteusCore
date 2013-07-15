@@ -32,5 +32,5 @@ link_directories(
                  ${HomeDir}/../builds/libs/GIT_LIB/libgit2-0.18.0/lib/
 				)
 
-add_executable(slip  slip.cpp )
+add_executable(slip slip.cpp )
 target_link_libraries(slip Proteus git2 gmp gmpxx  pthread sqlite3 ${UNICODE_LIBS} SDL2_image SDL2 ${PANGO_LIBS})

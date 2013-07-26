@@ -710,8 +710,8 @@ void XlaterENGLISH::findDefinitions(WordS& words){
 
 
 infon* XlaterENGLISH::infonate(WordS& text){
-	cout<<"W O R D   R E P O R T\n"; dumpWordS(text);
-	
+//	cout<<"W O R D   R E P O R T\n"; dumpWordS(text);
+	// create an infon of english clause={word, oneOf[word, word, word], word, ...}
  //tmp   cout<<"NORM:"<<(*text.words.begin())<<(*text.words.begin())->norm<<"   def:"<<(*(*text.words.begin())->altDefs.begin())->norm<<"\n";
     if (text.definition) return text.definition;
     WordListItr WLI=text.words.begin(); //++WLI;

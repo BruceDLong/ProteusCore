@@ -9,9 +9,9 @@ set(LANG_MODULES XlaterENGLISH.cpp)
 add_definitions( -std=gnu++11 -Wno-deprecated -Wno-write-strings -fpermissive -g -Wall -O0 -fPIC)
 SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ")
 
-set(PROTEUS_SRCS Proteus.cpp convs.cpp InfonIO.cpp Functions.cpp wordLibrary.cpp ${LANG_MODULES} repoMngr.cpp)
+set(PROTEUS_SRCS Proteus.cpp convs.cpp InfonIO.cpp Functions.cpp wordLibrary.cpp ${LANG_MODULES} repoMngr.cpp qsort.c)
 set(UNICODE_LIBS icuio icui18n icutu icuuc icudata icule iculx icutest dl)
-set(PROTEUS_LIBS git2 gmpxx gmp dl pthread sqlite3 ${UNICODE_LIBS})
+set(PROTEUS_LIBS  git2 gmpxx gmp dl pthread sqlite3 ${UNICODE_LIBS} )
 set(CLIP_LIBS ncurses readline)
 
 set(HomeDir ${CMAKE_CURRENT_BINARY_DIR})
@@ -32,12 +32,12 @@ link_directories(${HomeDir}/../builds/libs/GMP_BigInts/${GMP_Version}/lib/
                  ${HomeDir}/../builds/libs/GIT_LIB/libgit2-0.18.0/lib/
                  )
 
-add_library(Proteus SHARED ${PROTEUS_SRCS})
-target_link_libraries(Proteus Proteus)
+add_library(Proteus STATIC ${PROTEUS_SRCS})
+target_link_libraries(Proteus Proteus  ${PROTEUS_LIBS})
 
 if(NOT(${PLAT_BUILD} STREQUAL "xANDROID_ARM"))
 	add_executable(clip clip.cpp)
-	target_link_libraries(clip Proteus  ${PROTEUS_LIBS} ${CLIP_LIBS})
+	target_link_libraries(clip Proteus ${CLIP_LIBS})
 endif()
 
 if(${PLAT_BUILD} STREQUAL "HOST")

@@ -273,7 +273,7 @@ struct ProteusParser{
     string sourceSpec;
     InfonManager *sources;
     istream *stream;
-    string streamName;
+    string streamName, streamPath;
     bool doCache;
     char buf[bufmax];
     char nTok; // First character of last token

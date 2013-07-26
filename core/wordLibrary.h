@@ -128,7 +128,7 @@ struct WordLibrary:WordSMap {
 };
 
 struct InfonSource{
-	InfonSource(string SourceSpec, uint interval=30*60);
+	InfonSource(string srcRoot, string SourceSpec, uint interval=30*60);
 	istream *stream();
 	string sourceSpec; // URI + file path.
 	string sourceID; // hash name for this source
@@ -165,7 +165,7 @@ struct InfonManager{
 	uint errorState;   // 0=OK
 	
 	InfonManager(string DataFolder, sqlite3 *DB):db(DB), dataFolder(DataFolder){};
-	istream* cachedStream(string srcSpec, bool &doCache);    // Fetches an infon stream from either git/file or the cache
+	istream* cachedStream(string srcRoot, string srcSpec, bool &doCache);    // Fetches an infon stream from either git/file or the cache
 	void updateRepositories();
 };
 

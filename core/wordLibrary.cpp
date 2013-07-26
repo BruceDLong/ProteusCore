@@ -77,19 +77,26 @@ WordSPtr WordLibrary::insertWord(){
 // Repository functions
 extern int do_clone(const char* url, const char* path);
 
-InfonSource::InfonSource(string SourceSpec, uint interval):sourceSpec(SourceSpec){
-	// SourceSpec format like: git://github.com/BruceDLong/NewsTest.git:master.pr
-	int pos1=sourceSpec.find("://");
-	srcType=sourceSpec.substr(0,pos1);
-	if (srcType!="git" && srcType!="file" && srcType!="string"){errorDesc="Invalid source type: "+srcType; errorState=1; return;}
-	
-	pos1+=3;
-	int pos2=sourceSpec.find(":", pos1);
-	URI_path=sourceSpec.substr(pos1,pos2-pos1);
-	if(URI_path.find("..")!=string::npos){errorDesc="Invalid repository spec"; errorState=1; return;}
-	
-	filePath=sourceSpec.substr(pos2+1);
-	if(srcType!="string" && filePath.find("..")!=string::npos){errorDesc="Invalid path to file"; errorState=1; return;}
+InfonSource::InfonSource(string srcRoot, string SourceSpec, uint interval):sourceSpec(SourceSpec){
+	// SourceSpec format like: git://github.com/BruceDLong/NewsTest.git:World.pr
+	if(srcRoot!=""){ // Using as already vetted source tree
+		if(sourceSpec.find("..")!=string::npos){errorDesc="Invalid path to file"; errorState=1; return;}
+		filePath=sourceSpec;
+		URI_path=srcRoot;
+		srcType="file";
+	} else {	
+		int pos1=sourceSpec.find("://");
+		srcType=sourceSpec.substr(0,pos1);
+		if (srcType!="git" && srcType!="file" && srcType!="string"){errorDesc="Invalid source type: "+srcType; errorState=1; return;}
+		
+		pos1+=3;
+		int pos2=sourceSpec.find(":", pos1);
+		URI_path=sourceSpec.substr(pos1,pos2-pos1);
+		if(URI_path.find("..")!=string::npos){errorDesc="Invalid repository spec"; errorState=1; return;}
+		
+		filePath=sourceSpec.substr(pos2+1);
+		if(srcType!="string" && filePath.find("..")!=string::npos){errorDesc="Invalid path to file"; errorState=1; return;}
+	}
 	relativePath=URI_path+'/'+filePath;
 	URI=srcType+"://"+URI_path;
 	sourceID=""; // hash name for this source
@@ -102,11 +109,12 @@ InfonSource::InfonSource(string SourceSpec, uint interval):sourceSpec(SourceSpec
 	errorDesc="";
 }
 
-istream* InfonManager::cachedStream(string srcSpec, bool &doCache){
+istream* InfonManager::cachedStream(string srcRoot, string srcSpec, bool &doCache){
 	doCache=false;
-	InfonSourcePtr infSrc(new InfonSource(srcSpec));
+	InfonSourcePtr infSrc(new InfonSource(srcRoot, srcSpec));
+	if(infSrc->errorState) {cout<<"\n"<<infSrc->errorDesc<<"\n"; return 0;}
 	string repoDir=dataFolder+'/'+infSrc->URI_path;
-	sources[infSrc->sourceSpec] = infSrc;
+	sources[infSrc->sourceSpec] = infSrc;	
 	if(infSrc->srcType=="git"){
 		struct stat buffer; int rc;
 		if(stat(repoDir.c_str(), &buffer)==-1){

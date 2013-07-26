@@ -60,7 +60,7 @@ extern InfonManager *informationSources;
 int main(int argc, char **argv){
     string resourceDir="../../../resources";
     string dbName="proteusData.db";
-	char* NewsURI="git://github.com/BruceDLong/NewsTest.git:master.pr";
+	char* NewsURI="git://github.com/BruceDLong/NewsTest.git:World.pr";
     
 	if(initializeProteusCore(resourceDir, dbName)) {cout<< "Could not initialize the Proteus Engine\n\n"; exit(1);}
     initReadline();
@@ -69,7 +69,7 @@ int main(int argc, char **argv){
     // Load World model
     agent a(0, IsHardFunc, AutoEval);                       // One agent per user.
     cout<<"Locale: "<<localeString(&a.locale)<<"\n";
-    if(a.loadInfon(NewsURI, &a.world, 0)) exit(1);     // Load/cache the master news file
+    if(a.loadInfon(NewsURI, &a.world, 0)) exit(1);     // Load/cache the World news file
     topInfon=a.world;  // Use topInfon in the ddd debugger to view World
 
     cout<<"\nThe Proteus CLI. Type some infons or 'quit'\n\n";
@@ -107,7 +107,10 @@ int main(int argc, char **argv){
         } catch (char const* errMsg){cout<<errMsg<<"\n";}
 
         if (Entry) cout<<"\n"<<a.printInfon(Entry)<<"\n\n";
-        else {cout<<"\nError: "<<pp.buf<<"\n\n";}
+        else {
+			if(strlen(pp.buf)) cout<<"\nError: "<<pp.buf<<"\n\n"; 
+			else cout<<"\nAn unknown error occured while processing.\n\n"; // Does World.pr end with '...'?
+			}
     }
     shutdownProteusCore();
     return 0;

@@ -28,6 +28,8 @@ set(toolChainPath ${CMAKE_CURRENT_SOURCE_DIR}/xTools)
 set(LOCAL_CC ${CMAKE_C_COMPILER})
 set(LOCAL_CXX ${CMAKE_CXX_COMPILER})
 
+set(ICU_DIR unicode)
+
 if (NOT DEFINED PLAT_BUILD) 
 	SET(PLAT_BUILD "HOST")
 endif()
@@ -111,8 +113,9 @@ elseif (${PLAT_BUILD} STREQUAL "xANDROID_ARM") # android_14
 	      PNG_CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}/builds/libs/PNG_LIB/libpng-1.6.2/include  
 	      CFLAGS=-I${CMAKE_CURRENT_BINARY_DIR}
 	      )
+	set(ICU_DIR unicode_util)
 	SET(ICU_PLAT_CODE_local Linux)
-	SET(ICU_PLAT_CODE Linux --host=arm-android-linux --with-cross-build=${CMAKE_CURRENT_BINARY_DIR}/deps/unicode/${ICU_UnicodeVersion} CPPFLAGS=-nostdlib)
+	SET(ICU_PLAT_CODE Linux --host=arm-android-linux --with-cross-build=${CMAKE_CURRENT_BINARY_DIR}/deps/${ICU_DIR}/${ICU_UnicodeVersion} CPPFLAGS=-nostdlib)
 
 elseif (${PLAT_BUILD} STREQUAL "xANDROID_MIPS")
 	message(STATUS "Building for ${PLAT_BUILD}.")
@@ -365,7 +368,7 @@ if (${MAKE_CPF} STREQUAL "ON")
 		  CONFIGURE_COMMAND 
 		  CMAKE_COMMAND cmake -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
 		  BUILD_COMMAND  $(MAKE)
-		  INSTALL_COMMAND  mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Remiss && cp ${CMAKE_CURRENT_BINARY_DIR}/deps/Remiss/src/Remiss-build/libremiss.a ${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Remiss
+		  INSTALL_COMMAND  mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Remiss && cp ${CMAKE_CURRENT_BINARY_DIR}/deps/Remiss/src/Remiss-build/libremiss.so ${CMAKE_CURRENT_BINARY_DIR}/builds/libs/Remiss
 	)
 	
 	#=========================================
@@ -448,7 +451,9 @@ if (${MAKE_GMP} STREQUAL "ON")
 	  
 	  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/GMP_BigInts/src/${GMP_Version}/
 	  PATCH_COMMAND patch -p0 -d ${CMAKE_CURRENT_BINARY_DIR} -i ${CMAKE_CURRENT_SOURCE_DIR}/GMP_patch
-	  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/GMP_BigInts/src/${GMP_Version}/configure ${xCONFIG_GMP} --enable-cxx CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  --enable-static --disable-shared --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/GMP_BigInts/${GMP_Version}/
+	  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/GMP_BigInts/src/${GMP_Version}/configure ${xCONFIG_GMP} 
+	     --enable-cxx CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS}  
+	     --enable-static --disable-shared --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/GMP_BigInts/${GMP_Version}/
 	  BUILD_COMMAND  $(MAKE) -j4
 	  INSTALL_COMMAND  $(MAKE) install
 	  BUILD_IN_SOURCE 0
@@ -481,7 +486,7 @@ if (${MAKE_SQL} STREQUAL "ON")
 	  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/sqlite-autoconf-3071602.tar.gz"
 
 	  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/sqlite3/src/sqlite-autoconf-3071602/
-	  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/sqlite3/src/sqlite-autoconf-3071602/configure ${xCONFIG_SQL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS} --enable-static --disable-shared --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/sqlite3/sqlite-autoconf-3071602/
+	  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/sqlite3/src/sqlite-autoconf-3071602/configure ${xCONFIG_SQL} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS} --enable-static --enable-shared --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/sqlite3/sqlite-autoconf-3071602/
 
 	  BUILD_COMMAND  $(MAKE)
 	  INSTALL_COMMAND  $(MAKE) install
@@ -517,7 +522,7 @@ if (${MAKE_GIT} STREQUAL "ON")
 	  URL "${CMAKE_CURRENT_SOURCE_DIR}/deps/archive/libgit2-0.18.0.tar.gz"
 
 	  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/GIT_LIB/src/libgit2-0.18.0/
-	  CMAKE_COMMAND cmake  CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} ${xCONFIG_VARS} -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/GIT_LIB/libgit2-0.18.0/
+	  CMAKE_COMMAND cmake  -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DBUILD_SHARED_LIBS=OFF -DBUILD_CLAR=OFF ${xCONFIG_VARS} -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/GIT_LIB/libgit2-0.18.0/
 
 	  BUILD_COMMAND  $(MAKE) -j4
 	  INSTALL_COMMAND  $(MAKE) install
@@ -531,14 +536,17 @@ if (${MAKE_ICU} STREQUAL "ON")
 	find_package(Subversion)
 	ExternalProject_Add(
 	  ICU_unicode_local
-	  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/unicode/
 	  SVN_REPOSITORY "http://source.icu-project.org/repos/icu/icu/tags/${ICU_UnicodeVersion}"
 	  UPDATE_COMMAND ""
 	  # TODO: patch uversion.h and platform.h as per readme.html
 	  PATCH_COMMAND
-	  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/unicode/${ICU_UnicodeVersion}
+	  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/${ICU_DIR}/${ICU_UnicodeVersion}
 	  
-	  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/unicode/${ICU_UnicodeVersion}/source/runConfigureICU ${ICU_PLAT_CODE_local} CXX=${LOCAL_CXX} CC=${LOCAL_CC} --with-data-packaging=archive ${xCONFIG_ICU} --enable-static  --disable-shared --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/unicode/${ICU_UnicodeVersion}
+	  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/${ICU_DIR}/${ICU_UnicodeVersion}/source/runConfigureICU ${ICU_PLAT_CODE_local} 
+	       CXX=${LOCAL_CXX} CC=${LOCAL_CC} --with-data-packaging=archive ${xCONFIG_ICU} 
+	       --enable-static  --disable-shared --enable-extras=no --enable-strict=no 
+	       --enable-tests=no --enable-samples=no --enable-dyload=no --enable-tools=no 
+	       --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/${ICU_DIR}/${ICU_UnicodeVersion}
 
 	  BUILD_COMMAND $(MAKE) -j4
 	  INSTALL_COMMAND $(MAKE) install
@@ -550,14 +558,17 @@ if (${MAKE_ICU} STREQUAL "ON")
 	# Build ICU (unicode) via cross compiler
 	ExternalProject_Add(
 	  ICU_unicode_cross
-	  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/unicode_cross/
 	  SVN_REPOSITORY "http://source.icu-project.org/repos/icu/icu/tags/${ICU_UnicodeVersion}"
 	  UPDATE_COMMAND ""
 	  # TODO: patch uversion.h and platform.h as per readme.html
 	  PATCH_COMMAND
-	  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/unicode_cross/${ICU_UnicodeVersion}
+	  SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/unicode/${ICU_UnicodeVersion}
 	  
-	  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/unicode_cross/${ICU_UnicodeVersion}/source/runConfigureICU ${ICU_PLAT_CODE} ${xCONFIG_VARS} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} --with-data-packaging=archive ${xCONFIG_ICU} --enable-static --disable-shared --enable-extras=no --enable-strict=no --enable-tests=no --enable-samples=no --enable-dyload=no --enable-tools=no --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/unicode_cross/${ICU_UnicodeVersion}
+	  CONFIGURE_COMMAND ${CMAKE_CURRENT_BINARY_DIR}/deps/unicode/${ICU_UnicodeVersion}/source/runConfigureICU ${ICU_PLAT_CODE} 
+	      ${xCONFIG_VARS} CXX=${CMAKE_CXX_COMPILER} CC=${CMAKE_C_COMPILER} --with-data-packaging=archive ${xCONFIG_ICU} 
+	      --enable-static --disable-shared --enable-extras=no --enable-strict=no 
+	      --enable-tests=no --enable-samples=no --enable-dyload=no --enable-tools=no 
+	      --prefix=${CMAKE_CURRENT_BINARY_DIR}/builds/libs/unicode/${ICU_UnicodeVersion}
 
 	  BUILD_COMMAND $(MAKE) -j4
 	  INSTALL_COMMAND $(MAKE) install

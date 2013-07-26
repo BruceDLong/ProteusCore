@@ -74,6 +74,7 @@ string agent::printInfon(infon* i, infon* CI){
         else{
             if(InfsType(i)==tNum) {s+=(SsFlag(i)&fInvert)?"/":"*"; s+=printPure(&i->size, 0,CI);}
             if(InfsType(i)==tNum) s+=(VsFlag(i)&fInvert)?"-":"+";
+//char buuf[100]; s+=itoa(i->getSize().get_ui(),buuf);            
             s+=printPure(&i->value, i->getSize().get_ui(), CI);
         }
     } else {
@@ -359,19 +360,21 @@ UInt ProteusParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, inf
                 pureInfon pSize(size+1);
                 j=new infon(iNone+isVirtual, &pSize); SetValueFormat(j, fUnknown); j->pos=(size+1); stay=0;
             } else {
-				string sourceID=""; int prevLine; string prevStreamName; istream* prevStream; bool prevDoCache; string prevIndent;
+				string sourceID=""; int prevLine; string prevStreamName, prevStreamPath; istream* prevStream; bool prevDoCache; string prevIndent;
 				if(prevChar=='\n' && nxtTok("%INSERT")){
-					prevLine=line; prevStreamName=streamName; prevStream=stream;  prevIndent=indent; prevDoCache=doCache; indent+="   ";
+					prevLine=line; prevStreamName=streamName; prevStream=stream;  prevIndent=indent; 
+					prevStreamPath=streamPath; prevDoCache=doCache; indent+="   ";
 					for (p=stream->peek(); !(stream->eof() || stream->fail()) && (p==' '||p=='\t'); p=stream->peek()) streamGet();
 					for (p=stream->peek(); !(stream->eof() || stream->fail()) && p!='\n'; p=stream->peek()) sourceID+=streamGet();
 					if(sourceID=="") throw"Expected the specifier of a code to insert";
-					stream=sources->cachedStream(sourceID, doCache); line=1; streamName=sourceID;
 					cout<<"\n"<<indent<<"Loading:"<<sourceID<<"..."<<flush;
-					if(stream==0 || stream->fail()) {cout<<"\nUnable to open stream "<<sourceID<<"\n"; exit(1);}
+					stream=sources->cachedStream(streamPath, sourceID, doCache); line=1; streamName=sourceID;
+					if(stream==0 || stream->fail()) {cout<<"\n"<<indent<<"Unable to open stream "<<sourceID<<"\n"; exit(1);}
 				}
 				j=ReadInfon(scopeID);
 				if(sourceID != "") {
-					stream=prevStream; line=prevLine; streamName=prevStreamName; doCache=prevDoCache; prevChar='\n'; indent=prevIndent;
+					stream=prevStream; line=prevLine; streamName=prevStreamName; streamPath=prevStreamPath;
+					doCache=prevDoCache; prevChar='\n'; indent=prevIndent;
 				}
 			}
             if(++size==1){
@@ -429,7 +432,7 @@ UInt ProteusParser::ReadPureInfon(pureInfon* pInf, UInt* flags, UInt *wFlag, inf
     return size;
 }
 
-extern void RegisterArticle(infon* articalInfon); // This will go away later.
+//extern void RegisterArticle(infon* articalInfon); // This will go away later.
 
 infon* ProteusParser::ReadInfon(string &scopeID, int noIDs){
     char op=0; UInt size=0; pureInfon iSize, iVal; infon *s1=0,*s2=0; UInt wFlag=0,fs=0,fv=0;
@@ -478,7 +481,7 @@ infon* ProteusParser::ReadInfon(string &scopeID, int noIDs){
                 else if(((fv&mType)==tList) && iVal.listHead && InfIsVirtual(iVal.listHead->prev)) {iSize.flags=fUnknown+tNum;} // Set size's flags for {...}
         }
     }
-    infon* i=new infon(wFlag, &iSize,&iVal,0,s1,s2,0); i->wSize=size; i->type=tags; if(!attrs->empty()){i->attrs=attrs; RegisterArticle(i);}
+    infon* i=new infon(wFlag, &iSize,&iVal,0,s1,s2,0); i->wSize=size; i->type=tags; //if(!attrs->empty()){i->attrs=attrs; RegisterArticle(i);}
     if(ValueIsConcat(i) && ((*i->size.dataHead)==1) && !InfIsLoop(i)){infon* ret=i->value.listHead; delete(i); i=ret; i->wFlag&=~mListPos; i->top=i->next=i->prev=0;} // BUT we lose some flags (desc, ...)
     else {
         if (i->size.listHead) i->size.listHead->top=i;
@@ -544,9 +547,10 @@ infon* ProteusParser::ReadInfon(string &scopeID, int noIDs){
 
 infon* ProteusParser::parse(){
     textParsed=""; string topScope="U"; prevChar='\0'; indent="";
-    stream=sources->cachedStream(sourceSpec, doCache);
+    stream=sources->cachedStream("", sourceSpec, doCache);
     if(stream==0) {cout<<"Could not fetch "<<sourceSpec<<".\n"; return 0;}
     streamName=sourceSpec;
+    streamPath=sources->sources.find(streamName)->second->URI_path+"/";
     // TODO: set cache mode here. cache or don't_cache.
     try{
         line=1;

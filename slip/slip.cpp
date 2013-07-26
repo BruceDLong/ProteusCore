@@ -565,7 +565,7 @@ static int SimThread(void *nothing){
 
 void InitializePortalSystem(int argc, char** argv){
     numPortals=0;
-    char* worldSpec="git://github.com/BruceDLong/NewsTest.git:master.pr"; char* username="bruce"; char* password="erty"; string theme;
+    char* worldSpec="git://github.com/BruceDLong/NewsTest.git:World.pr"; char* username="bruce"; char* password="erty"; string theme;
     for (int i=1; i<argc;) {
         int consumed = 0;
         if (consumed == 0) {
@@ -592,7 +592,7 @@ void InitializePortalSystem(int argc, char** argv){
     atexit(cleanup);
 
     if(initializeProteusCore(resourceDir, dbName)) {cout<< "Could not initialize the Proteus Engine\n\n"; exit(1);}
-    if(theAgent.loadInfon(worldSpec, &theAgent.world, 0)) exit(1);     // Load/cache the master news file
+    if(theAgent.loadInfon(worldSpec, &theAgent.world, 0)) exit(1);     // Load/cache the World news file
     
     User* portalUser=new User;
     if(loadUserRecord(portalUser, username, password)) {MSGl("\nUser could not be authenticated. Exiting..."); exit(5);}
@@ -756,8 +756,6 @@ void StreamEvents(){
 }
 
 int main(int argc, char *argv[]){
-//	void* myHandle SDL_LoadObject("libProteus.so");
-
     MSGl("\n\n         * * * * * Starting Proteus and The Slipstream * * * * *\n");
     //MSGl("SDL Revision " << SDL_GetRevisionNumber()<<",  "<<"\n");
     InitializePortalSystem(argc, argv);

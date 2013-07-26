@@ -774,7 +774,8 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt, int CIFolLvl){
     if(CIfol && !CIfol->pred) CIfol->pred=ci;
     if(wrkNode)do{
         wrkNode=wrkNode->next; item=wrkNode->item;
-        bool cpySize=0, cpyValue=0, resetCIsTentative=0, linkCIFol=false, invertAcceptance=((ci->wFlag&asNot) ^ (item->wFlag&asNot)); int reject=rAccept;
+        bool cpySize=0, cpyValue=0, resetCIsTentative=0, linkCIFol=false, invertAcceptance=((ci->wFlag&asNot) ^ (item->wFlag&asNot)); 
+        int reject=rAccept;
         if (wrkNode->idFlags&skipFollower) CIfol=0;
         switch (wrkNode->idFlags&WorkType){
         case InitSearchList: cout<<"InitSrchList"<<printInfon(ci)<<"\n"; // E.g., {[....]|...}::={3 4 5 6}
@@ -795,6 +796,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt, int CIFolLvl){
             if(wrkNode->idFlags&isRawFlag){
               tmp=new infon(ci->wFlag,&ci->size, &ci->value,0,ci->spec1,ci->spec2,ci->next);
               tmp->prev=ci->prev; tmp->top=ci->top; tmp->type=ci->type; tmp->pos=ci->pos;
+           //   tmp->wFlag&=~(sizeIndef);
               insertID(&tmp->wrkList, item,0, wrkNode->master);
               wrkNode->item=item=tmp;
               wrkNode->idFlags^=isRawFlag;
@@ -835,7 +837,6 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt, int CIFolLvl){
                 if (ItemsType && CIsType!=tList && CIsType!=ItemsType){reject=rInvertable;}
                 else if((ci->type && !(ci->wFlag&iHardFunc)) && (item->type && !checkTypeMatch(ci->type,item->type))){reject=rInvertable;}
             }
-
             int infTypes=CIsType+4*ItemsType;
             if (!reject) switch(infTypes){
                 case tUnknown+4*tUnknown: case tNum+4*tUnknown: case tString+4*tUnknown:
@@ -942,7 +943,7 @@ int agent::doWorkList(infon* ci, infon* CIfol, int asAlt, int CIFolLvl){
                 }
             }
             if(item->next==0 && ci->next!=0) item->pos=(UInt)ci; // Special use of pos. When item isn't in a list but can signal EOL for ci. So we must know ci's address.
-            if (reject){ cout<<"REJECT "<<CIfol<<"\n";
+            if (reject){ cout<<"REJECT "<<ci<<"\n";
                 result=BypassDeadEnd;
                 if(reject >= rNullable){
                     infon* CA=getTop(ci); if (CA) {AddSizeAlternate(CA, item, 0, ((UInt)ci->next->pos)-1, ci, looseType, wrkNode->master); }
